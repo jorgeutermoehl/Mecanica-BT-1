@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Diógenes Auto Peças
 
-## Getting Started
+Sistema completo de **e-commerce de peças mecânicas + ERP de gestão**: loja online (catálogo, carrinho, checkout) e painel administrativo com estoque rastreável, vendas, compras, financeiro e **DRE gerencial**.
 
-First, run the development server:
+## Stack
+Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Prisma · PostgreSQL (Supabase) · Supabase Auth + Storage · Zod · Playwright.
+
+## Começando
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. Instalar dependências
+npm install
+
+# 2. Configurar ambiente
+cp .env.example .env   # preencha com as chaves do Supabase
+
+# 3. Banco de dados (após configurar DATABASE_URL)
+npx prisma migrate dev
+npm run db:seed
+
+# 4. Rodar em desenvolvimento
+npm run dev            # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Estrutura
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+├─ app/
+│  ├─ (public)/   loja pública (tema escuro)
+│  ├─ (admin)/    painel administrativo (tema claro)
+│  └─ api/        route handlers
+├─ components/    ui (shadcn) · public · admin · shared
+├─ server/        regra de negócio (estoque, vendas, financeiro, dre)
+└─ lib/           prisma · supabase · validations (zod) · utils · constants
+prisma/           schema · migrations · seed
+tests/            Playwright (e2e)
+docs/             ESPECIFICACAO.md (fonte da verdade)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Roadmap
+F0 Fundação ✅ · F1 Banco · F2 Auth/permissões · F3 Loja pública · F4 Admin core · F5 Estoque · F6 Vendas · F7 Financeiro/DRE · F8 Promoções/Relatórios · F9 Testes.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Veja [`docs/ESPECIFICACAO.md`](docs/ESPECIFICACAO.md) para o detalhamento completo.
