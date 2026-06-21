@@ -1,0 +1,709 @@
+// Diógenes Auto Peças — schema do banco (PostgreSQL / Supabase)
+// Invariantes:
+//  - InventoryMovement e AuditLog são APPEND-ONLY (correção = novo lançamento).
+//  - OrderItem.unitCostAtSale CONGELA o custo no momento da venda (DRE/CMV corretos).
+//  - Soft-delete (deletedAt / status) em dados críticos — sem exclusão física.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ===========================================================================
+// ENUMS
+// ===========================================================================
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+  PROMOTION
+}
+
+enum OrderStatus {
+  AWAITING_PAYMENT
+  PAID
+  SEPARATING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+  BOLETO
+  CASH
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+/// Status de contas a pagar/receber e financeiro de entradas de estoque.
+enum FinanceStatus {
+  OPEN
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
+}
+
+enum MovementType {
+  ENTRY // entrada de mercadoria
+  SALE // saída por venda
+  MANUAL_OUT // saída manual
+  ADJUSTMENT // ajuste de inventário
+  CUSTOMER_RETURN // devolução de cliente (retorna ao estoque)
+  SUPPLIER_RETURN // devolução para fornecedor (sai do estoque)
+  LOSS // perda / avaria
+  INVENTORY // contagem / acerto de inventário
+}
+
+enum MovementDirection {
+  IN
+  OUT
+}
+
+enum CashFlowType {
+  INFLOW
+  OUTFLOW
+}
+
+enum DiscountType {
+  FIXED // valor fixo (R$)
+  PERCENT // percentual (%)
+}
+
+enum PromotionScope {
+  PRODUCT
+  CATEGORY
+}
+
+enum ContactStatus {
+  NEW
+  IN_REVIEW
+  ANSWERED
+  CLOSED
+}
+
+enum PersonType {
+  INDIVIDUAL // CPF
+  COMPANY // CNPJ
+}
+
+enum PeriodType {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+  CUSTOM
+}
+
+// ===========================================================================
+// ACESSO / PERMISSÕES
+// ===========================================================================
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  slug        String       @unique
+  description String?
+  permissions Permission[] @relation("RolePermissions")
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique // ex.: "products.create"
+  description String?
+  roles       Role[]   @relation("RolePermissions")
+  createdAt   DateTime @default(now())
+}
+
+/// Espelha o usuário do Supabase Auth (id = auth uid). Sem senha aqui.
+model User {
+  id       String  @id @default(uuid())
+  email    String  @unique
+  name     String
+  phone    String?
+  isActive Boolean @default(true)
+  roleId   String?
+  role     Role?   @relation(fields: [roleId], references: [id])
+
+  customer        Customer?
+  movements       InventoryMovement[]
+  stockEntries    StockEntry[]
+  orders          Order[] // como vendedor responsável
+  auditLogs       AuditLog[]
+  contactMessages ContactMessage[]    @relation("ContactHandler")
+  cashFlowEntries CashFlowEntry[]
+  cookieConsents  CookieConsent[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([roleId])
+}
+
+// ===========================================================================
+// PESSOAS
+// ===========================================================================
+
+model Customer {
+  id                String              @id @default(cuid())
+  userId            String?             @unique
+  user              User?               @relation(fields: [userId], references: [id])
+  name              String
+  document          String? // CPF/CNPJ
+  personType        PersonType          @default(INDIVIDUAL)
+  email             String?
+  phone             String?
+  notes             String?
+  totalSpent        Decimal             @default(0) @db.Decimal(12, 2)
+  lastPurchaseAt    DateTime?
+  addresses         Address[]
+  orders            Order[]
+  receivables       AccountReceivable[]
+  couponRedemptions CouponRedemption[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  deletedAt         DateTime?
+
+  @@index([document])
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  label      String?
+  zipCode    String
+  street     String
+  number     String?
+  complement String?
+  district   String?
+  city       String
+  state      String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+}
+
+model Supplier {
+  id           String           @id @default(cuid())
+  legalName    String
+  tradeName    String?
+  document     String? // CNPJ/CPF
+  personType   PersonType       @default(COMPANY)
+  email        String?
+  phone        String?
+  zipCode      String?
+  street       String?
+  number       String?
+  complement   String?
+  district     String?
+  city         String?
+  state        String?
+  paymentTerms String?
+  notes        String?
+  stockEntries StockEntry[]
+  payables     AccountPayable[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  deletedAt    DateTime?
+
+  @@index([document])
+}
+
+// ===========================================================================
+// CATÁLOGO
+// ===========================================================================
+
+model Category {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String?
+  imageUrl    String?
+  parentId    String?
+  parent      Category?   @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[]  @relation("CategoryTree")
+  products    Product[]
+  promotions  Promotion[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
+}
+
+model Brand {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  logoUrl   String?
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Manufacturer {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id             String        @id @default(cuid())
+  sku            String        @unique
+  name           String
+  slug           String        @unique
+  internalCode   String?
+  originalCode   String? // código original/fabricante
+  categoryId     String
+  category       Category      @relation(fields: [categoryId], references: [id])
+  brandId        String?
+  brand          Brand?        @relation(fields: [brandId], references: [id])
+  manufacturerId String?
+  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  description    String?
+  technicalSpecs String?
+  costPrice      Decimal       @default(0) @db.Decimal(12, 2) // custo médio atual
+  salePrice      Decimal       @default(0) @db.Decimal(12, 2)
+  promoPrice     Decimal?      @db.Decimal(12, 2)
+  desiredMargin  Decimal?      @db.Decimal(6, 2) // %
+  stockQuantity  Int           @default(0)
+  minStock       Int           @default(0)
+  location       String?
+  weightGrams    Int?
+  widthCm        Decimal?      @db.Decimal(8, 2)
+  heightCm       Decimal?      @db.Decimal(8, 2)
+  lengthCm       Decimal?      @db.Decimal(8, 2)
+  warranty       String?
+  status         ProductStatus @default(ACTIVE)
+  internalNotes  String?
+
+  images          ProductImage[]
+  applications    ProductApplication[]
+  orderItems      OrderItem[]
+  movements       InventoryMovement[]
+  stockEntryItems StockEntryItem[]
+  promotions      Promotion[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([status])
+  @@index([name])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  position  Int     @default(0)
+  isPrimary Boolean @default(false)
+
+  @@index([productId])
+}
+
+/// Compatibilidade da peça com veículos (marca/modelo/ano/motor).
+model ProductApplication {
+  id           String  @id @default(cuid())
+  productId    String
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vehicleBrand String
+  vehicleModel String
+  yearStart    Int?
+  yearEnd      Int?
+  engine       String?
+  notes        String?
+
+  @@index([productId])
+  @@index([vehicleBrand, vehicleModel])
+}
+
+// ===========================================================================
+// ESTOQUE
+// ===========================================================================
+
+/// Livro-razão de estoque (APPEND-ONLY). Saldo é derivado dos lançamentos.
+model InventoryMovement {
+  id            String            @id @default(cuid())
+  productId     String
+  product       Product           @relation(fields: [productId], references: [id])
+  type          MovementType
+  direction     MovementDirection
+  quantity      Int
+  unitCost      Decimal           @default(0) @db.Decimal(12, 2)
+  balanceBefore Int
+  balanceAfter  Int
+  reason        String?
+  userId        String?
+  user          User?             @relation(fields: [userId], references: [id])
+  orderId       String?
+  order         Order?            @relation(fields: [orderId], references: [id])
+  stockEntryId  String?
+  stockEntry    StockEntry?       @relation(fields: [stockEntryId], references: [id])
+  createdAt     DateTime          @default(now())
+
+  @@index([productId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model StockEntry {
+  id              String              @id @default(cuid())
+  supplierId      String?
+  supplier        Supplier?           @relation(fields: [supplierId], references: [id])
+  invoiceNumber   String?
+  purchaseDate    DateTime?
+  entryDate       DateTime            @default(now())
+  freight         Decimal             @default(0) @db.Decimal(12, 2)
+  otherExpenses   Decimal             @default(0) @db.Decimal(12, 2)
+  taxes           Decimal             @default(0) @db.Decimal(12, 2)
+  itemsTotal      Decimal             @default(0) @db.Decimal(12, 2)
+  total           Decimal             @default(0) @db.Decimal(12, 2)
+  paymentMethod   PaymentMethod?
+  installments    Int                 @default(1)
+  financialStatus FinanceStatus       @default(OPEN)
+  notes           String?
+  userId          String?
+  user            User?               @relation(fields: [userId], references: [id])
+  items           StockEntryItem[]
+  movements       InventoryMovement[]
+  payables        AccountPayable[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([supplierId])
+  @@index([entryDate])
+}
+
+model StockEntryItem {
+  id           String     @id @default(cuid())
+  stockEntryId String
+  stockEntry   StockEntry @relation(fields: [stockEntryId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id])
+  quantity     Int
+  unitCost     Decimal    @db.Decimal(12, 2)
+  totalCost    Decimal    @db.Decimal(12, 2)
+
+  @@index([stockEntryId])
+  @@index([productId])
+}
+
+// ===========================================================================
+// VENDAS / PEDIDOS
+// ===========================================================================
+
+model Order {
+  id               String         @id @default(cuid())
+  number           String         @unique
+  customerId       String?
+  customer         Customer?      @relation(fields: [customerId], references: [id])
+  customerName     String // snapshot
+  customerDocument String?
+  status           OrderStatus    @default(AWAITING_PAYMENT)
+  subtotal         Decimal        @default(0) @db.Decimal(12, 2)
+  discount         Decimal        @default(0) @db.Decimal(12, 2)
+  shippingCost     Decimal        @default(0) @db.Decimal(12, 2)
+  total            Decimal        @default(0) @db.Decimal(12, 2)
+  couponId         String?
+  coupon           Coupon?        @relation(fields: [couponId], references: [id])
+  couponCode       String?
+  paymentMethod    PaymentMethod?
+
+  // Snapshot do endereço de entrega
+  shipZipCode    String?
+  shipStreet     String?
+  shipNumber     String?
+  shipComplement String?
+  shipDistrict   String?
+  shipCity       String?
+  shipState      String?
+
+  notes  String?
+  userId String? // vendedor responsável
+  user   User?   @relation(fields: [userId], references: [id])
+
+  items             OrderItem[]
+  payments          Payment[]
+  movements         InventoryMovement[]
+  receivables       AccountReceivable[]
+  statusHistory     OrderStatusHistory[]
+  couponRedemptions CouponRedemption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String?
+  product        Product? @relation(fields: [productId], references: [id])
+  productName    String // snapshot
+  sku            String // snapshot
+  quantity       Int
+  unitPrice      Decimal  @db.Decimal(12, 2)
+  unitCostAtSale Decimal  @db.Decimal(12, 2) // CUSTO CONGELADO p/ DRE
+  discount       Decimal  @default(0) @db.Decimal(12, 2)
+  total          Decimal  @db.Decimal(12, 2)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  userId    String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount            Decimal       @db.Decimal(12, 2)
+  method            PaymentMethod
+  status            PaymentStatus @default(PENDING)
+  installmentNumber Int           @default(1)
+  paidAt            DateTime?
+  dueDate           DateTime?
+  createdAt         DateTime      @default(now())
+
+  @@index([orderId])
+}
+
+// ===========================================================================
+// FINANCEIRO
+// ===========================================================================
+
+model AccountPayable {
+  id            String         @id @default(cuid())
+  supplierId    String?
+  supplier      Supplier?      @relation(fields: [supplierId], references: [id])
+  stockEntryId  String?
+  stockEntry    StockEntry?    @relation(fields: [stockEntryId], references: [id])
+  description   String
+  category      String?
+  amount        Decimal        @db.Decimal(12, 2)
+  paidAmount    Decimal        @default(0) @db.Decimal(12, 2)
+  dueDate       DateTime
+  paidAt        DateTime?
+  status        FinanceStatus  @default(OPEN)
+  paymentMethod PaymentMethod?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status])
+  @@index([dueDate])
+}
+
+model AccountReceivable {
+  id             String         @id @default(cuid())
+  customerId     String?
+  customer       Customer?      @relation(fields: [customerId], references: [id])
+  orderId        String?
+  order          Order?         @relation(fields: [orderId], references: [id])
+  description    String
+  amount         Decimal        @db.Decimal(12, 2)
+  receivedAmount Decimal        @default(0) @db.Decimal(12, 2)
+  dueDate        DateTime
+  receivedAt     DateTime?
+  status         FinanceStatus  @default(OPEN)
+  paymentMethod  PaymentMethod?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status])
+  @@index([dueDate])
+}
+
+model CashFlowEntry {
+  id           String       @id @default(cuid())
+  type         CashFlowType
+  category     String?
+  description  String
+  amount       Decimal      @db.Decimal(12, 2)
+  date         DateTime     @default(now())
+  orderId      String?
+  payableId    String?
+  receivableId String?
+  userId       String?
+  user         User?        @relation(fields: [userId], references: [id])
+  createdAt    DateTime     @default(now())
+
+  @@index([date])
+  @@index([type])
+}
+
+/// Fechamento de DRE por período (snapshot calculado).
+model FinancialResult {
+  id                String     @id @default(cuid())
+  periodType        PeriodType
+  periodStart       DateTime
+  periodEnd         DateTime
+  grossRevenue      Decimal    @default(0) @db.Decimal(14, 2)
+  discounts         Decimal    @default(0) @db.Decimal(14, 2)
+  returns           Decimal    @default(0) @db.Decimal(14, 2)
+  netRevenue        Decimal    @default(0) @db.Decimal(14, 2)
+  cogs              Decimal    @default(0) @db.Decimal(14, 2) // CMV
+  grossProfit       Decimal    @default(0) @db.Decimal(14, 2)
+  operatingExpenses Decimal    @default(0) @db.Decimal(14, 2)
+  adminExpenses     Decimal    @default(0) @db.Decimal(14, 2)
+  salesExpenses     Decimal    @default(0) @db.Decimal(14, 2)
+  financialExpenses Decimal    @default(0) @db.Decimal(14, 2)
+  operatingResult   Decimal    @default(0) @db.Decimal(14, 2)
+  taxes             Decimal    @default(0) @db.Decimal(14, 2)
+  netProfit         Decimal    @default(0) @db.Decimal(14, 2)
+  createdAt         DateTime   @default(now())
+
+  @@unique([periodType, periodStart, periodEnd])
+}
+
+// ===========================================================================
+// PROMOÇÕES / CUPONS
+// ===========================================================================
+
+model Promotion {
+  id            String         @id @default(cuid())
+  name          String
+  scope         PromotionScope
+  productId     String?
+  product       Product?       @relation(fields: [productId], references: [id])
+  categoryId    String?
+  category      Category?      @relation(fields: [categoryId], references: [id])
+  discountType  DiscountType
+  discountValue Decimal        @db.Decimal(12, 2)
+  startsAt      DateTime
+  endsAt        DateTime
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([isActive])
+}
+
+model Coupon {
+  id            String             @id @default(cuid())
+  code          String             @unique
+  type          DiscountType
+  value         Decimal            @db.Decimal(12, 2)
+  minOrderValue Decimal?           @db.Decimal(12, 2)
+  usageLimit    Int?
+  usageCount    Int                @default(0)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  isActive      Boolean            @default(true)
+  orders        Order[]
+  redemptions   CouponRedemption[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model CouponRedemption {
+  id         String    @id @default(cuid())
+  couponId   String
+  coupon     Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  orderId    String?
+  order      Order?    @relation(fields: [orderId], references: [id])
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  usedAt     DateTime  @default(now())
+
+  @@index([couponId])
+}
+
+// ===========================================================================
+// CONFORMIDADE / CONTEÚDO
+// ===========================================================================
+
+model ContactMessage {
+  id          String        @id @default(cuid())
+  name        String
+  phone       String?
+  email       String?
+  subject     String?
+  message     String
+  status      ContactStatus @default(NEW)
+  response    String?
+  handledById String?
+  handledBy   User?         @relation("ContactHandler", fields: [handledById], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status])
+}
+
+model CookieConsent {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  sessionId String?
+  necessary Boolean  @default(true)
+  analytics Boolean  @default(false)
+  marketing Boolean  @default(false)
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+}
+
+/// Trilha de auditoria (APPEND-ONLY).
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String // CREATE, UPDATE, DELETE, LOGIN, CANCEL, RETURN...
+  entity      String // Product, Order, InventoryMovement...
+  entityId    String?
+  description String?
+  metadata    Json?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
