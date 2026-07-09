@@ -3,7 +3,7 @@ import { Catalog } from "@/components/public/produtos/catalog";
 import { CATEGORIES } from "@/lib/mock-data";
 
 export const metadata: Metadata = {
-  title: "Produtos — FullBoost Race Parts",
+  title: "Produtos",
   description:
     "Catálogo completo de peças de performance: turbo, motor, escape, freios, suspensão e mais. Filtre por categoria, marca e preço.",
 };

@@ -9,7 +9,7 @@ import { ON_SALE } from "@/lib/mock-data";
 import { CouponCard, type Coupon } from "@/components/public/promocoes/coupon-card";
 
 export const metadata: Metadata = {
-  title: "Promoções e cupons | FullBoost Race Parts",
+  title: "Promoções",
   description:
     "Cupons ativos e ofertas em peças de performance. Economize em turbo, freios, suspensão, escape e mais durante a Semana do Boost.",
 };

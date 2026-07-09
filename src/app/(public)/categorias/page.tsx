@@ -8,7 +8,7 @@ import { whatsappLink } from "@/lib/constants";
 import { CATEGORIES } from "@/lib/mock-data";
 
 export const metadata: Metadata = {
-  title: "Categorias | FullBoost Race Parts",
+  title: "Categorias",
   description:
     "Navegue por categoria e encontre turbinas, freios, suspensão, escape e mais peças de performance para o seu projeto.",
 };

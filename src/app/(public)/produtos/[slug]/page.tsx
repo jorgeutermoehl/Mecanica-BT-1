@@ -51,12 +51,12 @@ export async function generateMetadata({
   const product = getProduct(slug);
 
   if (!product) {
-    return { title: "Produto não encontrado · FullBoost Race Parts" };
+    return { title: "Produto não encontrado" };
   }
 
   const current = product.promoPrice ?? product.price;
   return {
-    title: `${product.name} · FullBoost Race Parts`,
+    title: product.name,
     description: `${product.name} da ${product.brand} — ${formatBRL(
       current,
     )}. ${product.category} de performance com garantia e nota fiscal. Compre na FullBoost Race Parts.`,

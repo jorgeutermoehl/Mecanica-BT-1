@@ -22,7 +22,7 @@ import { SITE, whatsappLink } from "@/lib/constants";
 import { BRANDS } from "@/lib/mock-data";
 
 export const metadata: Metadata = {
-  title: "Sobre a FullBoost Race Parts",
+  title: "Sobre nós",
   description:
     "Quem somos: mais de uma década montando setups de performance com procedência, curadoria técnica e atendimento especializado. Conheça a história da FullBoost Race Parts.",
 };

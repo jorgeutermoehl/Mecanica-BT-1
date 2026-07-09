@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SITE, whatsappLink } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "Termos de Uso | FullBoost Race Parts",
+  title: "Termos de Uso",
   description:
     "Termos e condições de uso da loja FullBoost Race Parts: cadastro, pedidos, pagamentos, entrega, trocas, devoluções e garantia das peças de performance.",
 };
