@@ -8,14 +8,18 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --font-heading: var(--font-display);
 
-  /* Marca */
+  /* Marca FullBoost */
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --color-boost: var(--boost);
+  --color-boost-foreground: var(--boost-foreground);
+  --color-silver: var(--silver);
 
-  /* Status (badges de pedidos / financeiro) */
+  /* Status */
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
@@ -57,125 +61,132 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Paleta oficial FullBoost Race Parts */
+:root {
+  --fb-carbon: #000000;
+  --fb-graphite: #1f1e21;
+  --fb-gray-metal: #646367;
+  --fb-silver: #d6d6d7;
+  --fb-white: #f7f7f7;
+  --fb-red: #ed2110;
+  --fb-red-dark: #a4110c;
+  --fb-orange: #ed7149;
+  --fb-wine: #4e0c0a;
 }
 
 /*
- * TEMA CLARO (:root) — usado na ÁREA ADMINISTRATIVA.
- * Fundo branco/cinza claro para leitura de tabelas e dados.
- * Vermelho como cor de ação. Sidebar é preta (definida abaixo) para
- * contraste premium: barra lateral escura + conteúdo claro.
+ * TEMA CLARO — branco gelo, cinza claro, detalhes em vermelho.
+ * Visual limpo, comercial, contraste elegante.
  */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 
-  --background: oklch(0.99 0 0);
-  --foreground: oklch(0.16 0 0);
+  --background: #f7f7f8;
+  --foreground: #17161a;
+  --card: #ffffff;
+  --card-foreground: #17161a;
+  --popover: #ffffff;
+  --popover-foreground: #17161a;
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.16 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.16 0 0);
+  --primary: #ed2110;
+  --primary-foreground: #ffffff;
+  --secondary: #ececed;
+  --secondary-foreground: #1f1e21;
+  --muted: #f0f0f1;
+  --muted-foreground: #5c5b60;
+  --accent: #fcebe9;
+  --accent-foreground: #a4110c;
 
-  /* Vermelho da marca (≈ red-600) */
-  --primary: oklch(0.577 0.245 27.325);
-  --primary-foreground: oklch(0.985 0 0);
+  --brand: #ed2110;
+  --brand-foreground: #ffffff;
+  --boost: #e0561f;
+  --boost-foreground: #ffffff;
+  --silver: #646367;
 
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.968 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --accent: oklch(0.965 0.01 25);
-  --accent-foreground: oklch(0.205 0 0);
+  --destructive: #d81c0e;
+  --success: #15a34a;
+  --success-foreground: #ffffff;
+  --warning: #d97706;
+  --warning-foreground: #ffffff;
+  --info: #2563eb;
+  --info-foreground: #ffffff;
 
-  --brand: oklch(0.577 0.245 27.325);
-  --brand-foreground: oklch(0.985 0 0);
+  --border: #e2e2e4;
+  --input: #e0e0e2;
+  --ring: #ed2110;
 
-  --destructive: oklch(0.577 0.245 27.325);
+  --chart-1: #ed2110;
+  --chart-2: #e0561f;
+  --chart-3: #646367;
+  --chart-4: #15a34a;
+  --chart-5: #2563eb;
 
-  --success: oklch(0.62 0.17 150);
-  --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.78 0.16 75);
-  --warning-foreground: oklch(0.24 0.04 75);
-  --info: oklch(0.6 0.16 250);
-  --info-foreground: oklch(0.985 0 0);
-
-  --border: oklch(0.92 0 0);
-  --input: oklch(0.92 0 0);
-  --ring: oklch(0.577 0.245 27.325);
-
-  --chart-1: oklch(0.577 0.245 27.325);
-  --chart-2: oklch(0.45 0 0);
-  --chart-3: oklch(0.62 0.17 150);
-  --chart-4: oklch(0.78 0.16 75);
-  --chart-5: oklch(0.6 0.16 250);
-
-  /* Sidebar preta no admin */
-  --sidebar: oklch(0.17 0 0);
-  --sidebar-foreground: oklch(0.97 0 0);
-  --sidebar-primary: oklch(0.577 0.245 27.325);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.26 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.577 0.245 27.325);
+  /* Admin: sidebar escura mesmo no tema claro (contraste premium) */
+  --sidebar: #161519;
+  --sidebar-foreground: #e7e7e8;
+  --sidebar-primary: #ed2110;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #262427;
+  --sidebar-accent-foreground: #f7f7f8;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #ed2110;
 }
 
 /*
- * TEMA ESCURO (.dark) — usado na LOJA PÚBLICA (preto como base).
- * Aplicado via wrapper <div class="dark"> no layout público.
+ * TEMA ESCURO — preto carbono, grafite, vermelho racing, detalhes metálicos.
+ * Sensação de oficina premium / preparação automotiva.
  */
 .dark {
-  --background: oklch(0.13 0 0);
-  --foreground: oklch(0.985 0 0);
+  --background: #0a0a0b;
+  --foreground: #f4f4f5;
+  --card: #17161a;
+  --card-foreground: #f4f4f5;
+  --popover: #141317;
+  --popover-foreground: #f4f4f5;
 
-  --card: oklch(0.18 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.18 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  --primary: #ed2110;
+  --primary-foreground: #ffffff;
+  --secondary: #201f23;
+  --secondary-foreground: #f4f4f5;
+  --muted: #201f23;
+  --muted-foreground: #a3a2a7;
+  --accent: #2a1c1c;
+  --accent-foreground: #f4f4f5;
 
-  /* Vermelho mais vivo para destacar sobre o preto (≈ red-500) */
-  --primary: oklch(0.62 0.24 27);
-  --primary-foreground: oklch(0.99 0 0);
+  --brand: #ed2110;
+  --brand-foreground: #ffffff;
+  --boost: #ed7149;
+  --boost-foreground: #17161a;
+  --silver: #d6d6d7;
 
-  --secondary: oklch(0.24 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.24 0 0);
-  --muted-foreground: oklch(0.7 0 0);
-  --accent: oklch(0.26 0.02 25);
-  --accent-foreground: oklch(0.985 0 0);
+  --destructive: #ed2110;
+  --success: #22c55e;
+  --success-foreground: #0a0a0b;
+  --warning: #ed7149;
+  --warning-foreground: #1a1206;
+  --info: #3b82f6;
+  --info-foreground: #0a0a0b;
 
-  --brand: oklch(0.62 0.24 27);
-  --brand-foreground: oklch(0.99 0 0);
+  --border: #2b2a30;
+  --input: #2f2e34;
+  --ring: #ed2110;
 
-  --destructive: oklch(0.62 0.24 27);
+  --chart-1: #ed2110;
+  --chart-2: #ed7149;
+  --chart-3: #d6d6d7;
+  --chart-4: #22c55e;
+  --chart-5: #3b82f6;
 
-  --success: oklch(0.7 0.16 150);
-  --success-foreground: oklch(0.13 0 0);
-  --warning: oklch(0.82 0.16 80);
-  --warning-foreground: oklch(0.2 0.04 80);
-  --info: oklch(0.68 0.15 250);
-  --info-foreground: oklch(0.13 0 0);
-
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.62 0.24 27);
-
-  --chart-1: oklch(0.62 0.24 27);
-  --chart-2: oklch(0.7 0 0);
-  --chart-3: oklch(0.7 0.16 150);
-  --chart-4: oklch(0.82 0.16 80);
-  --chart-5: oklch(0.68 0.15 250);
-
-  --sidebar: oklch(0.1 0 0);
-  --sidebar-foreground: oklch(0.97 0 0);
-  --sidebar-primary: oklch(0.62 0.24 27);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.24 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.62 0.24 27);
+  --sidebar: #0d0c0f;
+  --sidebar-foreground: #e7e7e8;
+  --sidebar-primary: #ed2110;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #201f23;
+  --sidebar-accent-foreground: #f7f7f8;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #ed2110;
 }
 
 @layer base {
@@ -187,5 +198,57 @@
   }
   html {
     @apply font-sans antialiased;
+  }
+  h1, h2, h3, h4, h5 {
+    @apply font-display;
+  }
+}
+
+/* ==========================================================================
+ * Utilitários de assinatura FullBoost
+ * ========================================================================== */
+@layer utilities {
+  /* Gradiente "boost": wine → vermelho → laranja turbo */
+  .text-boost {
+    background-image: linear-gradient(100deg, var(--fb-red) 0%, var(--fb-orange) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-boost {
+    background-image: linear-gradient(100deg, var(--fb-wine) 0%, var(--fb-red) 45%, var(--fb-orange) 100%);
+  }
+
+  /* Texto cromado/metálico (usar em superfícies escuras) */
+  .text-chrome {
+    background-image: linear-gradient(180deg, #ffffff 0%, #d6d6d7 45%, #8f8e92 70%, #d6d6d7 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Textura sutil de fibra de carbono */
+  .bg-carbon {
+    background-color: var(--background);
+    background-image:
+      repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 6px),
+      repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 6px);
+    background-size: 8px 8px;
+  }
+
+  /* Brilho de boost (turbo) — radial vermelho→laranja controlado */
+  .boost-glow {
+    background-image: radial-gradient(60% 60% at 50% 0%, color-mix(in oklab, var(--fb-red) 22%, transparent) 0%, transparent 70%);
+  }
+
+  /* Slash diagonal de corrida (borda inferior angular) */
+  .racing-clip {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 calc(100% - 1.5rem));
+  }
+
+  /* Linha divisória diagonal com gradiente da marca */
+  .racing-rule {
+    height: 2px;
+    background-image: linear-gradient(90deg, transparent, var(--fb-red) 30%, var(--fb-orange) 55%, transparent);
   }
 }
