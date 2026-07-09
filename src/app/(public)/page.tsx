@@ -266,8 +266,8 @@ export default function HomePage() {
       {/* ===================== CTA WHATSAPP ===================== */}
       <section className="pb-20">
         <Container>
-          <div className="flex flex-col items-center gap-5 rounded-2xl border border-border bg-carbon px-8 py-14 text-center">
-            <span className="boost-glow pointer-events-none absolute" />
+          <div className="relative flex flex-col items-center gap-5 overflow-hidden rounded-2xl border border-border bg-carbon px-8 py-14 text-center">
+            <span aria-hidden className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-40" />
             <h2 className="max-w-2xl font-display text-3xl font-bold uppercase tracking-tight sm:text-4xl">
               Montou seu setup? <span className="text-boost">Fale com um especialista.</span>
             </h2>

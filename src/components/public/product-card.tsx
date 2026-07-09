@@ -43,7 +43,7 @@ export function ProductCard({ product }: { product: MockProduct }) {
             </span>
           )}
           {product.isNew && (
-            <span className="rounded bg-boost px-2 py-0.5 font-mono text-[11px] font-bold text-boost-foreground">
+            <span className="rounded bg-boost px-2 py-0.5 font-mono text-[11px] font-bold text-white">
               NOVO
             </span>
           )}
@@ -107,11 +107,11 @@ export function ProductCard({ product }: { product: MockProduct }) {
 
         {/* Ações */}
         <div className="flex gap-2">
-          <Button onClick={addToCart} disabled={outOfStock} size="sm" className="flex-1 gap-1.5">
+          <Button onClick={addToCart} disabled={outOfStock} className="h-10 flex-1 gap-1.5">
             <ShoppingCart className="size-4" />
             {outOfStock ? "Indisponível" : "Adicionar"}
           </Button>
-          <Button asChild size="sm" variant="outline">
+          <Button asChild variant="outline" className="h-10">
             <Link href={`/produtos/${product.slug}`}>Ver</Link>
           </Button>
         </div>

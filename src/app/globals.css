@@ -12,10 +12,10 @@
   --font-display: var(--font-display);
   --font-heading: var(--font-display);
 
-  /* Marca FullBoost */
+  /* Marca FullBoost — bg-boost/text-boost são utilitários de GRADIENTE
+     definidos em @layer utilities (não gerar cor sólida homônima aqui). */
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --color-boost: var(--boost);
   --color-boost-foreground: var(--boost-foreground);
   --color-silver: var(--silver);
 
@@ -117,6 +117,10 @@
   --input: #e0e0e2;
   --ring: #ed2110;
 
+  /* Hachura sutil do carbono (clara no tema claro) */
+  --carbon-line-a: rgba(0, 0, 0, 0.035);
+  --carbon-line-b: rgba(0, 0, 0, 0.05);
+
   --chart-1: #ed2110;
   --chart-2: #e0561f;
   --chart-3: #646367;
@@ -172,6 +176,10 @@
   --border: #2b2a30;
   --input: #2f2e34;
   --ring: #ed2110;
+
+  /* Hachura do carbono (escura/premium no tema escuro) */
+  --carbon-line-a: rgba(255, 255, 255, 0.02);
+  --carbon-line-b: rgba(0, 0, 0, 0.28);
 
   --chart-1: #ed2110;
   --chart-2: #ed7149;
@@ -231,8 +239,8 @@
   .bg-carbon {
     background-color: var(--background);
     background-image:
-      repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 6px),
-      repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 6px);
+      repeating-linear-gradient(45deg, var(--carbon-line-a) 0 1px, transparent 1px 6px),
+      repeating-linear-gradient(-45deg, var(--carbon-line-b) 0 1px, transparent 1px 6px);
     background-size: 8px 8px;
   }
 

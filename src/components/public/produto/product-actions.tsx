@@ -1,0 +1,127 @@
+"use client";
+
+import { useState } from "react";
+import {
+  Minus,
+  Plus,
+  ShoppingCart,
+  MessageCircle,
+  Truck,
+  ShieldCheck,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { whatsappLink } from "@/lib/constants";
+import { formatBRL } from "@/lib/format";
+import type { MockProduct } from "@/lib/mock-data";
+
+export function ProductActions({ product }: { product: MockProduct }) {
+  const outOfStock = product.stock <= 0;
+  const maxQty = Math.max(1, product.stock);
+  const [qty, setQty] = useState(1);
+
+  const current = product.promoPrice ?? product.price;
+
+  function changeQty(delta: number) {
+    setQty((q) => Math.min(maxQty, Math.max(1, q + delta)));
+  }
+
+  function addToCart() {
+    if (outOfStock) return;
+    toast.success("Adicionado ao carrinho", {
+      description: `${qty}× ${product.name} — ${formatBRL(current * qty)}`,
+    });
+  }
+
+  const waMessage = `Olá! Tenho interesse na peça ${product.name} (SKU ${product.sku}). Pode me ajudar com uma dúvida?`;
+
+  return (
+    <div className="mt-6 flex flex-col gap-4">
+      {/* Seletor de quantidade + adicionar ao carrinho */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+        <div
+          className="flex items-center rounded-lg border border-border bg-card"
+          role="group"
+          aria-label="Selecionar quantidade"
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => changeQty(-1)}
+            disabled={outOfStock || qty <= 1}
+            aria-label="Diminuir quantidade"
+          >
+            <Minus className="size-4" />
+          </Button>
+          <span
+            className="w-10 text-center font-mono text-sm font-semibold tabular-nums"
+            aria-live="polite"
+            aria-label={`Quantidade: ${qty}`}
+          >
+            {qty}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => changeQty(1)}
+            disabled={outOfStock || qty >= maxQty}
+            aria-label="Aumentar quantidade"
+          >
+            <Plus className="size-4" />
+          </Button>
+        </div>
+
+        <Button
+          type="button"
+          size="lg"
+          onClick={addToCart}
+          disabled={outOfStock}
+          className="flex-1 gap-2"
+        >
+          <ShoppingCart className="size-4" />
+          {outOfStock ? "Produto indisponível" : "Adicionar ao carrinho"}
+        </Button>
+      </div>
+
+      {/* Dúvida no WhatsApp */}
+      <Button asChild size="lg" variant="outline" className="gap-2">
+        <a
+          href={whatsappLink(waMessage)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <MessageCircle className="size-4" />
+          Tirar dúvida no WhatsApp
+        </a>
+      </Button>
+
+      {/* Mini-cards de entrega e garantia */}
+      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Truck className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Envio em até 24h</p>
+            <p className="text-xs text-muted-foreground">
+              Frete rastreável para todo o Brasil.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <ShieldCheck className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Garantia de 12 meses</p>
+            <p className="text-xs text-muted-foreground">
+              Peça original, com nota fiscal.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
