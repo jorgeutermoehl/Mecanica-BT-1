@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Catalog } from "@/components/public/produtos/catalog";
-import { CATEGORIES } from "@/lib/mock-data";
+import { getStoreCategories, getStoreProducts } from "@/server/catalog";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Produtos",
@@ -13,12 +15,22 @@ export default async function ProdutosPage({
 }: {
   searchParams: Promise<{ categoria?: string }>;
 }) {
-  const { categoria } = await searchParams;
+  const [{ categoria }, products, categories] = await Promise.all([
+    searchParams,
+    getStoreProducts(),
+    getStoreCategories(),
+  ]);
 
   // Só aceita categoria que exista de fato no catálogo.
-  const initialCategory = CATEGORIES.some((c) => c.slug === categoria)
+  const initialCategory = categories.some((c) => c.slug === categoria)
     ? categoria
     : undefined;
 
-  return <Catalog initialCategory={initialCategory} />;
+  return (
+    <Catalog
+      products={products}
+      categories={categories}
+      initialCategory={initialCategory}
+    />
+  );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   MessageCircle,
@@ -7,7 +8,6 @@ import {
   Lock,
   Headset,
   Star,
-  Gauge,
   Quote,
 } from "lucide-react";
 import { Container } from "@/components/shared/container";
@@ -15,7 +15,10 @@ import { PartIcon } from "@/components/shared/part-icon";
 import { ProductCard } from "@/components/public/product-card";
 import { Button } from "@/components/ui/button";
 import { whatsappLink } from "@/lib/constants";
-import { CATEGORIES, BEST_SELLERS, ON_SALE, BRANDS } from "@/lib/mock-data";
+import { BRANDS } from "@/lib/constants";
+import { getHomeData } from "@/server/catalog";
+
+export const dynamic = "force-dynamic";
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
@@ -39,7 +42,9 @@ const TESTIMONIALS = [
   { name: "Diego S.", car: "Gol G6 Turbo", text: "Preço justo, peça de qualidade e chegou antes do prazo. Recomendo demais." },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { categories, bestSellers, onSale, wheels, totalProducts } = await getHomeData();
+
   return (
     <>
       {/* ===================== HERO ===================== */}
@@ -73,7 +78,7 @@ export default function HomePage() {
 
             <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-border pt-8">
               {[
-                { value: "+5.000", label: "Itens em estoque" },
+                { value: String(totalProducts), label: "Peças em catálogo" },
                 { value: "24h", label: "Despacho rápido" },
                 { value: "100%", label: "Compra segura" },
               ].map((s) => (
@@ -87,81 +92,121 @@ export default function HomePage() {
             </dl>
           </div>
 
-          {/* Painel visual (turbo / boost) */}
+          {/* Painel visual — foto real de motor */}
           <div className="relative hidden lg:block">
             <div className="relative mx-auto aspect-square w-full max-w-md -skew-x-3 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-black/40">
-              <span className="boost-glow absolute inset-0" />
-              <div className="absolute inset-0 skew-x-3 p-8">
-                <div className="flex h-full flex-col items-center justify-center gap-6">
-                  <PartIcon icon="turbo" className="size-28 text-primary" />
-                  <div className="text-center">
-                    <p className="font-mono text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                      Boost pressure
-                    </p>
-                    <p className="font-display text-5xl font-bold text-boost">1.8 bar</p>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Gauge className="size-4" />
-                    <span className="font-mono text-xs">Full boost engaged</span>
-                  </div>
-                </div>
-              </div>
+              <Image
+                src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=1600&auto=format&fit=crop"
+                alt="Motor de alta performance"
+                fill
+                priority
+                sizes="(max-width: 1024px) 0px, 28rem"
+                className="skew-x-3 scale-110 object-cover"
+              />
+              <span aria-hidden className="boost-glow pointer-events-none absolute inset-0" />
             </div>
           </div>
+        </Container>
+      </section>
+
+      {/* ===================== RODAS EM DESTAQUE ===================== */}
+      <section className="py-16">
+        <Container>
+          <div className="relative overflow-hidden rounded-2xl border border-border">
+            <Image
+              src="https://images.unsplash.com/photo-1542377281-73d08e3a10aa?q=80&w=1600&auto=format&fit=crop"
+              alt="Roda esportiva de liga leve"
+              fill
+              priority
+              sizes="(max-width: 1280px) 100vw, 1280px"
+              className="object-cover"
+            />
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/25"
+            />
+            <div className="relative flex flex-col items-start gap-4 px-8 py-14 sm:py-16 lg:px-12">
+              <Eyebrow>Destaque</Eyebrow>
+              <h2 className="max-w-xl font-display text-3xl font-bold uppercase tracking-tight sm:text-4xl">
+                Rodas para todos os projetos
+              </h2>
+              <p className="max-w-md text-pretty text-muted-foreground">
+                Esportivas, forjadas e réplicas — aro 15 ao 20.
+              </p>
+              <Button asChild size="lg" className="mt-2 gap-2">
+                <Link href="/produtos?categoria=rodas">
+                  Ver todas as rodas
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {wheels.length > 0 && (
+            <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              {wheels.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          )}
         </Container>
       </section>
 
       {/* ===================== CATEGORIAS ===================== */}
-      <section className="py-16">
-        <Container>
-          <div className="mb-8 flex items-end justify-between gap-4">
-            <div>
-              <Eyebrow>Explore</Eyebrow>
-              <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">Categorias</h2>
+      {categories.length > 0 && (
+        <section className="py-8">
+          <Container>
+            <div className="mb-8 flex items-end justify-between gap-4">
+              <div>
+                <Eyebrow>Explore</Eyebrow>
+                <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">Categorias</h2>
+              </div>
+              <Button asChild variant="ghost" size="sm" className="gap-1">
+                <Link href="/categorias">Ver todas <ArrowRight className="size-4" /></Link>
+              </Button>
             </div>
-            <Button asChild variant="ghost" size="sm" className="gap-1">
-              <Link href="/categorias">Ver todas <ArrowRight className="size-4" /></Link>
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {CATEGORIES.map((c) => (
-              <Link
-                key={c.slug}
-                href={`/produtos?categoria=${c.slug}`}
-                className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/5"
-              >
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                  <PartIcon icon={c.icon} className="size-5" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold">{c.name}</span>
-                  <span className="font-mono text-[11px] text-muted-foreground">{c.count} itens</span>
-                </span>
-              </Link>
-            ))}
-          </div>
-        </Container>
-      </section>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {categories.map((c) => (
+                <Link
+                  key={c.slug}
+                  href={`/produtos?categoria=${c.slug}`}
+                  className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/5"
+                >
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                    <PartIcon icon={c.icon} className="size-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">{c.name}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground">{c.count} itens</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* ===================== MAIS VENDIDOS ===================== */}
-      <section className="py-8">
-        <Container>
-          <div className="mb-8 flex items-end justify-between gap-4">
-            <div>
-              <Eyebrow>Top de linha</Eyebrow>
-              <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">Mais vendidos</h2>
+      {bestSellers.length > 0 && (
+        <section className="py-8">
+          <Container>
+            <div className="mb-8 flex items-end justify-between gap-4">
+              <div>
+                <Eyebrow>Top de linha</Eyebrow>
+                <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">Mais vendidos</h2>
+              </div>
+              <Button asChild variant="ghost" size="sm" className="gap-1">
+                <Link href="/produtos">Ver catálogo <ArrowRight className="size-4" /></Link>
+              </Button>
             </div>
-            <Button asChild variant="ghost" size="sm" className="gap-1">
-              <Link href="/produtos">Ver catálogo <ArrowRight className="size-4" /></Link>
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {BEST_SELLERS.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </Container>
-      </section>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              {bestSellers.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* ===================== FAIXA DE PROMOÇÃO ===================== */}
       <section className="py-12">
@@ -184,19 +229,21 @@ export default function HomePage() {
       </section>
 
       {/* ===================== OFERTAS ===================== */}
-      <section className="py-8">
-        <Container>
-          <div className="mb-8">
-            <Eyebrow>Economize</Eyebrow>
-            <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">Em promoção</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {ON_SALE.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </Container>
-      </section>
+      {onSale.length > 0 && (
+        <section className="py-8">
+          <Container>
+            <div className="mb-8">
+              <Eyebrow>Economize</Eyebrow>
+              <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">Em promoção</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              {onSale.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* ===================== MARCAS ===================== */}
       <section className="py-12">

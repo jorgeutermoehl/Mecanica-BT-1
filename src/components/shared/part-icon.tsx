@@ -9,12 +9,13 @@ import {
   Wind,
   BatteryCharging,
   Package,
+  LifeBuoy,
   type LucideIcon,
 } from "lucide-react";
-import type { IconKey } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
-const MAP: Record<IconKey, LucideIcon> = {
+/** Ícones automotivos por chave de categoria (fallback: Package). */
+const MAP: Record<string, LucideIcon> = {
   turbo: Fan,
   motor: Cog,
   freios: Disc3,
@@ -24,6 +25,7 @@ const MAP: Record<IconKey, LucideIcon> = {
   oleos: Droplets,
   escape: Wind,
   bateria: BatteryCharging,
+  rodas: LifeBuoy,
   acessorios: Package,
 };
 
@@ -31,7 +33,7 @@ export function PartIcon({
   icon,
   className,
 }: {
-  icon: IconKey;
+  icon: string;
   className?: string;
 }) {
   const Icon = MAP[icon] ?? Package;

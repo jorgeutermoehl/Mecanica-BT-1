@@ -44,3 +44,10 @@ next-env.d.ts
 # artefatos locais de dev
 .playwright-mcp/
 .next-dev.log
+
+# banco SQLite local
+prisma/*.db
+prisma/*.db-journal
+
+# prints de trabalho (os oficiais ficam em docs/screenshots)
+/screenshots/

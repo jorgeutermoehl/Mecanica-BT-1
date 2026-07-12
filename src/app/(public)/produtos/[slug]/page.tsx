@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  Star,
   Gauge,
   Wrench,
   Car,
@@ -29,14 +29,12 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import {
-  getProduct,
-  relatedProducts,
-  type MockProduct,
-  type IconKey,
-} from "@/lib/mock-data";
+import { getStoreProduct, getRelatedProducts } from "@/server/catalog";
+import type { StoreProduct } from "@/types/store";
 import { formatBRL, installment, discountPercent } from "@/lib/format";
 import { whatsappLink } from "@/lib/constants";
+
+export const dynamic = "force-dynamic";
 
 /* ------------------------------------------------------------------ */
 /* Metadata                                                            */
@@ -48,7 +46,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getStoreProduct(slug);
 
   if (!product) {
     return { title: "Produto não encontrado" };
@@ -57,14 +55,14 @@ export async function generateMetadata({
   const current = product.promoPrice ?? product.price;
   return {
     title: product.name,
-    description: `${product.name} da ${product.brand} — ${formatBRL(
+    description: `${product.name} da ${product.brand ?? product.category} — ${formatBRL(
       current,
     )}. ${product.category} de performance com garantia e nota fiscal. Compre na FullBoost Race Parts.`,
   };
 }
 
 /* ------------------------------------------------------------------ */
-/* Helpers de conteúdo (copy plausível a partir dos dados do produto)  */
+/* Helpers de apresentação (dados reais vindos do banco)               */
 /* ------------------------------------------------------------------ */
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -76,108 +74,52 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Especificações técnicas plausíveis por tipo de peça. */
-function buildSpecs(p: MockProduct): { label: string; value: string }[] {
-  const byIcon: Partial<Record<IconKey, { label: string; value: string }[]>> = {
-    turbo: [
-      { label: "Material da carcaça", value: "Alumínio billet usinado" },
-      { label: "Pressão máx. de boost", value: "1.8 bar" },
-      { label: "Rolamento", value: "Dual ball bearing" },
-      { label: "Refrigeração", value: "Água + óleo" },
-    ],
-    escape: [
-      { label: "Material", value: "Aço inox 304" },
-      { label: "Diâmetro", value: '3" (76 mm)' },
-      { label: "Acabamento", value: "Ponteira polida dupla parede" },
-      { label: "Ganho sonoro", value: "Ronco esportivo progressivo" },
-    ],
-    suspensao: [
-      { label: "Regulagem", value: "32 pontos de amortecimento" },
-      { label: "Molas", value: "Aço SAE 9254 pré-carregado" },
-      { label: "Altura", value: "Rebaixamento ajustável 30–70 mm" },
-      { label: "Corpo", value: "Alumínio anodizado anticorrosão" },
-    ],
-    freios: [
-      { label: "Pistões", value: "4 por pinça, alumínio" },
-      { label: "Disco", value: "Ventilado 330 mm ranhurado" },
-      { label: "Pastilha", value: "Composto semimetálico HP" },
-      { label: "Linha", value: "Flexível em malha de aço" },
-    ],
-    filtros: [
-      { label: "Elemento", value: "Algodão lavável multicamada" },
-      { label: "Entrada", value: "76 mm universal" },
-      { label: "Fluxo", value: "+35% vs. filtro de papel" },
-      { label: "Vida útil", value: "Lavável até 1.000.000 km" },
-    ],
-    eletrica: [
-      { label: "Eletrodo", value: "Irídio 0,6 mm" },
-      { label: "Tensão de trabalho", value: "12 V" },
-      { label: "Rosca", value: "M14 x 1.25" },
-      { label: "Índice térmico", value: "Grau 8 (frio, uso severo)" },
-    ],
-    motor: [
-      { label: "Material", value: "Liga forjada de alta resistência" },
-      { label: "Tolerância", value: "Usinagem de precisão ±0,01 mm" },
-      { label: "Aplicação", value: "Motores turbo e aspirados" },
-      { label: "Torque de aperto", value: "Conforme manual do fabricante" },
-    ],
-    oleos: [
-      { label: "Viscosidade", value: "5W40" },
-      { label: "Especificação", value: "API SN / ACEA C3" },
-      { label: "Base", value: "100% sintética" },
-      { label: "Volume", value: "1 litro" },
-    ],
-    bateria: [
-      { label: "Capacidade", value: "60 Ah" },
-      { label: "Corrente de partida", value: "600 A (CCA)" },
-      { label: "Tensão", value: "12 V" },
-      { label: "Tecnologia", value: "Livre de manutenção" },
-    ],
-  };
-
-  const specific = byIcon[p.icon] ?? [
-    { label: "Material", value: "Componente de alta performance" },
-    { label: "Acabamento", value: "Padrão racing" },
-  ];
-
-  return [
-    { label: "Código (SKU)", value: p.sku },
-    { label: "Marca", value: p.brand },
-    { label: "Categoria", value: p.category },
-    ...specific,
-    { label: "Aplicação", value: p.fitment ?? "Multiaplicação" },
-    { label: "Garantia", value: "12 meses contra defeito de fabricação" },
-    { label: "Procedência", value: "Produto original com nota fiscal" },
-  ];
-}
-
-/** Lista de veículos compatíveis plausível por tipo de peça. */
-function buildVehicles(p: MockProduct): string[] {
-  const generic = [
-    "VW Golf GTI Mk7 (2014–2020)",
-    "VW Jetta GLI 2.0 TSI (2019+)",
-    "Audi A3 Sedan 1.8 TFSI (2017+)",
-    "Honda Civic Si (2018+)",
-    "Chevrolet Cruze Turbo (2017+)",
-    "Ford Focus 2.0 (2016+)",
-  ];
-  if (p.icon === "oleos" || p.icon === "eletrica") {
-    return [
-      "Aplicação universal para motores de alta performance",
-      "VW / Audi linha TSI e TFSI",
-      "Honda linha VTEC turbo",
-      "GM / Ford linhas Ecotec e EcoBoost",
-    ];
+/** Quebra a descrição do banco em parágrafos (fallback com copy plausível). */
+function buildDescription(p: StoreProduct): string[] {
+  if (p.description) {
+    const paragraphs = p.description
+      .split(/\n+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (paragraphs.length > 0) return paragraphs;
   }
-  return generic;
+  return [
+    `${p.name} da ${p.brand ?? "FullBoost"}, desenvolvida para quem leva a preparação a sério. Peça da linha ${p.category.toLowerCase()} com controle de qualidade rigoroso para uso severo em pista e rua.`,
+  ];
 }
 
-/** Descrição longa plausível para o produto. */
-function buildDescription(p: MockProduct): string[] {
-  return [
-    `${p.name} da ${p.brand}, desenvolvida para quem leva a preparação a sério. Cada componente passa por controle de qualidade rigoroso para entregar desempenho consistente mesmo sob uso severo em pista e rua.`,
-    `Projetada para a linha ${p.category.toLowerCase()}, esta peça une materiais premium, engenharia de precisão e acabamento de alto padrão. O resultado é resposta imediata, durabilidade e ganho real de performance no seu setup.`,
-  ];
+/**
+ * Especificações técnicas: se o texto seguir o padrão
+ * "chave: valor | chave: valor", vira linhas de tabela; senão, parágrafo mono.
+ */
+function parseTechnicalSpecs(
+  specs: string | null,
+): { label: string; value: string }[] | null {
+  if (!specs || !specs.includes(" | ")) return null;
+  return specs
+    .split(" | ")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const idx = entry.indexOf(":");
+      if (idx === -1) return { label: "Especificação", value: entry };
+      return {
+        label: entry.slice(0, idx).trim(),
+        value: entry.slice(idx + 1).trim(),
+      };
+    });
+}
+
+/** Faixa de anos de uma aplicação ("2008–2020", "2016+", "—"). */
+function formatYears(app: StoreProduct["applications"][number]): string {
+  if (app.yearStart && app.yearEnd) {
+    return app.yearStart === app.yearEnd
+      ? String(app.yearStart)
+      : `${app.yearStart}–${app.yearEnd}`;
+  }
+  if (app.yearStart) return `${app.yearStart}+`;
+  if (app.yearEnd) return `até ${app.yearEnd}`;
+  return "—";
 }
 
 const HIGHLIGHTS = [
@@ -197,22 +139,36 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getStoreProduct(slug);
 
   if (!product) {
     notFound();
   }
 
-  const hasPromo = typeof product.promoPrice === "number";
+  const hasPromo = product.promoPrice !== null;
   const current = product.promoPrice ?? product.price;
   const outOfStock = product.stock <= 0;
   const lowStock = product.stock > 0 && product.stock <= 5;
-  const rating = product.rating ?? 0;
+  const brandLabel = product.brand ?? product.category;
+  const warrantyLabel =
+    product.warranty ?? "12 meses contra defeitos de fabricação";
 
-  const specs = buildSpecs(product);
-  const vehicles = buildVehicles(product);
   const description = buildDescription(product);
-  const related = relatedProducts(product);
+  const specLines = parseTechnicalSpecs(product.technicalSpecs);
+  const baseSpecs: { label: string; value: string }[] = [
+    { label: "Código (SKU)", value: product.sku },
+    { label: "Marca", value: brandLabel },
+    { label: "Categoria", value: product.category },
+    ...(product.originalCode
+      ? [{ label: "Código original", value: product.originalCode }]
+      : []),
+    ...(specLines ?? []),
+    { label: "Aplicação", value: product.fitment ?? "Multiaplicação" },
+    { label: "Garantia", value: warrantyLabel },
+    { label: "Procedência", value: "Produto original com nota fiscal" },
+  ];
+
+  const related = await getRelatedProducts(product);
 
   const faqs = [
     {
@@ -275,10 +231,12 @@ export default async function ProductPage({
             {/* ---------- Galeria ---------- */}
             <div className="flex flex-col gap-4">
               <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-carbon">
-                <span
-                  aria-hidden
-                  className="boost-glow pointer-events-none absolute inset-0"
-                />
+                {!product.image && (
+                  <span
+                    aria-hidden
+                    className="boost-glow pointer-events-none absolute inset-0"
+                  />
+                )}
                 {/* Badges sobre a galeria */}
                 <div className="absolute left-4 top-4 z-10 flex flex-col gap-2">
                   {hasPromo && (
@@ -292,48 +250,59 @@ export default async function ProductPage({
                     </span>
                   )}
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <PartIcon
-                    icon={product.icon}
-                    className="size-40 text-muted-foreground/40 sm:size-52"
+                {product.image ? (
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    className="object-cover"
                   />
-                </div>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <PartIcon
+                      icon={product.icon}
+                      className="size-40 text-muted-foreground/40 sm:size-52"
+                    />
+                  </div>
+                )}
                 <span className="absolute bottom-4 right-4 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground/70">
                   <Gauge className="size-3.5" />
                   Full boost
                 </span>
               </div>
 
-              {/* Miniaturas decorativas */}
-              <div
-                aria-hidden
-                className="grid grid-cols-4 gap-3"
-              >
-                {[0, 1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border bg-carbon transition-colors ${
-                      i === 0
-                        ? "border-primary/60"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <PartIcon
-                      icon={product.icon}
-                      className={`size-8 ${
-                        i === 0 ? "text-primary/70" : "text-muted-foreground/30"
+              {/* Miniaturas reais (apenas quando há mais de uma foto) */}
+              {product.images.length > 1 && (
+                <div className="grid grid-cols-4 gap-3">
+                  {product.images.slice(0, 4).map((url, i) => (
+                    <div
+                      key={url}
+                      className={`relative aspect-square overflow-hidden rounded-lg border bg-carbon ${
+                        i === 0
+                          ? "border-primary/60"
+                          : "border-border hover:border-primary/40"
                       }`}
-                    />
-                  </div>
-                ))}
-              </div>
+                    >
+                      <Image
+                        src={url}
+                        alt={`${product.name} — foto ${i + 1}`}
+                        fill
+                        sizes="150px"
+                        className="object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* ---------- Informações ---------- */}
             <div className="flex flex-col">
               <div className="flex items-center justify-between gap-3">
                 <span className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                  {product.brand}
+                  {brandLabel}
                 </span>
                 <span className="font-mono text-xs text-muted-foreground">
                   SKU {product.sku}
@@ -344,25 +313,20 @@ export default async function ProductPage({
                 {product.name}
               </h1>
 
-              {/* Avaliação */}
-              <div className="mt-4 flex items-center gap-2">
-                <div className="flex gap-0.5" aria-hidden>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={
-                        i < Math.round(rating)
-                          ? "size-4 fill-warning text-warning"
-                          : "size-4 text-muted-foreground/30"
-                      }
-                    />
-                  ))}
+              {/* Prova social / código original */}
+              {(product.sold > 0 || product.originalCode) && (
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-sm text-muted-foreground">
+                  {product.sold > 0 && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <BadgeCheck className="size-4 text-success" />
+                      {product.sold} vendidos
+                    </span>
+                  )}
+                  {product.originalCode && (
+                    <span>Cód. original {product.originalCode}</span>
+                  )}
                 </div>
-                <span className="font-mono text-sm text-muted-foreground">
-                  {rating.toFixed(1)}
-                  {product.sold ? ` · ${product.sold} vendidos` : ""}
-                </span>
-              </div>
+              )}
 
               {/* Preço */}
               <div className="mt-6 rounded-2xl border border-border bg-card p-6">
@@ -384,7 +348,7 @@ export default async function ProductPage({
                   ou 10x de {installment(current)} sem juros
                 </p>
 
-                {/* Estoque */}
+                {/* Estoque real */}
                 <div className="mt-4 flex items-center gap-2">
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-xs font-medium uppercase ${
@@ -475,12 +439,10 @@ export default async function ProductPage({
                 <div className="mt-5 overflow-hidden rounded-xl border border-border">
                   <table className="w-full text-sm">
                     <tbody>
-                      {specs.map((s, i) => (
+                      {baseSpecs.map((s, i) => (
                         <tr
-                          key={s.label}
-                          className={
-                            i % 2 === 0 ? "bg-card" : "bg-card/40"
-                          }
+                          key={`${s.label}-${i}`}
+                          className={i % 2 === 0 ? "bg-card" : "bg-card/40"}
                         >
                           <th
                             scope="row"
@@ -496,6 +458,11 @@ export default async function ProductPage({
                     </tbody>
                   </table>
                 </div>
+                {!specLines && product.technicalSpecs && (
+                  <p className="mt-4 rounded-xl border border-border bg-card p-4 font-mono text-sm text-muted-foreground">
+                    {product.technicalSpecs}
+                  </p>
+                )}
               </div>
 
               {/* Compatibilidade */}
@@ -515,17 +482,59 @@ export default async function ProductPage({
                     </span>
                   </p>
                 </div>
-                <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                  {vehicles.map((v) => (
-                    <li
-                      key={v}
-                      className="flex items-start gap-2.5 rounded-lg border border-border bg-card px-4 py-3 text-sm"
-                    >
-                      <Car className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                      <span>{v}</span>
-                    </li>
-                  ))}
-                </ul>
+                {product.applications.length > 0 ? (
+                  <div className="mt-4 overflow-hidden rounded-xl border border-border">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-card">
+                            <th className="border-b border-border px-4 py-3 text-left font-mono text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                              Marca
+                            </th>
+                            <th className="border-b border-border px-4 py-3 text-left font-mono text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                              Modelo
+                            </th>
+                            <th className="border-b border-border px-4 py-3 text-left font-mono text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                              Anos
+                            </th>
+                            <th className="border-b border-border px-4 py-3 text-left font-mono text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                              Motor
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {product.applications.map((app, i) => (
+                            <tr
+                              key={`${app.vehicleBrand}-${app.vehicleModel}-${i}`}
+                              className={i % 2 === 0 ? "bg-card/40" : "bg-card"}
+                            >
+                              <td className="border-b border-border px-4 py-3">
+                                <span className="inline-flex items-center gap-2">
+                                  <Car className="size-4 shrink-0 text-muted-foreground" />
+                                  {app.vehicleBrand}
+                                </span>
+                              </td>
+                              <td className="border-b border-border px-4 py-3">
+                                {app.vehicleModel}
+                              </td>
+                              <td className="border-b border-border px-4 py-3 font-mono">
+                                {formatYears(app)}
+                              </td>
+                              <td className="border-b border-border px-4 py-3 font-mono">
+                                {app.engine ?? "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+                    Multiaplicação — confirme o encaixe com o nosso time antes
+                    de comprar.
+                  </p>
+                )}
                 <p className="mt-4 text-sm text-muted-foreground">
                   Não encontrou o seu carro na lista? Confirme a compatibilidade
                   com o nosso time antes de comprar.
@@ -575,9 +584,7 @@ export default async function ProductPage({
                   </div>
                   <div className="flex items-center gap-3">
                     <ShieldCheck className="size-4 shrink-0 text-success" />
-                    <span className="text-sm">
-                      12 meses de garantia de fábrica
-                    </span>
+                    <span className="text-sm">Garantia: {warrantyLabel}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Gauge className="size-4 shrink-0 text-success" />

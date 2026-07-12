@@ -4,13 +4,17 @@ import { ArrowRight, MessageCircle } from "lucide-react";
 import { Container } from "@/components/shared/container";
 import { PartIcon } from "@/components/shared/part-icon";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { whatsappLink } from "@/lib/constants";
-import { CATEGORIES } from "@/lib/mock-data";
+import { getStoreCategories } from "@/server/catalog";
+import { cn } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Categorias",
   description:
-    "Navegue por categoria e encontre turbinas, freios, suspensão, escape e mais peças de performance para o seu projeto.",
+    "Navegue por categoria e encontre rodas, turbinas, freios, suspensão, escape e mais peças de performance para o seu projeto.",
 };
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -22,27 +26,14 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Descrições editoriais por categoria (copy específica de performance). */
-const CATEGORY_INFO: Record<string, string> = {
-  turbo:
-    "Turbinas, intercoolers, wastegates e válvulas de prioridade para mais pressão e resposta de boost.",
-  motor:
-    "Embreagens reforçadas, bicos de alta vazão e internos preparados para segurar potência com segurança.",
-  escape:
-    "Cat-backs, downpipes e ponteiras em inox que liberam fluxo e entregam sonoridade esportiva.",
-  freios:
-    "Big brakes, discos ventilados e pastilhas de alta fricção para frear firme, mesmo no limite.",
-  suspensao:
-    "Coilovers, kits de molas e barras estabilizadoras para acerto fino de altura e rodagem.",
-  filtros:
-    "Filtros cônicos, kits de admissão e intakes que puxam mais ar frio para dentro do motor.",
-  eletrica:
-    "Velas iridium, cabos, bobinas e baterias de performance para faísca forte e partida garantida.",
-  oleos:
-    "Óleos sintéticos, fluidos de freio e aditivos formulados para aguentar alta temperatura e giro.",
-};
+/** Frase genérica quando a categoria ainda não tem descrição cadastrada. */
+function fallbackDescription(name: string): string {
+  return `Seleção de ${name.toLowerCase()} de performance com procedência garantida para o seu setup.`;
+}
 
-export default function CategoriasPage() {
+export default async function CategoriasPage() {
+  const categories = await getStoreCategories();
+
   return (
     <>
       {/* ===================== CABEÇALHO ===================== */}
@@ -68,30 +59,67 @@ export default function CategoriasPage() {
       <section className="py-16">
         <Container>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <Link
-                key={c.slug}
+                key={c.id}
                 href={`/produtos?categoria=${c.slug}`}
-                className="group relative flex flex-col rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10"
+                className={cn(
+                  "group relative flex flex-col rounded-2xl border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10",
+                  c.featured
+                    ? "border-primary/60 shadow-lg shadow-primary/10 sm:col-span-2 sm:p-8"
+                    : "border-border",
+                )}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <span className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <PartIcon icon={c.icon} className="size-7" />
+                {c.featured && (
+                  <span
+                    aria-hidden
+                    className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-24 rounded-t-2xl opacity-70"
+                  />
+                )}
+
+                <div className="relative flex items-start justify-between gap-4">
+                  <span
+                    className={cn(
+                      "flex shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground",
+                      c.featured ? "size-16" : "size-14",
+                    )}
+                  >
+                    <PartIcon
+                      icon={c.icon}
+                      className={c.featured ? "size-8" : "size-7"}
+                    />
                   </span>
-                  <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {c.count} itens
+                  <span className="flex items-center gap-2">
+                    {c.featured && (
+                      <Badge className="font-mono text-[11px] uppercase tracking-wide">
+                        Destaque
+                      </Badge>
+                    )}
+                    <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+                      {c.count} {c.count === 1 ? "item" : "itens"}
+                    </span>
                   </span>
                 </div>
 
-                <h2 className="mt-5 font-display text-xl font-bold uppercase tracking-tight transition-colors group-hover:text-primary">
+                <h2
+                  className={cn(
+                    "relative mt-5 font-display font-bold uppercase tracking-tight transition-colors group-hover:text-primary",
+                    c.featured ? "text-2xl" : "text-xl",
+                  )}
+                >
                   {c.name}
                 </h2>
 
-                <p className="mt-2 flex-1 text-sm text-muted-foreground">
-                  {CATEGORY_INFO[c.slug]}
+                <p
+                  className={cn(
+                    "relative mt-2 flex-1 text-sm text-muted-foreground",
+                    c.featured && "max-w-xl",
+                  )}
+                >
+                  {c.description ?? fallbackDescription(c.name)}
                 </p>
 
-                <span className="mt-5 inline-flex items-center gap-1.5 font-mono text-xs font-medium uppercase tracking-wide text-primary">
+                <span className="relative mt-5 inline-flex items-center gap-1.5 font-mono text-xs font-medium uppercase tracking-wide text-primary">
                   Ver produtos
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
                 </span>

@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   UserRound,
@@ -12,7 +14,7 @@ import {
   Lock,
   ShieldCheck,
   Tag,
-  Check,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -22,10 +24,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useCart } from "@/components/cart/cart-provider";
+import { placeOrderAction } from "@/app/actions/checkout";
+import { PAYMENT_METHOD_LABEL, type CheckoutInput } from "@/lib/validations";
 import { cn } from "@/lib/utils";
 import { formatBRL, installment } from "@/lib/format";
-import { getProduct } from "@/lib/mock-data";
+import type { CartItem } from "@/types/store";
+
+/** Regra de frete espelhada do servidor (src/server/orders.ts). */
+const FREE_SHIPPING_THRESHOLD = 599;
+const FLAT_SHIPPING = 34.9;
 
 /* ---------- Rótulo de seção (padrão da home) ---------- */
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -37,27 +47,13 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ---------- Carrinho mock ---------- */
-const CART = [
-  { product: getProduct("turbina-billet-050-antilag")!, qty: 1 },
-  { product: getProduct("intercooler-frontal-race-600x300")!, qty: 1 },
-  { product: getProduct("vela-ignicao-iridium-racing")!, qty: 4 },
-];
+/* ---------- Métodos de pagamento aceitos na loja ---------- */
+type Method = CheckoutInput["paymentMethod"];
 
-const unitPrice = (p: (typeof CART)[number]["product"]) => p.promoPrice ?? p.price;
-
-/* ---------- Métodos de pagamento ---------- */
-type Method = "pix" | "cartao" | "boleto";
-
-const PAYMENTS: {
-  value: Method;
-  label: string;
-  hint: string;
-  icon: LucideIcon;
-}[] = [
-  { value: "pix", label: "Pix", hint: "Aprovação na hora · 5% de desconto", icon: QrCode },
-  { value: "cartao", label: "Cartão de crédito", hint: "Em até 12x sem juros", icon: CreditCard },
-  { value: "boleto", label: "Boleto bancário", hint: "Compensação em até 3 dias úteis", icon: Barcode },
+const PAYMENTS: { value: Method; hint: string; icon: LucideIcon }[] = [
+  { value: "PIX", hint: "Aprovação na hora — pedido segue direto para separação", icon: QrCode },
+  { value: "CREDIT_CARD", hint: "Em até 10x sem juros", icon: CreditCard },
+  { value: "BOLETO", hint: "Compensação em até 3 dias úteis", icon: Barcode },
 ];
 
 /* ---------- Card de seção numerada ---------- */
@@ -109,34 +105,122 @@ function Field({
   );
 }
 
+/* ---------- Miniatura do item no resumo ---------- */
+function SummaryThumb({ item }: { item: CartItem }) {
+  const [imgError, setImgError] = React.useState(false);
+  const showImage = item.image && !imgError;
+
+  return (
+    <span className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-carbon">
+      {showImage ? (
+        <Image
+          src={item.image!}
+          alt={item.name}
+          fill
+          sizes="48px"
+          className="object-cover"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <PartIcon icon={item.icon} className="size-6 text-muted-foreground/50" />
+      )}
+    </span>
+  );
+}
+
+/* ---------- Skeleton (antes da hidratação do carrinho) ---------- */
+function CheckoutSkeleton() {
+  return (
+    <section className="py-12 lg:py-16">
+      <Container>
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="mt-4 h-9 w-72" />
+        <div className="mt-8 grid items-start gap-8 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_400px]">
+          <div className="space-y-6">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-56 w-full rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-[28rem] w-full rounded-xl" />
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------- *
+ * Página
+ * ---------------------------------------------------------------- */
+
 export default function CheckoutPage() {
-  const [method, setMethod] = React.useState<Method>("pix");
+  const router = useRouter();
+  const { items, count, subtotal, hydrated, clear } = useCart();
+  const [method, setMethod] = React.useState<Method>("PIX");
+  const [submitting, setSubmitting] = React.useState(false);
+  /** Evita o redirect para /carrinho quando o clear() acontece após a venda. */
+  const placedRef = React.useRef(false);
 
-  const subtotal = CART.reduce((sum, item) => sum + unitPrice(item.product) * item.qty, 0);
-  const itemCount = CART.reduce((sum, item) => sum + item.qty, 0);
-  const shipping = 0; // frete grátis nesta compra
-  const pixDiscount = method === "pix" ? subtotal * 0.05 : 0;
-  const total = subtotal + shipping - pixDiscount;
+  React.useEffect(() => {
+    if (hydrated && items.length === 0 && !placedRef.current) {
+      router.replace("/carrinho");
+    }
+  }, [hydrated, items.length, router]);
 
-  function calcularFrete() {
-    toast.success("Frete grátis para o seu CEP", {
-      description: "Entrega estimada em 3 a 5 dias úteis.",
-    });
-  }
+  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
+  const shipping = freeShipping ? 0 : FLAT_SHIPPING;
+  const total = subtotal + shipping;
 
-  function aplicarCupom() {
-    toast.info("Cupom inválido ou expirado", {
-      description: "Confira o código e tente novamente.",
-    });
-  }
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const label = PAYMENTS.find((p) => p.value === method)?.label ?? "";
-    toast.success("Pedido realizado com sucesso!", {
-      description: `Pagamento via ${label} · ${formatBRL(total)}. Enviaremos a confirmação por e-mail.`,
-    });
+    if (submitting || items.length === 0) return;
+
+    const data = new FormData(e.currentTarget);
+    const get = (key: string) => String(data.get(key) ?? "").trim();
+
+    const input: CheckoutInput = {
+      customer: {
+        name: get("name"),
+        email: get("email"),
+        phone: get("phone"),
+        document: get("document"),
+      },
+      shipping: {
+        zipCode: get("zipCode"),
+        street: get("street"),
+        number: get("number"),
+        complement: get("complement"),
+        district: get("district"),
+        city: get("city"),
+        state: get("state").toUpperCase(),
+      },
+      paymentMethod: method,
+      couponCode: get("couponCode").toUpperCase(),
+      items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+    };
+
+    setSubmitting(true);
+    try {
+      const r = await placeOrderAction(input);
+      if (r.ok) {
+        placedRef.current = true;
+        clear();
+        toast.success("Pedido realizado com sucesso!", {
+          description: `Pedido ${r.orderNumber} · ${formatBRL(r.total)}`,
+        });
+        router.push(
+          `/pedido-confirmado?numero=${encodeURIComponent(r.orderNumber)}&total=${r.total}&status=${r.status}`,
+        );
+        return; // mantém o botão travado durante a navegação
+      }
+      toast.error("Não foi possível concluir o pedido", { description: r.error });
+    } catch {
+      toast.error("Falha de conexão", { description: "Tente novamente em instantes." });
+    }
+    setSubmitting(false);
   }
+
+  if (!hydrated) return <CheckoutSkeleton />;
+  if (items.length === 0) return <CheckoutSkeleton />; // redirecionando para /carrinho
 
   return (
     <section className="py-12 lg:py-16">
@@ -144,11 +228,11 @@ export default function CheckoutPage() {
         {/* Cabeçalho */}
         <div className="mb-8">
           <Link
-            href="/produtos"
+            href="/carrinho"
             className="mb-5 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="size-4" />
-            Voltar às compras
+            Voltar ao carrinho
           </Link>
           <Eyebrow>Checkout</Eyebrow>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
@@ -172,114 +256,123 @@ export default function CheckoutPage() {
             <SectionCard step="01" title="Seus dados" icon={UserRound}>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
-                  id="nome"
+                  id="name"
+                  name="name"
                   label="Nome completo"
                   className="sm:col-span-2"
                   placeholder="Ex.: Rafael Menezes"
                   autoComplete="name"
+                  minLength={3}
                   required
                 />
                 <Field
                   id="email"
+                  name="email"
                   label="E-mail"
                   className="sm:col-span-2"
                   type="email"
                   placeholder="voce@email.com"
                   autoComplete="email"
-                  hint="Enviaremos a nota fiscal e o rastreio aqui."
+                  hint="Enviaremos a confirmação e o rastreio aqui."
                   required
                 />
                 <Field
-                  id="cpf"
-                  label="CPF"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="000.000.000-00"
-                  autoComplete="off"
-                  required
-                />
-                <Field
-                  id="celular"
+                  id="phone"
+                  name="phone"
                   label="Celular / WhatsApp"
                   type="tel"
                   inputMode="tel"
                   placeholder="(00) 00000-0000"
                   autoComplete="tel"
+                  minLength={8}
                   required
+                />
+                <Field
+                  id="document"
+                  name="document"
+                  label="CPF/CNPJ (opcional)"
+                  inputMode="numeric"
+                  placeholder="Somente números"
+                  autoComplete="off"
+                  maxLength={20}
                 />
               </div>
             </SectionCard>
 
             {/* 02 — Entrega */}
             <SectionCard step="02" title="Entrega" icon={Truck}>
-              <div className="space-y-4">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="cep">CEP</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="cep"
-                      inputMode="numeric"
-                      placeholder="00000-000"
-                      autoComplete="postal-code"
-                      className="max-w-[10rem]"
-                      required
-                    />
-                    <Button type="button" variant="outline" size="sm" onClick={calcularFrete}>
-                      Calcular
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-6">
-                  <Field
-                    id="endereco"
-                    label="Endereço"
-                    className="sm:col-span-4"
-                    placeholder="Rua, avenida..."
-                    autoComplete="address-line1"
-                    required
-                  />
-                  <Field
-                    id="numero"
-                    label="Número"
-                    className="sm:col-span-2"
-                    inputMode="numeric"
-                    placeholder="1000"
-                    required
-                  />
-                  <Field
-                    id="complemento"
-                    label="Complemento"
-                    className="sm:col-span-3"
-                    placeholder="Apto, bloco, referência (opcional)"
-                    autoComplete="address-line2"
-                  />
-                  <Field
-                    id="bairro"
-                    label="Bairro"
-                    className="sm:col-span-3"
-                    placeholder="Centro"
-                    required
-                  />
-                  <Field
-                    id="cidade"
-                    label="Cidade"
-                    className="sm:col-span-4"
-                    placeholder="Sua cidade"
-                    autoComplete="address-level2"
-                    required
-                  />
-                  <Field
-                    id="uf"
-                    label="UF"
-                    className="sm:col-span-2"
-                    placeholder="SP"
-                    maxLength={2}
-                    autoComplete="address-level1"
-                    inputClassName="uppercase"
-                    required
-                  />
-                </div>
+              <div className="grid gap-4 sm:grid-cols-6">
+                <Field
+                  id="zipCode"
+                  name="zipCode"
+                  label="CEP"
+                  className="sm:col-span-2"
+                  inputMode="numeric"
+                  placeholder="00000-000"
+                  autoComplete="postal-code"
+                  minLength={8}
+                  maxLength={9}
+                  required
+                />
+                <Field
+                  id="street"
+                  name="street"
+                  label="Endereço"
+                  className="sm:col-span-4"
+                  placeholder="Rua, avenida..."
+                  autoComplete="address-line1"
+                  minLength={3}
+                  required
+                />
+                <Field
+                  id="number"
+                  name="number"
+                  label="Número"
+                  className="sm:col-span-2"
+                  placeholder="1000"
+                  maxLength={20}
+                  required
+                />
+                <Field
+                  id="complement"
+                  name="complement"
+                  label="Complemento"
+                  className="sm:col-span-4"
+                  placeholder="Apto, bloco, referência (opcional)"
+                  autoComplete="address-line2"
+                  maxLength={80}
+                />
+                <Field
+                  id="district"
+                  name="district"
+                  label="Bairro"
+                  className="sm:col-span-2"
+                  placeholder="Centro"
+                  maxLength={80}
+                />
+                <Field
+                  id="city"
+                  name="city"
+                  label="Cidade"
+                  className="sm:col-span-3"
+                  placeholder="Sua cidade"
+                  autoComplete="address-level2"
+                  minLength={2}
+                  required
+                />
+                <Field
+                  id="state"
+                  name="state"
+                  label="UF"
+                  className="sm:col-span-1"
+                  placeholder="SP"
+                  maxLength={2}
+                  pattern="[A-Za-z]{2}"
+                  title="Sigla do estado com 2 letras (ex.: SP)"
+                  autoComplete="address-level1"
+                  inputClassName="uppercase"
+                  required
+                />
               </div>
             </SectionCard>
 
@@ -291,7 +384,7 @@ export default function CheckoutPage() {
                 aria-label="Forma de pagamento"
                 className="gap-3"
               >
-                {PAYMENTS.map(({ value, label, hint, icon: Icon }) => {
+                {PAYMENTS.map(({ value, hint, icon: Icon }) => {
                   const active = method === value;
                   return (
                     <Label
@@ -312,89 +405,20 @@ export default function CheckoutPage() {
                         )}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold">{label}</span>
+                        <span className="block text-sm font-semibold">
+                          {PAYMENT_METHOD_LABEL[value]}
+                        </span>
                         <span className="font-mono text-[11px] text-muted-foreground">{hint}</span>
                       </span>
                     </Label>
                   );
                 })}
               </RadioGroup>
-
-              {/* Painel dinâmico por método */}
-              <div className="mt-5">
-                {method === "pix" && (
-                  <div className="flex items-start gap-4 rounded-lg border border-border bg-muted/40 p-4">
-                    <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-background text-primary ring-1 ring-border">
-                      <QrCode className="size-8" />
-                    </span>
-                    <div className="text-sm">
-                      <p className="font-semibold">Pague com Pix e ganhe 5% de desconto</p>
-                      <p className="mt-1 text-muted-foreground">
-                        Ao finalizar, geramos o QR Code para pagamento imediato. A confirmação é
-                        automática e o pedido segue para separação na hora.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {method === "cartao" && (
-                  <div className="grid gap-4 sm:grid-cols-6">
-                    <Field
-                      id="card-number"
-                      label="Número do cartão"
-                      className="sm:col-span-6"
-                      inputMode="numeric"
-                      placeholder="0000 0000 0000 0000"
-                      autoComplete="cc-number"
-                    />
-                    <Field
-                      id="card-name"
-                      label="Nome impresso no cartão"
-                      className="sm:col-span-6"
-                      placeholder="Como está no cartão"
-                      autoComplete="cc-name"
-                    />
-                    <Field
-                      id="card-exp"
-                      label="Validade"
-                      className="sm:col-span-2"
-                      placeholder="MM/AA"
-                      autoComplete="cc-exp"
-                    />
-                    <Field
-                      id="card-cvv"
-                      label="CVV"
-                      className="sm:col-span-2"
-                      inputMode="numeric"
-                      placeholder="000"
-                      autoComplete="cc-csc"
-                    />
-                    <Field
-                      id="card-parcelas"
-                      label="Parcelas"
-                      className="sm:col-span-2"
-                      defaultValue={`12x de ${installment(total, 12)}`}
-                      hint="Até 12x sem juros"
-                      readOnly
-                    />
-                  </div>
-                )}
-
-                {method === "boleto" && (
-                  <div className="flex items-start gap-4 rounded-lg border border-border bg-muted/40 p-4">
-                    <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-background text-foreground ring-1 ring-border">
-                      <Barcode className="size-8" />
-                    </span>
-                    <div className="text-sm">
-                      <p className="font-semibold">Boleto gerado ao finalizar o pedido</p>
-                      <p className="mt-1 text-muted-foreground">
-                        O prazo de entrega começa a contar após a compensação, que leva até 3 dias
-                        úteis. O boleto vence em 2 dias.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <p className="mt-4 font-mono text-[11px] text-muted-foreground">
+                {method === "BOLETO"
+                  ? "O pedido fica aguardando pagamento até a compensação do boleto."
+                  : "Pagamento aprovado na hora — o pedido já entra na fila de separação."}
+              </p>
             </SectionCard>
           </div>
 
@@ -406,43 +430,50 @@ export default function CheckoutPage() {
                   Resumo do pedido
                 </h2>
                 <span className="font-mono text-xs text-muted-foreground">
-                  {itemCount} {itemCount === 1 ? "item" : "itens"}
+                  {count} {count === 1 ? "item" : "itens"}
                 </span>
               </div>
 
-              {/* Itens */}
-              <ul className="space-y-4">
-                {CART.map(({ product, qty }) => (
-                  <li key={product.id} className="flex items-center gap-3">
-                    <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-carbon">
-                      <PartIcon icon={product.icon} className="size-7 text-muted-foreground/50" />
-                    </span>
+              {/* Itens reais do carrinho */}
+              <ul className="max-h-72 space-y-4 overflow-y-auto pr-1">
+                {items.map((item) => (
+                  <li key={item.productId} className="flex items-center gap-3">
+                    <SummaryThumb item={item} />
                     <div className="min-w-0 flex-1">
-                      <p className="line-clamp-1 text-sm font-medium">{product.name}</p>
+                      <p className="line-clamp-1 text-sm font-medium">{item.name}</p>
                       <p className="font-mono text-[11px] text-muted-foreground">
-                        {product.brand} · Qtd {qty}
+                        {item.quantity} × {formatBRL(item.price)}
                       </p>
                     </div>
-                    <span className="shrink-0 font-mono text-sm font-medium">
-                      {formatBRL(unitPrice(product) * qty)}
+                    <span className="shrink-0 font-mono text-sm font-medium tabular-nums">
+                      {formatBRL(item.price * item.quantity)}
                     </span>
                   </li>
                 ))}
               </ul>
 
-              {/* Cupom */}
-              <div className="mt-5 flex items-center gap-2">
-                <div className="relative flex-1">
+              {/* Cupom (desconto calculado no servidor) */}
+              <div className="mt-5">
+                <Label
+                  htmlFor="couponCode"
+                  className="text-xs uppercase tracking-wide text-muted-foreground"
+                >
+                  Cupom de desconto
+                </Label>
+                <div className="relative mt-1.5">
                   <Tag className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    aria-label="Cupom de desconto"
-                    placeholder="Cupom de desconto"
-                    className="pl-8"
+                    id="couponCode"
+                    name="couponCode"
+                    placeholder="Ex.: BOOST10"
+                    autoComplete="off"
+                    maxLength={30}
+                    className="pl-8 font-mono uppercase placeholder:normal-case placeholder:tracking-normal"
                   />
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={aplicarCupom}>
-                  Aplicar
-                </Button>
+                <p className="mt-1.5 font-mono text-[11px] text-muted-foreground">
+                  Validado ao finalizar — o desconto é calculado no servidor.
+                </p>
               </div>
 
               <Separator className="my-5" />
@@ -451,38 +482,54 @@ export default function CheckoutPage() {
               <dl className="space-y-2.5 text-sm">
                 <div className="flex items-center justify-between">
                   <dt className="text-muted-foreground">Subtotal</dt>
-                  <dd className="font-mono">{formatBRL(subtotal)}</dd>
+                  <dd className="font-mono tabular-nums">{formatBRL(subtotal)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-muted-foreground">Frete</dt>
-                  <dd className="font-mono font-medium text-success">Grátis</dd>
+                  <dd className="font-mono tabular-nums">
+                    {freeShipping ? (
+                      <span className="font-medium text-success">Grátis</span>
+                    ) : (
+                      formatBRL(FLAT_SHIPPING)
+                    )}
+                  </dd>
                 </div>
-                {pixDiscount > 0 && (
-                  <div className="flex items-center justify-between">
-                    <dt className="text-muted-foreground">Desconto Pix (5%)</dt>
-                    <dd className="font-mono text-success">- {formatBRL(pixDiscount)}</dd>
-                  </div>
-                )}
               </dl>
 
               <Separator className="my-5" />
 
               <div className="flex items-end justify-between">
-                <span className="font-display text-sm font-bold uppercase tracking-tight">Total</span>
+                <span className="font-display text-sm font-bold uppercase tracking-tight">
+                  Total estimado
+                </span>
                 <div className="text-right">
                   <span className="font-display text-2xl font-bold text-foreground">
                     {formatBRL(total)}
                   </span>
                   <p className="font-mono text-[11px] text-muted-foreground">
-                    ou 12x de {installment(total, 12)}
+                    ou 10x de {installment(total)} sem juros
                   </p>
                 </div>
               </div>
 
               {/* Botão finalizar */}
-              <Button type="submit" size="lg" className="mt-5 h-11 w-full gap-2 text-sm">
-                <Lock className="size-4" />
-                Finalizar pedido
+              <Button
+                type="submit"
+                size="lg"
+                disabled={submitting}
+                className="mt-5 h-12 w-full gap-2 text-sm"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Processando pedido...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="size-4" />
+                    Finalizar pedido
+                  </>
+                )}
               </Button>
 
               {/* Selos de segurança */}
@@ -497,9 +544,8 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <p className="mt-4 flex items-center justify-center gap-1.5 text-center font-mono text-[11px] text-muted-foreground">
-                <Check className="size-3.5 text-success" />
-                Dados criptografados de ponta a ponta
+              <p className="mt-4 text-center font-mono text-[11px] text-muted-foreground">
+                Preços e estoque são revalidados no servidor ao finalizar.
               </p>
             </div>
           </aside>

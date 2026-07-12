@@ -44,7 +44,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { PRODUCTS, CATEGORIES, BRANDS } from "@/lib/mock-data";
+import type { StoreCategory, StoreProduct } from "@/types/store";
 import { whatsappLink } from "@/lib/constants";
 
 /* ---------- Configurações de filtro / ordenação ---------- */
@@ -73,13 +73,10 @@ const PRICE_RANGES: { id: string; label: string; min: number; max: number }[] = 
   { id: "gt5000", label: "Acima de R$ 5.000", min: 5000, max: Infinity },
 ];
 
-// Contagens reais derivadas do catálogo mock (facetas honestas com os dados).
-const CAT_COUNTS: Record<string, number> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.slug, PRODUCTS.filter((p) => p.categorySlug === c.slug).length]),
-);
-const BRAND_COUNTS: Record<string, number> = Object.fromEntries(
-  BRANDS.map((b) => [b, PRODUCTS.filter((p) => p.brand === b).length]),
-);
+/** Preço efetivo (promoção vence o preço cheio). */
+function priceOf(p: StoreProduct) {
+  return p.promoPrice ?? p.price;
+}
 
 function toggle(list: string[], value: string): string[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -100,6 +97,10 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 
 type FilterPanelProps = {
   idPrefix: string;
+  categories: StoreCategory[];
+  catCounts: Record<string, number>;
+  brandOptions: string[];
+  brandCounts: Record<string, number>;
   cats: string[];
   setCats: (v: string[]) => void;
   brands: string[];
@@ -124,6 +125,10 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 function FilterPanel({
   idPrefix,
+  categories,
+  catCounts,
+  brandOptions,
+  brandCounts,
   cats,
   setCats,
   brands,
@@ -161,7 +166,7 @@ function FilterPanel({
         <div className="py-5 first:pt-0">
           <SectionTitle>Categoria</SectionTitle>
           <div className="flex flex-col gap-0.5">
-            {CATEGORIES.map((c) => {
+            {categories.map((c) => {
               const id = `${idPrefix}-cat-${c.slug}`;
               return (
                 <div key={c.slug} className="flex items-center gap-2.5 py-1">
@@ -176,7 +181,7 @@ function FilterPanel({
                   >
                     <span>{c.name}</span>
                     <span className="font-mono text-xs text-muted-foreground">
-                      {CAT_COUNTS[c.slug]}
+                      {catCounts[c.slug] ?? 0}
                     </span>
                   </label>
                 </div>
@@ -186,32 +191,34 @@ function FilterPanel({
         </div>
 
         {/* Marca */}
-        <div className="py-5">
-          <SectionTitle>Marca</SectionTitle>
-          <div className="flex flex-col gap-0.5">
-            {BRANDS.map((b) => {
-              const id = `${idPrefix}-brand-${b.replace(/\s+/g, "-").toLowerCase()}`;
-              return (
-                <div key={b} className="flex items-center gap-2.5 py-1">
-                  <Checkbox
-                    id={id}
-                    checked={brands.includes(b)}
-                    onCheckedChange={() => setBrands(toggle(brands, b))}
-                  />
-                  <label
-                    htmlFor={id}
-                    className="flex flex-1 cursor-pointer items-center justify-between text-sm"
-                  >
-                    <span>{b}</span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {BRAND_COUNTS[b]}
-                    </span>
-                  </label>
-                </div>
-              );
-            })}
+        {brandOptions.length > 0 && (
+          <div className="py-5">
+            <SectionTitle>Marca</SectionTitle>
+            <div className="flex flex-col gap-0.5">
+              {brandOptions.map((b) => {
+                const id = `${idPrefix}-brand-${b.replace(/\s+/g, "-").toLowerCase()}`;
+                return (
+                  <div key={b} className="flex items-center gap-2.5 py-1">
+                    <Checkbox
+                      id={id}
+                      checked={brands.includes(b)}
+                      onCheckedChange={() => setBrands(toggle(brands, b))}
+                    />
+                    <label
+                      htmlFor={id}
+                      className="flex flex-1 cursor-pointer items-center justify-between text-sm"
+                    >
+                      <span>{b}</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {brandCounts[b] ?? 0}
+                      </span>
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Faixa de preço */}
         <div className="py-5">
@@ -270,7 +277,13 @@ function FilterPanel({
 
 /* ---------- Catálogo ---------- */
 
-export function Catalog({ initialCategory }: { initialCategory?: string }) {
+type CatalogProps = {
+  products: StoreProduct[];
+  categories: StoreCategory[];
+  initialCategory?: string;
+};
+
+export function Catalog({ products, categories, initialCategory }: CatalogProps) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortId>("relevancia");
   const [cats, setCats] = useState<string[]>(
@@ -281,6 +294,29 @@ export function Catalog({ initialCategory }: { initialCategory?: string }) {
   const [onlyPromo, setOnlyPromo] = useState(false);
   const [inStock, setInStock] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Facetas honestas com os dados: contagens derivadas do catálogo real.
+  const catCounts = useMemo<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    for (const p of products) {
+      counts[p.categorySlug] = (counts[p.categorySlug] ?? 0) + 1;
+    }
+    return counts;
+  }, [products]);
+
+  const { brandOptions, brandCounts } = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of products) {
+      if (!p.brand) continue;
+      counts[p.brand] = (counts[p.brand] ?? 0) + 1;
+    }
+    return {
+      brandOptions: Object.keys(counts).sort((a, b) =>
+        a.localeCompare(b, "pt-BR"),
+      ),
+      brandCounts: counts,
+    };
+  }, [products]);
 
   const activeCount =
     cats.length +
@@ -303,19 +339,17 @@ export function Catalog({ initialCategory }: { initialCategory?: string }) {
     const q = query.trim().toLowerCase();
     const range = PRICE_RANGES.find((r) => r.id === priceId) ?? PRICE_RANGES[0];
 
-    const priceOf = (p: (typeof PRODUCTS)[number]) => p.promoPrice ?? p.price;
-
-    const list = PRODUCTS.filter((p) => {
+    const list = products.filter((p) => {
       const price = priceOf(p);
       if (q) {
         const haystack =
-          `${p.name} ${p.sku} ${p.fitment ?? ""} ${p.brand}`.toLowerCase();
+          `${p.name} ${p.sku} ${p.fitment ?? ""} ${p.brand ?? ""}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       if (cats.length && !cats.includes(p.categorySlug)) return false;
-      if (brands.length && !brands.includes(p.brand)) return false;
+      if (brands.length && (!p.brand || !brands.includes(p.brand))) return false;
       if (price < range.min || price > range.max) return false;
-      if (onlyPromo && typeof p.promoPrice !== "number") return false;
+      if (onlyPromo && p.promoPrice === null) return false;
       if (inStock && p.stock <= 0) return false;
       return true;
     });
@@ -326,19 +360,14 @@ export function Catalog({ initialCategory }: { initialCategory?: string }) {
       case "maior-preco":
         return [...list].sort((a, b) => priceOf(b) - priceOf(a));
       case "mais-vendidos":
-        return [...list].sort((a, b) => (b.sold ?? 0) - (a.sold ?? 0));
+        return [...list].sort((a, b) => b.sold - a.sold);
       case "novidades":
-        return [...list].sort(
-          (a, b) => Number(!!b.isNew) - Number(!!a.isNew),
-        );
+        return [...list].sort((a, b) => Number(b.isNew) - Number(a.isNew));
       default:
-        return [...list].sort(
-          (a, b) =>
-            Number(!!b.bestSeller) - Number(!!a.bestSeller) ||
-            (b.sold ?? 0) - (a.sold ?? 0),
-        );
+        // Relevância = ordem em que o servidor entregou o catálogo.
+        return list;
     }
-  }, [query, cats, brands, priceId, onlyPromo, inStock, sort]);
+  }, [products, query, cats, brands, priceId, onlyPromo, inStock, sort]);
 
   return (
     <Container className="py-10 lg:py-14">
@@ -363,8 +392,8 @@ export function Catalog({ initialCategory }: { initialCategory?: string }) {
             Produtos
           </h1>
           <p className="font-mono text-sm text-muted-foreground">
-            {filtered.length} de {PRODUCTS.length}{" "}
-            {PRODUCTS.length === 1 ? "produto" : "produtos"}
+            {filtered.length} de {products.length}{" "}
+            {products.length === 1 ? "produto" : "produtos"}
           </p>
         </div>
       </div>
@@ -378,6 +407,10 @@ export function Catalog({ initialCategory }: { initialCategory?: string }) {
           <div className="sticky top-24">
             <FilterPanel
               idPrefix="desktop"
+              categories={categories}
+              catCounts={catCounts}
+              brandOptions={brandOptions}
+              brandCounts={brandCounts}
               cats={cats}
               setCats={setCats}
               brands={brands}
@@ -446,6 +479,10 @@ export function Catalog({ initialCategory }: { initialCategory?: string }) {
                   <div className="px-4 py-2">
                     <FilterPanel
                       idPrefix="mobile"
+                      categories={categories}
+                      catCounts={catCounts}
+                      brandOptions={brandOptions}
+                      brandCounts={brandCounts}
                       cats={cats}
                       setCats={setCats}
                       brands={brands}

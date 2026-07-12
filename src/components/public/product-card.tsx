@@ -1,49 +1,61 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
-import { ShoppingCart, Star } from "lucide-react";
-import { toast } from "sonner";
+import Image from "next/image";
+import { ShoppingCart } from "lucide-react";
 import { PartIcon } from "@/components/shared/part-icon";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/components/cart/cart-provider";
 import { cn } from "@/lib/utils";
 import { formatBRL, installment, discountPercent } from "@/lib/format";
-import type { MockProduct } from "@/lib/mock-data";
+import type { StoreProduct } from "@/types/store";
 
-export function ProductCard({ product }: { product: MockProduct }) {
-  const hasPromo = typeof product.promoPrice === "number";
+export function ProductCard({ product }: { product: StoreProduct }) {
+  const { addProduct } = useCart();
+  const [imgError, setImgError] = React.useState(false);
+
+  const hasPromo = product.promoPrice !== null;
   const current = product.promoPrice ?? product.price;
   const outOfStock = product.stock <= 0;
   const lowStock = product.stock > 0 && product.stock <= 5;
-
-  function addToCart() {
-    if (outOfStock) return;
-    toast.success("Adicionado ao carrinho", {
-      description: product.name,
-    });
-  }
+  const showImage = product.image && !imgError;
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10">
-      {/* Imagem / painel */}
+      {/* Imagem do produto */}
       <Link
         href={`/produtos/${product.slug}`}
         className="relative block aspect-square overflow-hidden bg-carbon"
         aria-label={product.name}
       >
-        <span className="boost-glow absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        <span className="absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
-          <PartIcon icon={product.icon} className="size-20 text-muted-foreground/40" />
-        </span>
+        {showImage ? (
+          <Image
+            src={product.image!}
+            alt={product.name}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <>
+            <span className="boost-glow absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <span className="absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
+              <PartIcon icon={product.icon} className="size-20 text-muted-foreground/40" />
+            </span>
+          </>
+        )}
 
         {/* Badges */}
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
           {hasPromo && (
-            <span className="rounded bg-primary px-2 py-0.5 font-mono text-[11px] font-bold text-primary-foreground">
+            <span className="rounded bg-primary px-2 py-0.5 font-mono text-[11px] font-bold text-primary-foreground shadow-sm">
               -{discountPercent(product.price, product.promoPrice!)}%
             </span>
           )}
           {product.isNew && (
-            <span className="rounded bg-boost px-2 py-0.5 font-mono text-[11px] font-bold text-white">
+            <span className="rounded bg-boost px-2 py-0.5 font-mono text-[11px] font-bold text-white shadow-sm">
               NOVO
             </span>
           )}
@@ -51,12 +63,12 @@ export function ProductCard({ product }: { product: MockProduct }) {
         <div className="absolute right-3 top-3">
           <span
             className={cn(
-              "rounded px-2 py-0.5 font-mono text-[10px] font-medium uppercase",
+              "rounded px-2 py-0.5 font-mono text-[10px] font-medium uppercase shadow-sm backdrop-blur-sm",
               outOfStock
-                ? "bg-muted text-muted-foreground"
+                ? "bg-background/80 text-muted-foreground"
                 : lowStock
-                  ? "bg-warning/15 text-warning"
-                  : "bg-success/15 text-success",
+                  ? "bg-warning/90 text-warning-foreground"
+                  : "bg-success/90 text-success-foreground",
             )}
           >
             {outOfStock ? "Esgotado" : lowStock ? `Últimas ${product.stock}` : "Em estoque"}
@@ -68,14 +80,11 @@ export function ProductCard({ product }: { product: MockProduct }) {
       <div className="flex flex-1 flex-col p-4">
         <div className="mb-1 flex items-center justify-between gap-2">
           <span className="font-mono text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            {product.brand}
+            {product.brand ?? product.category}
           </span>
-          {product.rating ? (
-            <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-              <Star className="size-3 fill-warning text-warning" />
-              {product.rating.toFixed(1)}
-            </span>
-          ) : null}
+          {product.sold > 0 && (
+            <span className="font-mono text-[10px] text-muted-foreground">{product.sold} vendidos</span>
+          )}
         </div>
 
         <Link href={`/produtos/${product.slug}`}>
@@ -105,14 +114,18 @@ export function ProductCard({ product }: { product: MockProduct }) {
           </p>
         </div>
 
-        {/* Ações */}
-        <div className="flex gap-2">
-          <Button onClick={addToCart} disabled={outOfStock} className="h-10 flex-1 gap-1.5">
+        {/* Ações — empilhadas no mobile para alvos de toque maiores */}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            onClick={() => addProduct(product)}
+            disabled={outOfStock}
+            className="h-10 flex-1 gap-1.5"
+          >
             <ShoppingCart className="size-4" />
             {outOfStock ? "Indisponível" : "Adicionar"}
           </Button>
           <Button asChild variant="outline" className="h-10">
-            <Link href={`/produtos/${product.slug}`}>Ver</Link>
+            <Link href={`/produtos/${product.slug}`}>Ver detalhes</Link>
           </Button>
         </div>
       </div>

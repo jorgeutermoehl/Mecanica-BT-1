@@ -32,6 +32,18 @@ export const PUBLIC_NAV = [
   { label: "Contato", href: "/contato" },
 ] as const;
 
+/** Marcas parceiras exibidas na vitrine (bloco institucional). */
+export const BRANDS = [
+  "Garrett",
+  "Bosch",
+  "NGK",
+  "Brembo",
+  "Motul",
+  "K&N",
+  "Enkei",
+  "BBS",
+] as const;
+
 /** Mensagem padrão ao abrir o WhatsApp. */
 export const WHATSAPP_DEFAULT_MESSAGE =
   "Olá! Vim pelo site da FullBoost e gostaria de falar com um especialista.";

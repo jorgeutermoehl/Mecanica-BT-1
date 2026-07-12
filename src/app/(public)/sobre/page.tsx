@@ -19,7 +19,7 @@ import { Container } from "@/components/shared/container";
 import { PartIcon } from "@/components/shared/part-icon";
 import { Button } from "@/components/ui/button";
 import { SITE, whatsappLink } from "@/lib/constants";
-import { BRANDS } from "@/lib/mock-data";
+import { BRANDS } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Sobre nós",

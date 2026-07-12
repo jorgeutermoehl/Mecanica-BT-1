@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Minus,
   Plus,
@@ -9,18 +10,17 @@ import {
   Truck,
   ShieldCheck,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/components/cart/cart-provider";
 import { whatsappLink } from "@/lib/constants";
-import { formatBRL } from "@/lib/format";
-import type { MockProduct } from "@/lib/mock-data";
+import type { StoreProduct } from "@/types/store";
 
-export function ProductActions({ product }: { product: MockProduct }) {
+export function ProductActions({ product }: { product: StoreProduct }) {
   const outOfStock = product.stock <= 0;
   const maxQty = Math.max(1, product.stock);
   const [qty, setQty] = useState(1);
-
-  const current = product.promoPrice ?? product.price;
+  const { addProduct } = useCart();
+  const router = useRouter();
 
   function changeQty(delta: number) {
     setQty((q) => Math.min(maxQty, Math.max(1, q + delta)));
@@ -28,9 +28,13 @@ export function ProductActions({ product }: { product: MockProduct }) {
 
   function addToCart() {
     if (outOfStock) return;
-    toast.success("Adicionado ao carrinho", {
-      description: `${qty}× ${product.name} — ${formatBRL(current * qty)}`,
-    });
+    addProduct(product, qty);
+  }
+
+  function buyNow() {
+    if (outOfStock) return;
+    addProduct(product, qty);
+    router.push("/carrinho");
   }
 
   const waMessage = `Olá! Tenho interesse na peça ${product.name} (SKU ${product.sku}). Pode me ajudar com uma dúvida?`;
@@ -78,24 +82,36 @@ export function ProductActions({ product }: { product: MockProduct }) {
           size="lg"
           onClick={addToCart}
           disabled={outOfStock}
-          className="flex-1 gap-2"
+          className="h-11 flex-1 gap-2"
         >
           <ShoppingCart className="size-4" />
           {outOfStock ? "Produto indisponível" : "Adicionar ao carrinho"}
         </Button>
       </div>
 
-      {/* Dúvida no WhatsApp */}
-      <Button asChild size="lg" variant="outline" className="gap-2">
-        <a
-          href={whatsappLink(waMessage)}
-          target="_blank"
-          rel="noopener noreferrer"
+      {/* Comprar agora + dúvida no WhatsApp */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Button
+          type="button"
+          size="lg"
+          variant="secondary"
+          onClick={buyNow}
+          disabled={outOfStock}
+          className="h-11 gap-2"
         >
-          <MessageCircle className="size-4" />
-          Tirar dúvida no WhatsApp
-        </a>
-      </Button>
+          Comprar agora
+        </Button>
+        <Button asChild size="lg" variant="outline" className="h-11 gap-2">
+          <a
+            href={whatsappLink(waMessage)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <MessageCircle className="size-4" />
+            Tirar dúvida no WhatsApp
+          </a>
+        </Button>
+      </div>
 
       {/* Mini-cards de entrega e garantia */}
       <div className="mt-2 grid gap-3 sm:grid-cols-2">

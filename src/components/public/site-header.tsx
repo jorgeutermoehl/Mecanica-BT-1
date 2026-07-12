@@ -6,6 +6,7 @@ import { Menu, ShoppingCart, User } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Container } from "@/components/shared/container";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useCart } from "@/components/cart/cart-provider";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const { count, hydrated } = useCart();
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -54,10 +56,18 @@ export function SiteHeader() {
               Entrar
             </Link>
           </Button>
-          <Button asChild size="sm" className="gap-2 font-medium">
+          <Button asChild size="sm" className="relative gap-2 font-medium">
             <Link href="/carrinho">
               <ShoppingCart className="size-4" />
               <span className="hidden sm:inline">Carrinho</span>
+              {hydrated && count > 0 && (
+                <span
+                  aria-label={`${count} itens no carrinho`}
+                  className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full border border-background bg-foreground font-mono text-[10px] font-bold text-background"
+                >
+                  {count > 9 ? "9+" : count}
+                </span>
+              )}
             </Link>
           </Button>
 

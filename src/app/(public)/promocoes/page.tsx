@@ -5,17 +5,16 @@ import { Container } from "@/components/shared/container";
 import { ProductCard } from "@/components/public/product-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ON_SALE } from "@/lib/mock-data";
+import { getStoreProducts } from "@/server/catalog";
 import { CouponCard, type Coupon } from "@/components/public/promocoes/coupon-card";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Promoções",
   description:
-    "Cupons ativos e ofertas em peças de performance. Economize em turbo, freios, suspensão, escape e mais durante a Semana do Boost.",
+    "Cupons ativos e ofertas em peças de performance. Economize em turbo, freios, suspensão, escape e mais na FullBoost Race Parts.",
 };
-
-/** Fim da campanha vigente (exibido nos selos). */
-const CAMPAIGN_END = "15/07/2026";
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
@@ -26,13 +25,14 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Cupons ativos cadastrados no sistema (mesmas regras do checkout). */
 const COUPONS: Coupon[] = [
   {
     code: "BEMVINDO10",
     highlight: "10% OFF",
-    title: "Primeira compra",
-    description: "Desconto de boas-vindas na sua estreia com a gente.",
-    condition: "Válido na 1ª compra · pedidos acima de R$ 200",
+    title: "Boas-vindas",
+    description: "Desconto de 10% para começar o seu projeto com a gente.",
+    condition: "Pedidos acima de R$ 100 · não acumulativo",
   },
   {
     code: "TURBO15",
@@ -42,15 +42,18 @@ const COUPONS: Coupon[] = [
     condition: "Pedidos acima de R$ 500 · não acumulativo",
   },
   {
-    code: "FRETEGRATIS",
-    highlight: "Frete grátis",
-    title: "Entrega por nossa conta",
-    description: "Frete zero para Sul e Sudeste nas peças em estoque.",
-    condition: "Sul e Sudeste · pedidos acima de R$ 350",
+    code: "NITRO50",
+    highlight: "R$ 50 OFF",
+    title: "Injeção direta",
+    description: "R$ 50 de desconto direto no total do seu pedido.",
+    condition: "Pedidos acima de R$ 300 · não acumulativo",
   },
 ];
 
-export default function PromocoesPage() {
+export default async function PromocoesPage() {
+  const products = await getStoreProducts();
+  const onSale = products.filter((p) => p.promoPrice !== null);
+
   return (
     <>
       {/* ===================== BANNER ===================== */}
@@ -70,7 +73,7 @@ export default function PromocoesPage() {
           </p>
           <span className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 font-mono text-xs font-medium uppercase tracking-wide backdrop-blur-sm">
             <Timer className="size-3.5" />
-            Semana do Boost · até {CAMPAIGN_END}
+            Válido enquanto durar o estoque
           </span>
         </Container>
       </section>
@@ -97,8 +100,8 @@ export default function PromocoesPage() {
 
           <p className="mt-6 flex items-start gap-2 text-xs text-muted-foreground">
             <Info className="mt-px size-3.5 shrink-0" />
-            Cupons não são acumulativos entre si e valem enquanto durar a
-            campanha. O desconto é aplicado no carrinho, antes de finalizar a
+            Cupons não são acumulativos entre si e valem enquanto estiverem
+            ativos. O desconto é aplicado no carrinho, antes de finalizar a
             compra.
           </p>
         </Container>
@@ -109,13 +112,12 @@ export default function PromocoesPage() {
         <Container>
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <Eyebrow>Semana do Boost</Eyebrow>
+              <Eyebrow>Preço de boost</Eyebrow>
               <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">
                 Ofertas
               </h2>
               <p className="mt-2 max-w-xl text-muted-foreground">
-                Preços promocionais válidos até {CAMPAIGN_END} ou enquanto
-                durarem os estoques.
+                Peças com preço promocional válido enquanto durar o estoque.
               </p>
             </div>
             <Badge
@@ -123,15 +125,27 @@ export default function PromocoesPage() {
               className="gap-1.5 border-primary/40 font-mono uppercase tracking-wide text-primary"
             >
               <Timer className="size-3" />
-              Termina em {CAMPAIGN_END}
+              Enquanto durar o estoque
             </Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {ON_SALE.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {onSale.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              {onSale.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
+              <p className="font-display text-lg font-semibold uppercase tracking-tight">
+                Nenhuma oferta ativa no momento
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                As promoções mudam rápido por aqui. Volte em breve ou explore o
+                catálogo completo.
+              </p>
+            </div>
+          )}
 
           <div className="mt-10 flex justify-center">
             <Button asChild variant="outline" size="lg" className="gap-2">
