@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
 import {
   Search,
@@ -162,33 +163,49 @@ function FilterPanel({
       </div>
 
       <div className="divide-y divide-border">
-        {/* Categoria */}
-        <div className="py-5 first:pt-0">
-          <SectionTitle>Categoria</SectionTitle>
-          <div className="flex flex-col gap-0.5">
-            {categories.map((c) => {
-              const id = `${idPrefix}-cat-${c.slug}`;
-              return (
-                <div key={c.slug} className="flex items-center gap-2.5 py-1">
-                  <Checkbox
-                    id={id}
-                    checked={cats.includes(c.slug)}
-                    onCheckedChange={() => setCats(toggle(cats, c.slug))}
-                  />
-                  <label
-                    htmlFor={id}
-                    className="flex flex-1 cursor-pointer items-center justify-between text-sm"
-                  >
-                    <span>{c.name}</span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {catCounts[c.slug] ?? 0}
-                    </span>
-                  </label>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+{/* Categorias — navegação lateral */}
+<div className="py-5 first:pt-0">
+  <SectionTitle>Categorias</SectionTitle>
+  <nav className="flex flex-col gap-0.5">
+    <button
+      type="button"
+      onClick={() => setCats([])}
+      aria-current={cats.length === 0 ? "true" : undefined}
+      className={cn(
+        "flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
+        cats.length === 0
+          ? "bg-primary/10 font-medium text-primary"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+      )}
+    >
+      <span>Todas as categorias</span>
+      <span className="font-mono text-xs">
+        {Object.values(catCounts).reduce((s, n) => s + n, 0)}
+      </span>
+    </button>
+
+    {categories.map((c) => {
+      const active = cats.length === 1 && cats[0] === c.slug;
+      return (
+        <button
+          key={c.slug}
+          type="button"
+          onClick={() => setCats(active ? [] : [c.slug])}
+          aria-current={active ? "true" : undefined}
+          className={cn(
+            "flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
+            active
+              ? "bg-primary/10 font-medium text-primary"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <span>{c.name}</span>
+          <span className="font-mono text-xs">{catCounts[c.slug] ?? 0}</span>
+        </button>
+      );
+    })}
+  </nav>
+</div>
 
         {/* Marca */}
         {brandOptions.length > 0 && (

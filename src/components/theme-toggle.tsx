@@ -13,15 +13,22 @@ export function ThemeToggle({ className }: { className?: string }) {
 
   const isDark = resolvedTheme === "dark";
 
+  // Antes de montar, servidor e cliente renderizam o MESMO conteúdo neutro,
+  // evitando o mismatch de hidratação. Depois de montar, mostra o estado real.
+  const label = mounted
+    ? isDark
+      ? "Ativar tema claro"
+      : "Ativar tema escuro"
+    : "Alternar tema";
+
   return (
     <Button
       variant="ghost"
       size="icon"
       className={className}
-      aria-label={isDark ? "Ativar tema claro" : "Ativar tema escuro"}
+      aria-label={label}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
-      {/* Renderiza um ícone estável no SSR para evitar mismatch de hidratação */}
       {mounted && !isDark ? (
         <Moon className="size-5" />
       ) : (

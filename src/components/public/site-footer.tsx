@@ -3,8 +3,7 @@ import { Mail, MapPin, Phone, Clock, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Container } from "@/components/shared/container";
 import { SITE } from "@/lib/constants";
-
-const PAYMENTS = ["Pix", "Visa", "Master", "Elo", "Boleto"];
+import { PaymentMethods } from "@/components/public/metodos-pagamento";
 
 /* Ícones de marca (lucide removeu os brand icons) */
 function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -67,7 +66,6 @@ export function SiteFooter() {
             <h3 className="mb-4 font-display text-sm font-semibold uppercase tracking-wide">Loja</h3>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li><Link href="/produtos" className="hover:text-foreground">Produtos</Link></li>
-              <li><Link href="/categorias" className="hover:text-foreground">Categorias</Link></li>
               <li><Link href="/promocoes" className="hover:text-foreground">Promoções</Link></li>
               <li><Link href="/carrinho" className="hover:text-foreground">Carrinho</Link></li>
             </ul>
@@ -76,7 +74,6 @@ export function SiteFooter() {
           <div>
             <h3 className="mb-4 font-display text-sm font-semibold uppercase tracking-wide">Institucional</h3>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
-              <li><Link href="/sobre" className="hover:text-foreground">Sobre nós</Link></li>
               <li><Link href="/contato" className="hover:text-foreground">Contato</Link></li>
               <li><Link href="/privacidade" className="hover:text-foreground">Privacidade</Link></li>
               <li><Link href="/termos" className="hover:text-foreground">Termos de uso</Link></li>
@@ -94,24 +91,14 @@ export function SiteFooter() {
           </div>
         </div>
 
-        {/* Pagamentos e segurança */}
+{/* Pagamentos e segurança */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
-          <div className="flex items-center gap-2">
-            {PAYMENTS.map((p) => (
-              <span
-                key={p}
-                className="rounded border border-border bg-card px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-              >
-                {p}
-              </span>
-            ))}
-          </div>
+          <PaymentMethods />
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <ShieldCheck className="size-4 text-success" />
             Compra 100% segura
           </div>
         </div>
-
         <div className="mt-6 flex flex-col items-center justify-between gap-2 text-xs text-muted-foreground sm:flex-row">
           <p>© {new Date().getFullYear()} {SITE.name}. Todos os direitos reservados.</p>
           <p>CNPJ 00.000.000/0001-00</p>
