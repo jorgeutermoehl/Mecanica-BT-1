@@ -26,9 +26,7 @@ export const SITE = {
 export const PUBLIC_NAV = [
   { label: "Início", href: "/" },
   { label: "Produtos", href: "/produtos" },
-  { label: "Categorias", href: "/categorias" },
   { label: "Promoções", href: "/promocoes" },
-  { label: "Sobre nós", href: "/sobre" },
   { label: "Contato", href: "/contato" },
 ] as const;
 

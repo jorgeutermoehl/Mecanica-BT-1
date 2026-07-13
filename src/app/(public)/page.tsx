@@ -152,39 +152,6 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      {/* ===================== CATEGORIAS ===================== */}
-      {categories.length > 0 && (
-        <section className="py-8">
-          <Container>
-            <div className="mb-8 flex items-end justify-between gap-4">
-              <div>
-                <Eyebrow>Explore</Eyebrow>
-                <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">Categorias</h2>
-              </div>
-              <Button asChild variant="ghost" size="sm" className="gap-1">
-                <Link href="/categorias">Ver todas <ArrowRight className="size-4" /></Link>
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {categories.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/produtos?categoria=${c.slug}`}
-                  className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/5"
-                >
-                  <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <PartIcon icon={c.icon} className="size-5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">{c.name}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground">{c.count} itens</span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </Container>
-        </section>
-      )}
 
       {/* ===================== MAIS VENDIDOS ===================== */}
       {bestSellers.length > 0 && (
