@@ -306,6 +306,7 @@ async function main() {
     customer: joao,
     status: "DELIVERED",
     method: "PIX",
+    channel: "SITE",
     daysAgo: 6,
     items: [
       { sku: "IGN-NGK-777", qty: 4 },
@@ -314,12 +315,13 @@ async function main() {
     adminId: admin.id,
     productBySku,
   });
-  // PED-0002: Oficina — 4x roda forjada aro 18 (cartão, pago)
+  // PED-0002: Oficina — 4x roda forjada aro 18 (cartão, pago, via Instagram)
   await seedOrder({
     number: "PED-0002",
     customer: oficina,
     status: "PAID",
     method: "CREDIT_CARD",
+    channel: "INSTAGRAM",
     daysAgo: 1,
     items: [{ sku: "ROD-ENK-1885", qty: 4 }],
     adminId: admin.id,
@@ -354,6 +356,7 @@ type SeedOrderArgs = {
   customer: { id: string; name: string; document: string | null; email: string | null; phone: string | null };
   status: string;
   method: string;
+  channel: string;
   daysAgo: number;
   items: { sku: string; qty: number }[];
   adminId: string;
@@ -380,6 +383,7 @@ async function seedOrder(a: SeedOrderArgs) {
       customerEmail: a.customer.email,
       customerPhone: a.customer.phone,
       status: a.status,
+      channel: a.channel,
       subtotal,
       shippingCost: shipping,
       total,

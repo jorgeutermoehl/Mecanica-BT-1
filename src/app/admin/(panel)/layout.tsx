@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { getSession } from "@/lib/auth";
+import { getNotifications } from "@/server/notifications";
 import { logoutAction } from "@/app/actions/auth";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,8 @@ export default async function AdminPanelLayout({
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
+  const { count: notificationCount } = await getNotifications();
+
   return (
     <div className="min-h-svh bg-background lg:grid lg:grid-cols-[15rem_1fr]">
       {/* Coluna da sidebar (desktop) — o conteúdo real é fixo na viewport */}
@@ -29,7 +32,7 @@ export default async function AdminPanelLayout({
             <Logo href="/admin" />
           </div>
 
-          <AdminNav className="flex-1 overflow-y-auto p-3" />
+          <AdminNav className="flex-1 overflow-y-auto p-3" notificationCount={notificationCount} />
 
           <div className="shrink-0 border-t border-sidebar-border p-4">
             <p className="truncate text-sm font-medium">{session.name}</p>

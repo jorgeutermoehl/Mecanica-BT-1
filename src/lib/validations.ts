@@ -26,10 +26,20 @@ export const MOVEMENT_TYPES = [
   "INVENTORY",
 ] as const;
 
+export const SALE_CHANNELS = ["SITE", "INSTAGRAM", "WHATSAPP", "LOJA"] as const;
+
 export type ProductStatus = (typeof PRODUCT_STATUS)[number];
 export type OrderStatus = (typeof ORDER_STATUS)[number];
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export type MovementType = (typeof MOVEMENT_TYPES)[number];
+export type SaleChannel = (typeof SALE_CHANNELS)[number];
+
+export const SALE_CHANNEL_LABEL: Record<SaleChannel, string> = {
+  SITE: "Site",
+  INSTAGRAM: "Instagram",
+  WHATSAPP: "WhatsApp",
+  LOJA: "Loja física",
+};
 
 /** Rótulos pt-BR para exibição na loja e no painel. */
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
@@ -107,6 +117,55 @@ export const stockEntrySchema = z.object({
   invoiceNumber: z.string().max(40).optional().or(z.literal("")),
   supplierName: z.string().max(120).optional().or(z.literal("")),
   notes: z.string().max(500).optional().or(z.literal("")),
+  /// Financeiro da compra: lança a despesa junto com a movimentação.
+  registerExpense: z.boolean().default(true),
+  paid: z.boolean().default(true), // true = pago à vista (sai do caixa); false = a prazo (contas a pagar em aberto)
+  paymentMethod: z.enum(PAYMENT_METHODS).default("PIX"),
+});
+
+/** Venda manual (balcão/Instagram/WhatsApp) — gera pedido + saída de estoque. */
+export const manualSaleSchema = z.object({
+  productId: z.string().min(1, "Selecione o produto"),
+  quantity: z.coerce.number().int().positive("Quantidade deve ser maior que zero"),
+  unitPrice: z.coerce.number().positive("Preço deve ser maior que zero"),
+  channel: z.enum(SALE_CHANNELS),
+  customerName: z.string().max(120).optional().or(z.literal("")),
+  paymentMethod: z.enum(PAYMENT_METHODS).default("PIX"),
+});
+
+export const couponSchema = z.object({
+  code: z
+    .string()
+    .min(3, "Código deve ter ao menos 3 caracteres")
+    .max(30)
+    .regex(/^[A-Za-z0-9]+$/, "Use apenas letras e números"),
+  type: z.enum(["PERCENT", "FIXED"]),
+  value: z.coerce.number().positive("Valor deve ser maior que zero"),
+  minOrderValue: z.coerce.number().min(0).optional().or(z.literal("").transform(() => undefined)),
+  usageLimit: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
+}).refine((d) => d.type !== "PERCENT" || d.value <= 90, {
+  message: "Desconto percentual máximo é 90%",
+  path: ["value"],
+});
+
+export const promoPriceSchema = z.object({
+  productId: z.string().min(1, "Selecione o produto"),
+  promoPrice: z.coerce.number().positive("Preço promocional deve ser maior que zero"),
+});
+
+export const customerFormSchema = z.object({
+  name: z.string().min(3, "Informe o nome").max(120),
+  email: z.string().email("E-mail inválido").optional().or(z.literal("")),
+  phone: z.string().max(20).optional().or(z.literal("")),
+  document: z.string().max(20).optional().or(z.literal("")),
+  notes: z.string().max(500).optional().or(z.literal("")),
+});
+
+/** Filtros dos relatórios de estoque. */
+export const movementReportSchema = z.object({
+  from: z.string().optional().or(z.literal("")),
+  to: z.string().optional().or(z.literal("")),
+  direction: z.enum(["ALL", "IN", "OUT"]).default("ALL"),
 });
 
 export const stockOutSchema = z.object({
@@ -156,3 +215,8 @@ export type StockEntryInput = z.infer<typeof stockEntrySchema>;
 export type StockOutInput = z.infer<typeof stockOutSchema>;
 export type StockAdjustInput = z.infer<typeof stockAdjustSchema>;
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+export type ManualSaleInput = z.infer<typeof manualSaleSchema>;
+export type CouponInput = z.infer<typeof couponSchema>;
+export type PromoPriceInput = z.infer<typeof promoPriceSchema>;
+export type CustomerFormInput = z.infer<typeof customerFormSchema>;
+export type MovementReportInput = z.infer<typeof movementReportSchema>;

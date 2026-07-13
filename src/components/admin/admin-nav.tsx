@@ -3,11 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BadgePercent,
+  Bell,
   Boxes,
+  Calculator,
   ExternalLink,
+  FileBarChart,
   LayoutDashboard,
   Package,
   ShoppingCart,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,6 +23,8 @@ type NavItem = {
   icon: LucideIcon;
   /** Marca ativo apenas quando o pathname é exatamente igual (raiz do painel). */
   exact?: boolean;
+  /** Exibe o badge de notificações (contagem via prop). */
+  showBadge?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -25,6 +32,11 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/produtos", label: "Produtos", icon: Package },
   { href: "/admin/estoque", label: "Estoque", icon: Boxes },
   { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
+  { href: "/admin/clientes", label: "Clientes", icon: Users },
+  { href: "/admin/promocoes", label: "Promoções", icon: BadgePercent },
+  { href: "/admin/relatorios", label: "Relatórios", icon: FileBarChart },
+  { href: "/admin/dre", label: "DRE", icon: Calculator },
+  { href: "/admin/notificacoes", label: "Notificações", icon: Bell, showBadge: true },
 ];
 
 /** Rótulos pt-BR dos papéis staff (slug → exibição). */
@@ -43,9 +55,12 @@ export const ROLE_LABEL: Record<string, string> = {
 export function AdminNav({
   className,
   onNavigate,
+  notificationCount = 0,
 }: {
   className?: string;
   onNavigate?: () => void;
+  /** Contagem exibida no badge de Notificações (vem do layout server). */
+  notificationCount?: number;
 }) {
   const pathname = usePathname();
 
@@ -70,7 +85,15 @@ export function AdminNav({
             )}
           >
             <item.icon className="size-4" strokeWidth={active ? 2.4 : 2} />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.showBadge && notificationCount > 0 && (
+              <span
+                aria-label={`${notificationCount} notificações`}
+                className="flex size-5 items-center justify-center rounded-full bg-sidebar-primary font-mono text-[10px] font-bold text-sidebar-primary-foreground"
+              >
+                {notificationCount > 9 ? "9+" : notificationCount}
+              </span>
+            )}
           </Link>
         );
       })}

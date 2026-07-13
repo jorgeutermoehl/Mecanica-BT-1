@@ -349,6 +349,8 @@ model Order {
   customerPhone    String?
   /// AWAITING_PAYMENT | PAID | SEPARATING | SHIPPED | DELIVERED | CANCELLED | RETURNED
   status           String    @default("AWAITING_PAYMENT")
+  /// Canal da venda: SITE | INSTAGRAM | WHATSAPP | LOJA
+  channel          String    @default("SITE")
   subtotal         Decimal   @default(0)
   discount         Decimal   @default(0)
   shippingCost     Decimal   @default(0)

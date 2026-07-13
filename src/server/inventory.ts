@@ -48,6 +48,8 @@ export async function registerEntry(input: StockEntryInput, userId: string) {
         invoiceNumber: input.invoiceNumber || null,
         itemsTotal: totalCost,
         total: totalCost,
+        paymentMethod: input.registerExpense ? input.paymentMethod : null,
+        financialStatus: input.registerExpense ? (input.paid ? "PAID" : "OPEN") : "OPEN",
         notes: input.notes || null,
         userId,
         items: {
@@ -62,6 +64,36 @@ export async function registerEntry(input: StockEntryInput, userId: string) {
         },
       },
     });
+
+    // Financeiro da compra: despesa lançada junto com a movimentação.
+    if (input.registerExpense && totalCost > 0) {
+      const now = new Date();
+      await tx.accountPayable.create({
+        data: {
+          supplierId,
+          stockEntryId: entry.id,
+          description: `Compra de estoque — ${input.quantity}x ${product.sku}${input.invoiceNumber ? ` (NF ${input.invoiceNumber})` : ""}`,
+          category: "Compras de estoque",
+          amount: totalCost,
+          paidAmount: input.paid ? totalCost : 0,
+          dueDate: input.paid ? now : new Date(now.getTime() + 28 * 86_400_000),
+          paidAt: input.paid ? now : null,
+          status: input.paid ? "PAID" : "OPEN",
+          paymentMethod: input.paymentMethod,
+        },
+      });
+      if (input.paid) {
+        await tx.cashFlowEntry.create({
+          data: {
+            type: "OUTFLOW",
+            category: "Compras de estoque",
+            description: `Compra ${input.quantity}x ${product.sku}${input.invoiceNumber ? ` (NF ${input.invoiceNumber})` : ""}`,
+            amount: totalCost,
+            userId,
+          },
+        });
+      }
+    }
 
     const before = product.stockQuantity;
     const after = before + input.quantity;

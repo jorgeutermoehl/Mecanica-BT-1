@@ -7,12 +7,18 @@ import {
   stockAdjustSchema,
   stockEntrySchema,
   stockOutSchema,
+  manualSaleSchema,
+  couponSchema,
+  promoPriceSchema,
+  customerFormSchema,
   ORDER_STATUS,
   type OrderStatus,
 } from "@/lib/validations";
 import { createProduct, setProductStatus, updateProduct } from "@/server/products";
 import { adjustStock, registerEntry, registerOut } from "@/server/inventory";
-import { updateOrderStatus } from "@/server/orders";
+import { registerManualSale, updateOrderStatus } from "@/server/orders";
+import { createCoupon, setCouponActive, setPromoPrice, clearPromoPrice } from "@/server/promotions";
+import { createCustomer } from "@/server/customers";
 
 export type AdminActionResult = { ok: boolean; error?: string };
 
@@ -103,6 +109,83 @@ export async function stockAdjustAction(input: unknown): Promise<AdminActionResu
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
     await adjustStock(parsed.data, user.id);
     revalidateStore();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Venda manual (Instagram/WhatsApp/loja) — pedido + baixa + financeiro. */
+export async function manualSaleAction(input: unknown): Promise<AdminActionResult & { orderNumber?: string }> {
+  try {
+    const user = await requireStaff();
+    const parsed = manualSaleSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+    const result = await registerManualSale(parsed.data, user.id);
+    revalidateStore();
+    return { ok: true, orderNumber: result.orderNumber };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function createCouponAction(input: unknown): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    const parsed = couponSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+    await createCoupon(parsed.data, user.id);
+    revalidatePath("/admin/promocoes");
+    revalidatePath("/promocoes");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function setCouponActiveAction(id: string, active: boolean): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    await setCouponActive(id, active, user.id);
+    revalidatePath("/admin/promocoes");
+    revalidatePath("/promocoes");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function setPromoPriceAction(input: unknown): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    const parsed = promoPriceSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+    await setPromoPrice(parsed.data, user.id);
+    revalidateStore();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function clearPromoPriceAction(productId: string): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    await clearPromoPrice(productId, user.id);
+    revalidateStore();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function createCustomerAction(input: unknown): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    const parsed = customerFormSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+    await createCustomer(parsed.data, user.id);
+    revalidatePath("/admin/clientes");
     return { ok: true };
   } catch (e) {
     return fail(e);

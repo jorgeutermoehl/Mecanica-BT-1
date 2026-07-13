@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { OrderStatusBadge } from "@/components/admin/pedidos/order-status-badge";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
+import { ChannelBadge } from "@/components/admin/channel-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -286,6 +287,10 @@ export default async function OrderDetailPage({
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Método</span>
                 <span className="font-medium">{paymentLabel}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Canal</span>
+                <ChannelBadge channel={order.channel} />
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Status</span>

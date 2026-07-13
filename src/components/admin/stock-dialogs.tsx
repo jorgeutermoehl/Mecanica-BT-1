@@ -3,8 +3,14 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowDownToLine, ArrowUpFromLine, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ShoppingCart,
+  SlidersHorizontal,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogClose,
@@ -16,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -24,7 +30,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { stockAdjustAction, stockEntryAction, stockOutAction } from "@/app/actions/admin";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_LABEL,
+  SALE_CHANNELS,
+  SALE_CHANNEL_LABEL,
+  type PaymentMethod,
+  type SaleChannel,
+} from "@/lib/validations";
+import { formatBRL } from "@/lib/format";
+import {
+  manualSaleAction,
+  stockAdjustAction,
+  stockEntryAction,
+  stockOutAction,
+} from "@/app/actions/admin";
 
 /** Opção de produto vinda de listProductOptions() (src/server/inventory). */
 export type ProductOption = {
@@ -79,7 +100,42 @@ function ProductSelect({
 }
 
 /* ------------------------------------------------------------------ */
-/* Dialog: Registrar entrada                                          */
+/* Select de forma de pagamento                                        */
+/* ------------------------------------------------------------------ */
+
+function PaymentMethodSelect({
+  id,
+  value,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  value: PaymentMethod;
+  onChange: (method: PaymentMethod) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Select
+      value={value}
+      onValueChange={(v) => onChange(v as PaymentMethod)}
+      disabled={disabled}
+    >
+      <SelectTrigger id={id} className="w-full">
+        <SelectValue placeholder="Forma de pagamento" />
+      </SelectTrigger>
+      <SelectContent position="popper">
+        {PAYMENT_METHODS.map((m) => (
+          <SelectItem key={m} value={m}>
+            {PAYMENT_METHOD_LABEL[m]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Dialog: Registrar entrada (com financeiro da compra)                */
 /* ------------------------------------------------------------------ */
 
 function EntryDialog({ products }: { products: ProductOption[] }) {
@@ -92,6 +148,10 @@ function EntryDialog({ products }: { products: ProductOption[] }) {
   const [invoiceNumber, setInvoiceNumber] = React.useState("");
   const [supplierName, setSupplierName] = React.useState("");
   const [notes, setNotes] = React.useState("");
+  // Financeiro da compra
+  const [registerExpense, setRegisterExpense] = React.useState(true);
+  const [paid, setPaid] = React.useState(true);
+  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>("PIX");
 
   function reset() {
     setProductId("");
@@ -100,6 +160,9 @@ function EntryDialog({ products }: { products: ProductOption[] }) {
     setInvoiceNumber("");
     setSupplierName("");
     setNotes("");
+    setRegisterExpense(true);
+    setPaid(true);
+    setPaymentMethod("PIX");
   }
 
   function handleProduct(id: string) {
@@ -123,11 +186,18 @@ function EntryDialog({ products }: { products: ProductOption[] }) {
       invoiceNumber,
       supplierName,
       notes,
+      registerExpense,
+      paid,
+      paymentMethod,
     });
     setSubmitting(false);
     if (result.ok) {
       toast.success("Entrada registrada", {
-        description: "O saldo e o custo médio do produto foram atualizados.",
+        description: registerExpense
+          ? paid
+            ? "Saldo atualizado e despesa paga lançada no caixa."
+            : "Saldo atualizado e conta a pagar criada (vencimento em 28 dias)."
+          : "O saldo e o custo médio do produto foram atualizados.",
       });
       setOpen(false);
       reset();
@@ -149,7 +219,7 @@ function EntryDialog({ products }: { products: ProductOption[] }) {
         <ArrowDownToLine className="size-4" />
         Registrar entrada
       </Button>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Registrar entrada</DialogTitle>
           <DialogDescription>
@@ -223,6 +293,63 @@ function EntryDialog({ products }: { products: ProductOption[] }) {
               />
             </div>
           </div>
+
+          {/* Financeiro da compra */}
+          <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+            <p className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Financeiro
+            </p>
+            <div className="flex items-start gap-2.5">
+              <Checkbox
+                id="entry-register-expense"
+                checked={registerExpense}
+                onCheckedChange={(v) => setRegisterExpense(v === true)}
+                disabled={submitting}
+                className="mt-0.5"
+              />
+              <div className="grid gap-0.5">
+                <Label htmlFor="entry-register-expense">
+                  Lançar despesa da compra no financeiro
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Registra a compra como despesa junto com a entrada de estoque.
+                </p>
+              </div>
+            </div>
+            {registerExpense ? (
+              <>
+                <RadioGroup
+                  value={paid ? "PAID" : "TERM"}
+                  onValueChange={(v) => setPaid(v === "PAID")}
+                  disabled={submitting}
+                  className="gap-2"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <RadioGroupItem id="entry-paid-now" value="PAID" />
+                    <Label htmlFor="entry-paid-now" className="font-normal">
+                      Pago à vista (sai do caixa)
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <RadioGroupItem id="entry-paid-term" value="TERM" />
+                    <Label htmlFor="entry-paid-term" className="font-normal">
+                      A prazo (contas a pagar, venc. 28 dias)
+                    </Label>
+                  </div>
+                </RadioGroup>
+                <div className="grid gap-2">
+                  <Label htmlFor="entry-payment-method">Forma de pagamento</Label>
+                  <PaymentMethodSelect
+                    id="entry-payment-method"
+                    value={paymentMethod}
+                    onChange={setPaymentMethod}
+                    disabled={submitting}
+                  />
+                </div>
+              </>
+            ) : null}
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="entry-notes">Observações (opcional)</Label>
             <Textarea
@@ -310,6 +437,7 @@ function OutDialog({ products }: { products: ProductOption[] }) {
           <DialogTitle>Registrar saída</DialogTitle>
           <DialogDescription>
             Baixa manual de estoque — saída avulsa, perda/avaria ou devolução a fornecedor.
+            Para venda, use “Registrar venda”.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
@@ -382,6 +510,206 @@ function OutDialog({ products }: { products: ProductOption[] }) {
             </DialogClose>
             <Button type="submit" disabled={submitting}>
               {submitting ? "Registrando…" : "Registrar saída"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Dialog: Registrar venda (manual — Instagram/WhatsApp/loja/site)     */
+/* ------------------------------------------------------------------ */
+
+function SaleDialog({ products }: { products: ProductOption[] }) {
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [productId, setProductId] = React.useState("");
+  const [quantity, setQuantity] = React.useState("");
+  const [unitPrice, setUnitPrice] = React.useState("");
+  const [channel, setChannel] = React.useState<SaleChannel>("LOJA");
+  const [customerName, setCustomerName] = React.useState("");
+  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>("PIX");
+
+  const selected = products.find((p) => p.id === productId);
+  const qtyNumber = Number(quantity);
+  const priceNumber = Number(unitPrice);
+  const saleTotal =
+    qtyNumber > 0 && priceNumber > 0 ? qtyNumber * priceNumber : null;
+
+  function reset() {
+    setProductId("");
+    setQuantity("");
+    setUnitPrice("");
+    setChannel("LOJA");
+    setCustomerName("");
+    setPaymentMethod("PIX");
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!productId) {
+      toast.error("Selecione o produto.");
+      return;
+    }
+    setSubmitting(true);
+    const result = await manualSaleAction({
+      productId,
+      quantity,
+      unitPrice,
+      channel,
+      customerName,
+      paymentMethod,
+    });
+    setSubmitting(false);
+    if (result.ok) {
+      toast.success(
+        result.orderNumber
+          ? `Venda ${result.orderNumber} registrada`
+          : "Venda registrada",
+        {
+          description: "Pedido criado, estoque baixado e recebimento lançado no caixa.",
+        },
+      );
+      setOpen(false);
+      reset();
+      router.refresh();
+    } else {
+      toast.error(result.error ?? "Não foi possível registrar a venda.");
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) reset();
+      }}
+    >
+      <Button className="gap-2" onClick={() => setOpen(true)}>
+        <ShoppingCart className="size-4" />
+        Registrar venda
+      </Button>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Registrar venda</DialogTitle>
+          <DialogDescription>
+            Venda manual por Instagram, WhatsApp, balcão ou site. Gera pedido, baixa o
+            estoque e lança o recebimento no caixa.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="sale-product">Produto</Label>
+            <ProductSelect
+              id="sale-product"
+              products={products}
+              value={productId}
+              onChange={setProductId}
+              disabled={submitting}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="sale-quantity">Quantidade</Label>
+                {selected ? (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    Saldo: {selected.stock} un
+                  </span>
+                ) : null}
+              </div>
+              <Input
+                id="sale-quantity"
+                type="number"
+                min={1}
+                step={1}
+                required
+                placeholder="0"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                disabled={submitting}
+                className="font-mono"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="sale-unit-price">Preço unitário (R$)</Label>
+              <Input
+                id="sale-unit-price"
+                type="number"
+                min={0.01}
+                step="0.01"
+                required
+                placeholder="0,00"
+                value={unitPrice}
+                onChange={(e) => setUnitPrice(e.target.value)}
+                disabled={submitting}
+                className="font-mono"
+              />
+              {selected ? (
+                <p className="font-mono text-xs text-muted-foreground">
+                  Custo atual: {formatBRL(selected.costPrice)}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="sale-channel">Canal da venda</Label>
+              <Select
+                value={channel}
+                onValueChange={(v) => setChannel(v as SaleChannel)}
+                disabled={submitting}
+              >
+                <SelectTrigger id="sale-channel" className="w-full">
+                  <SelectValue placeholder="Canal" />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  {SALE_CHANNELS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {SALE_CHANNEL_LABEL[c]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="sale-payment-method">Forma de pagamento</Label>
+              <PaymentMethodSelect
+                id="sale-payment-method"
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                disabled={submitting}
+              />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="sale-customer">Cliente (opcional)</Label>
+            <Input
+              id="sale-customer"
+              placeholder="Cliente balcão"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              disabled={submitting}
+            />
+          </div>
+          {saleTotal !== null ? (
+            <p className="rounded-lg bg-muted/50 px-3 py-2 text-right font-mono text-sm">
+              Total da venda:{" "}
+              <span className="text-base font-semibold">{formatBRL(saleTotal)}</span>
+            </p>
+          ) : null}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={submitting}>
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Registrando…" : "Registrar venda"}
             </Button>
           </DialogFooter>
         </form>
@@ -521,6 +849,7 @@ export function StockDialogs({ products }: { products: ProductOption[] }) {
     <div className="flex flex-wrap items-center gap-2">
       <EntryDialog products={products} />
       <OutDialog products={products} />
+      <SaleDialog products={products} />
       <AdjustDialog products={products} />
     </div>
   );

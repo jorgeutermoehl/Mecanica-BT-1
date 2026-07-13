@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { CheckoutInput, OrderStatus } from "@/lib/validations";
+import type { CheckoutInput, ManualSaleInput, OrderStatus, SaleChannel } from "@/lib/validations";
 
 /**
  * Serviço de vendas. Invariantes:
@@ -95,6 +95,7 @@ export async function placeOrder(input: CheckoutInput) {
         customerEmail: email,
         customerPhone: input.customer.phone,
         status: orderStatus,
+        channel: "SITE",
         subtotal,
         discount,
         shippingCost,
@@ -216,6 +217,131 @@ export async function placeOrder(input: CheckoutInput) {
   });
 }
 
+/**
+ * Venda manual (Instagram, WhatsApp, loja física): cria pedido com canal,
+ * congela o custo, baixa o estoque via SALE e lança o financeiro — a mesma
+ * regra da loja, registrada pelo operador do painel.
+ */
+export async function registerManualSale(input: ManualSaleInput, userId: string) {
+  return prisma.$transaction(async (tx) => {
+    const product = await tx.product.findUnique({ where: { id: input.productId } });
+    if (!product || product.deletedAt) throw new Error("Produto não encontrado.");
+    if (input.quantity > product.stockQuantity) {
+      throw new Error(`Estoque insuficiente: saldo atual é ${product.stockQuantity} un.`);
+    }
+
+    const total = input.unitPrice * input.quantity;
+    const customerName = input.customerName?.trim() || "Cliente balcão";
+    const now = new Date();
+
+    // Cliente: reaproveita cadastro pelo nome exato, senão cria.
+    let customer = await tx.customer.findFirst({ where: { name: customerName, deletedAt: null } });
+    if (!customer) {
+      customer = await tx.customer.create({ data: { name: customerName } });
+    }
+
+    const count = await tx.order.count();
+    const number = `PED-${String(count + 1).padStart(4, "0")}`;
+
+    const order = await tx.order.create({
+      data: {
+        number,
+        customerId: customer.id,
+        customerName: customer.name,
+        status: "PAID",
+        channel: input.channel,
+        subtotal: total,
+        total,
+        paymentMethod: input.paymentMethod,
+        userId,
+        notes: `Venda manual registrada pelo painel (${input.channel})`,
+        items: {
+          create: [
+            {
+              productId: product.id,
+              productName: product.name,
+              sku: product.sku,
+              quantity: input.quantity,
+              unitPrice: input.unitPrice,
+              unitCostAtSale: product.costPrice, // CUSTO CONGELADO
+              total,
+            },
+          ],
+        },
+        statusHistory: { create: [{ status: "PAID", note: "Venda manual (painel)", userId }] },
+      },
+    });
+
+    // Baixa no ledger.
+    const before = product.stockQuantity;
+    const after = before - input.quantity;
+    await tx.inventoryMovement.create({
+      data: {
+        productId: product.id,
+        type: "SALE",
+        direction: "OUT",
+        quantity: input.quantity,
+        unitCost: product.costPrice,
+        balanceBefore: before,
+        balanceAfter: after,
+        reason: `Venda ${number} (${input.channel})`,
+        orderId: order.id,
+        userId,
+      },
+    });
+    await tx.product.update({
+      where: { id: product.id },
+      data: {
+        stockQuantity: after,
+        status: after <= 0 ? "OUT_OF_STOCK" : product.promoPrice !== null ? "PROMOTION" : "ACTIVE",
+      },
+    });
+
+    // Financeiro: pagamento, recebível quitado e entrada no caixa.
+    await tx.payment.create({
+      data: { orderId: order.id, amount: total, method: input.paymentMethod, status: "PAID", paidAt: now },
+    });
+    await tx.accountReceivable.create({
+      data: {
+        customerId: customer.id,
+        orderId: order.id,
+        description: `Recebimento ${number} (venda manual)`,
+        amount: total,
+        receivedAmount: total,
+        dueDate: now,
+        receivedAt: now,
+        status: "PAID",
+        paymentMethod: input.paymentMethod,
+      },
+    });
+    await tx.cashFlowEntry.create({
+      data: {
+        type: "INFLOW",
+        category: "Vendas",
+        description: `Recebimento ${number} (${input.channel})`,
+        amount: total,
+        orderId: order.id,
+        userId,
+      },
+    });
+    await tx.customer.update({
+      where: { id: customer.id },
+      data: { totalSpent: { increment: total }, lastPurchaseAt: now },
+    });
+    await tx.auditLog.create({
+      data: {
+        userId,
+        action: "CREATE",
+        entity: "Order",
+        entityId: order.id,
+        description: `Venda manual ${number} via ${input.channel} (${input.quantity}x ${product.sku}, R$ ${total.toFixed(2)})`,
+      },
+    });
+
+    return { orderNumber: number, total };
+  });
+}
+
 export async function listOrders() {
   const orders = await prisma.order.findMany({
     include: { items: true },
@@ -227,6 +353,7 @@ export async function listOrders() {
     number: o.number,
     customerName: o.customerName,
     status: o.status as OrderStatus,
+    channel: o.channel as SaleChannel,
     paymentMethod: o.paymentMethod,
     itemCount: o.items.reduce((s, i) => s + i.quantity, 0),
     total: Number(o.total),
@@ -250,6 +377,7 @@ export async function getOrder(id: string) {
     id: o.id,
     number: o.number,
     status: o.status as OrderStatus,
+    channel: o.channel as SaleChannel,
     customerName: o.customerName,
     customerEmail: o.customerEmail,
     customerPhone: o.customerPhone,

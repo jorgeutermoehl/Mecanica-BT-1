@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { OrderStatusBadge } from "@/components/admin/pedidos/order-status-badge";
+import { ChannelBadge } from "@/components/admin/channel-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,7 @@ export default async function OrdersPage() {
                   <TableHead>Pedido</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead>Cliente</TableHead>
+                  <TableHead>Canal</TableHead>
                   <TableHead className="text-right">Itens</TableHead>
                   <TableHead>Pagamento</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -96,6 +98,9 @@ export default async function OrdersPage() {
                     </TableCell>
                     <TableCell className="max-w-[220px] truncate font-medium">
                       {order.customerName}
+                    </TableCell>
+                    <TableCell>
+                      <ChannelBadge channel={order.channel} />
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
                       {order.itemCount}
