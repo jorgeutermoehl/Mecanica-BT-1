@@ -242,13 +242,13 @@ export default async function DrePage({
               </Button>
             );
           })}
-          <form action="/admin/dre" method="GET" className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          <form action="/admin/dre" method="GET" className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
             <Input
               type="date"
               name="from"
               defaultValue={from ?? ""}
               aria-label="Data inicial"
-              className="w-[150px] font-mono text-xs"
+              className="w-full font-mono text-xs sm:w-[150px]"
             />
             <span className="text-xs text-muted-foreground">até</span>
             <Input
@@ -256,9 +256,9 @@ export default async function DrePage({
               name="to"
               defaultValue={to ?? ""}
               aria-label="Data final"
-              className="w-[150px] font-mono text-xs"
+              className="w-full font-mono text-xs sm:w-[150px]"
             />
-            <Button type="submit" size="sm" variant="outline">
+            <Button type="submit" size="sm" variant="outline" className="w-full sm:w-auto">
               Aplicar
             </Button>
           </form>
@@ -266,7 +266,7 @@ export default async function DrePage({
       </Card>
 
       {/* Cards grandes */}
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <KpiCard
           label="Receita bruta"
           value={formatBRL(s.grossRevenue)}
@@ -399,6 +399,7 @@ export default async function DrePage({
               Nenhuma peça vendida no período selecionado.
             </p>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -468,6 +469,7 @@ export default async function DrePage({
                 </TableRow>
               </TableFooter>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

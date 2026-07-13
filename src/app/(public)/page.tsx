@@ -50,10 +50,10 @@ export default async function HomePage() {
       {/* ===================== HERO ===================== */}
       <section className="relative overflow-hidden border-b border-border bg-carbon">
         <span aria-hidden className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-[420px]" />
-        <Container className="relative grid items-center gap-12 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:py-28">
+        <Container className="relative grid items-center gap-12 py-12 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:py-28">
           <div>
             <Eyebrow>Performance · Boost · Race Parts</Eyebrow>
-            <h1 className="mt-5 text-balance text-4xl font-bold uppercase leading-[0.95] tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 text-balance text-3xl font-bold uppercase leading-[0.95] tracking-tight sm:text-4xl lg:text-6xl">
               Peças para quem busca{" "}
               <span className="text-boost">performance</span> de verdade.
             </h1>
@@ -110,7 +110,7 @@ export default async function HomePage() {
       </section>
 
       {/* ===================== RODAS EM DESTAQUE ===================== */}
-      <section className="py-16">
+      <section className="py-10 sm:py-14 lg:py-16">
         <Container>
           <div className="relative overflow-hidden rounded-2xl border border-border">
             <Image
@@ -125,7 +125,7 @@ export default async function HomePage() {
               aria-hidden
               className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/25"
             />
-            <div className="relative flex flex-col items-start gap-4 px-8 py-14 sm:py-16 lg:px-12">
+            <div className="relative flex flex-col items-start gap-4 px-5 py-10 sm:px-8 sm:py-14 lg:px-12 lg:py-16">
               <Eyebrow>Destaque</Eyebrow>
               <h2 className="max-w-xl font-display text-3xl font-bold uppercase tracking-tight sm:text-4xl">
                 Rodas para todos os projetos
@@ -143,7 +143,7 @@ export default async function HomePage() {
           </div>
 
           {wheels.length > 0 && (
-            <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {wheels.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
@@ -166,7 +166,7 @@ export default async function HomePage() {
                 <Link href="/produtos">Ver catálogo <ArrowRight className="size-4" /></Link>
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {bestSellers.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
@@ -178,7 +178,7 @@ export default async function HomePage() {
       {/* ===================== FAIXA DE PROMOÇÃO ===================== */}
       <section className="py-12">
         <Container>
-          <div className="racing-clip relative overflow-hidden rounded-2xl bg-boost px-8 py-12 text-white">
+          <div className="racing-clip relative overflow-hidden rounded-2xl bg-boost px-5 py-8 text-white sm:px-8 sm:py-12">
             <span aria-hidden className="absolute inset-0 bg-carbon opacity-10" />
             <div className="relative flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
               <div>
@@ -203,7 +203,7 @@ export default async function HomePage() {
               <Eyebrow>Economize</Eyebrow>
               <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">Em promoção</h2>
             </div>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {onSale.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
@@ -232,7 +232,7 @@ export default async function HomePage() {
       </section>
 
       {/* ===================== BENEFÍCIOS ===================== */}
-      <section className="border-y border-border bg-card/40 py-16">
+      <section className="border-y border-border bg-card/40 py-10 sm:py-14 lg:py-16">
         <Container>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {BENEFITS.map(({ icon: Icon, title, text }) => (
@@ -249,7 +249,7 @@ export default async function HomePage() {
       </section>
 
       {/* ===================== DEPOIMENTOS ===================== */}
-      <section className="py-16">
+      <section className="py-10 sm:py-14 lg:py-16">
         <Container>
           <div className="mb-8 text-center">
             <Eyebrow>Quem acelera com a gente</Eyebrow>
@@ -278,9 +278,9 @@ export default async function HomePage() {
       </section>
 
       {/* ===================== CTA WHATSAPP ===================== */}
-      <section className="pb-20">
+      <section className="pb-12 sm:pb-16 lg:pb-20">
         <Container>
-          <div className="relative flex flex-col items-center gap-5 overflow-hidden rounded-2xl border border-border bg-carbon px-8 py-14 text-center">
+          <div className="relative flex flex-col items-center gap-5 overflow-hidden rounded-2xl border border-border bg-carbon px-5 py-10 text-center sm:px-8 sm:py-14">
             <span aria-hidden className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-40" />
             <h2 className="max-w-2xl font-display text-3xl font-bold uppercase tracking-tight sm:text-4xl">
               Montou seu setup? <span className="text-boost">Fale com um especialista.</span>

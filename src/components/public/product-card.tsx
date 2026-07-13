@@ -114,17 +114,24 @@ export function ProductCard({ product }: { product: StoreProduct }) {
           </p>
         </div>
 
-        {/* Ações — empilhadas no mobile para alvos de toque maiores */}
-        <div className="flex flex-col gap-2 sm:flex-row">
+        {/* Ações — sempre empilhadas em largura total: espaçamento idêntico
+            em todos os cards, independente do tamanho dos rótulos. */}
+        <div className="grid gap-2">
           <Button
             onClick={() => addProduct(product)}
             disabled={outOfStock}
-            className="h-10 flex-1 gap-1.5"
+            className="h-10 w-full gap-1.5"
           >
             <ShoppingCart className="size-4" />
-            {outOfStock ? "Indisponível" : "Adicionar"}
+            {outOfStock ? (
+              "Indisponível"
+            ) : (
+              <span>
+                Adicionar<span className="hidden lg:inline"> ao carrinho</span>
+              </span>
+            )}
           </Button>
-          <Button asChild variant="outline" className="h-10">
+          <Button asChild variant="outline" className="h-10 w-full">
             <Link href={`/produtos/${product.slug}`}>Ver detalhes</Link>
           </Button>
         </div>

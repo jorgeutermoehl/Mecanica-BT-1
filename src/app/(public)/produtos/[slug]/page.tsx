@@ -227,7 +227,7 @@ export default async function ProductPage({
             </BreadcrumbList>
           </Breadcrumb>
 
-          <div className="grid gap-10 lg:grid-cols-2 lg:gap-14">
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
             {/* ---------- Galeria ---------- */}
             <div className="flex flex-col gap-4">
               <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-carbon">
@@ -404,7 +404,7 @@ export default async function ProductPage({
       </section>
 
       {/* ===================== DETALHES ===================== */}
-      <section className="border-t border-border py-16">
+      <section className="border-t border-border py-10 sm:py-14 lg:py-16">
         <Container>
           <div className="grid gap-12 lg:grid-cols-3">
             {/* Coluna principal */}
@@ -437,6 +437,7 @@ export default async function ProductPage({
                   Especificações técnicas
                 </h2>
                 <div className="mt-5 overflow-hidden rounded-xl border border-border">
+                  <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <tbody>
                       {baseSpecs.map((s, i) => (
@@ -457,6 +458,7 @@ export default async function ProductPage({
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
                 {!specLines && product.technicalSpecs && (
                   <p className="mt-4 rounded-xl border border-border bg-card p-4 font-mono text-sm text-muted-foreground">
@@ -601,7 +603,7 @@ export default async function ProductPage({
 
       {/* ===================== RELACIONADOS ===================== */}
       {related.length > 0 && (
-        <section className="border-t border-border py-16">
+        <section className="border-t border-border py-10 sm:py-14 lg:py-16">
           <Container>
             <div className="mb-8">
               <Eyebrow>Combina com o seu setup</Eyebrow>
@@ -609,7 +611,7 @@ export default async function ProductPage({
                 Produtos relacionados
               </h2>
             </div>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {related.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}

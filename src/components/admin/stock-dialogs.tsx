@@ -138,7 +138,7 @@ function PaymentMethodSelect({
 /* Dialog: Registrar entrada (com financeiro da compra)                */
 /* ------------------------------------------------------------------ */
 
-function EntryDialog({ products }: { products: ProductOption[] }) {
+export function EntryDialog({ products }: { products: ProductOption[] }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -381,7 +381,7 @@ function EntryDialog({ products }: { products: ProductOption[] }) {
 /* Dialog: Registrar saída                                            */
 /* ------------------------------------------------------------------ */
 
-function OutDialog({ products }: { products: ProductOption[] }) {
+export function OutDialog({ products }: { products: ProductOption[] }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -522,7 +522,7 @@ function OutDialog({ products }: { products: ProductOption[] }) {
 /* Dialog: Registrar venda (manual — Instagram/WhatsApp/loja/site)     */
 /* ------------------------------------------------------------------ */
 
-function SaleDialog({ products }: { products: ProductOption[] }) {
+export function SaleDialog({ products }: { products: ProductOption[] }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -722,7 +722,7 @@ function SaleDialog({ products }: { products: ProductOption[] }) {
 /* Dialog: Ajuste de inventário                                       */
 /* ------------------------------------------------------------------ */
 
-function AdjustDialog({ products }: { products: ProductOption[] }) {
+export function AdjustDialog({ products }: { products: ProductOption[] }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);

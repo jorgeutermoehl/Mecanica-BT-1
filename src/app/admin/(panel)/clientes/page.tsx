@@ -42,7 +42,7 @@ export default async function CustomersPage({
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase tracking-tight">
             Clientes
@@ -56,8 +56,8 @@ export default async function CustomersPage({
 
       {/* Busca (GET ?q=) */}
       <div className="flex flex-wrap items-center gap-3">
-        <Form action="/admin/clientes" className="flex flex-wrap items-center gap-2">
-          <div className="relative">
+        <Form action="/admin/clientes" className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="relative w-full sm:w-auto">
             <Search
               aria-hidden
               className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
@@ -67,7 +67,7 @@ export default async function CustomersPage({
               name="q"
               defaultValue={query ?? ""}
               placeholder="Buscar por nome, e-mail ou documento…"
-              className="w-72 pl-9"
+              className="w-full pl-9 sm:w-72"
               aria-label="Buscar clientes"
             />
           </div>
@@ -112,6 +112,7 @@ export default async function CustomersPage({
             </div>
           ) : (
             <>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -175,6 +176,7 @@ export default async function CustomersPage({
                   ))}
                 </TableBody>
               </Table>
+              </div>
               <p className="mt-4 border-t-2 border-border pt-3 font-mono text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {customers.length} {customers.length === 1 ? "cliente" : "clientes"}
               </p>

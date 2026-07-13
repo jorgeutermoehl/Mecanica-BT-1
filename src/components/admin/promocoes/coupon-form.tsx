@@ -89,7 +89,7 @@ export function CouponForm() {
         <TicketPercent className="size-4" />
         Novo cupom
       </Button>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Novo cupom de desconto</DialogTitle>
           <DialogDescription>
@@ -166,7 +166,7 @@ export function CouponForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="coupon-min-order">Pedido mínimo (opcional)</Label>
               <Input
@@ -197,7 +197,7 @@ export function CouponForm() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="grid grid-cols-2 gap-2">
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={submitting}>
                 Cancelar

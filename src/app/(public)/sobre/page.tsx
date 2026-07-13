@@ -124,10 +124,10 @@ export default function SobrePage() {
       {/* ===================== HERO ===================== */}
       <section className="relative overflow-hidden border-b border-border bg-carbon">
         <span aria-hidden className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-[420px]" />
-        <Container className="relative grid items-center gap-12 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:py-28">
+        <Container className="relative grid items-center gap-12 py-12 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:py-28">
           <div>
             <Eyebrow>Quem somos · Race Parts</Eyebrow>
-            <h1 className="mt-5 text-balance text-4xl font-bold uppercase leading-[0.95] tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 text-balance text-3xl font-bold uppercase leading-[0.95] tracking-tight sm:text-4xl lg:text-6xl">
               Mais de uma década montando{" "}
               <span className="text-boost">setups que aguentam o tranco.</span>
             </h1>
@@ -195,7 +195,7 @@ export default function SobrePage() {
       </section>
 
       {/* ===================== NÚMEROS ===================== */}
-      <section className="border-b border-border bg-card/40 py-16">
+      <section className="border-b border-border bg-card/40 py-10 sm:py-14 lg:py-16">
         <Container>
           <div className="mb-10 text-center">
             <Eyebrow>Em números</Eyebrow>
@@ -219,9 +219,9 @@ export default function SobrePage() {
       </section>
 
       {/* ===================== NOSSA HISTÓRIA ===================== */}
-      <section className="py-16">
+      <section className="py-10 sm:py-14 lg:py-16">
         <Container>
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 lg:items-center">
             <div>
               <Eyebrow>Nossa história</Eyebrow>
               <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">
@@ -273,7 +273,7 @@ export default function SobrePage() {
       </section>
 
       {/* ===================== POR QUE ESCOLHER ===================== */}
-      <section className="border-y border-border bg-card/40 py-16">
+      <section className="border-y border-border bg-card/40 py-10 sm:py-14 lg:py-16">
         <Container>
           <div className="mb-10">
             <Eyebrow>Por que escolher</Eyebrow>
@@ -301,9 +301,9 @@ export default function SobrePage() {
       </section>
 
       {/* ===================== QUALIDADE DAS PEÇAS ===================== */}
-      <section className="py-16">
+      <section className="py-10 sm:py-14 lg:py-16">
         <Container>
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 lg:items-center">
             {/* Selo de procedência */}
             <div className="order-2 lg:order-1">
               <div className="relative overflow-hidden rounded-2xl border border-border bg-carbon p-8 sm:p-10">
@@ -360,9 +360,9 @@ export default function SobrePage() {
       </section>
 
       {/* ===================== ATENDIMENTO ESPECIALIZADO ===================== */}
-      <section className="border-y border-border bg-card/40 py-16">
+      <section className="border-y border-border bg-card/40 py-10 sm:py-14 lg:py-16">
         <Container>
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 lg:items-center">
             <div>
               <Eyebrow>Atendimento especializado</Eyebrow>
               <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">
@@ -438,7 +438,7 @@ export default function SobrePage() {
       </section>
 
       {/* ===================== COMPROMISSO COM PERFORMANCE ===================== */}
-      <section className="py-16">
+      <section className="py-10 sm:py-14 lg:py-16">
         <Container>
           <div className="mb-10 text-center">
             <Eyebrow>Compromisso com performance</Eyebrow>
@@ -466,9 +466,9 @@ export default function SobrePage() {
       </section>
 
       {/* ===================== CTA FINAL ===================== */}
-      <section className="pb-20">
+      <section className="pb-12 sm:pb-16 lg:pb-20">
         <Container>
-          <div className="relative overflow-hidden rounded-2xl border border-border bg-carbon px-8 py-14 text-center">
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-carbon px-5 py-10 text-center sm:px-8 sm:py-14">
             <span aria-hidden className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-40" />
             <div className="relative flex flex-col items-center gap-5">
               <h2 className="max-w-2xl font-display text-3xl font-bold uppercase tracking-tight sm:text-4xl">

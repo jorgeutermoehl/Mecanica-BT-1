@@ -35,7 +35,7 @@ function NotificationCard({ item }: { item: AdminNotification }) {
   const { icon: Icon, chip } = KIND_STYLE[item.kind];
   return (
     <Card size="sm">
-      <CardContent className="flex items-center gap-4">
+      <CardContent className="flex items-center gap-3 sm:gap-4">
         <span className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${chip}`}>
           <Icon className="size-5" />
         </span>

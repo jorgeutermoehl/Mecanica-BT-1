@@ -460,7 +460,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-end gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:ml-auto sm:max-w-xs">
         <Button asChild type="button" variant="ghost">
           <Link href="/admin/produtos">Cancelar</Link>
         </Button>

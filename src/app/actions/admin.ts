@@ -15,7 +15,7 @@ import {
   type OrderStatus,
 } from "@/lib/validations";
 import { createProduct, setProductStatus, updateProduct } from "@/server/products";
-import { adjustStock, registerEntry, registerOut } from "@/server/inventory";
+import { adjustStock, correctMovement, registerEntry, registerOut, reverseMovement } from "@/server/inventory";
 import { registerManualSale, updateOrderStatus } from "@/server/orders";
 import { createCoupon, setCouponActive, setPromoPrice, clearPromoPrice } from "@/server/promotions";
 import { createCustomer } from "@/server/customers";
@@ -108,6 +108,47 @@ export async function stockAdjustAction(input: unknown): Promise<AdminActionResu
     const parsed = stockAdjustSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
     await adjustStock(parsed.data, user.id);
+    revalidateStore();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** "Excluir" movimentação = estorno (lançamento reverso, append-only). */
+export async function reverseMovementAction(movementId: string): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    if (!movementId) return { ok: false, error: "Movimentação inválida." };
+    await reverseMovement(movementId, user.id);
+    revalidateStore();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** "Editar" movimentação = estorno + relançamento com os novos valores. */
+export async function correctMovementAction(
+  movementId: string,
+  input: { quantity: number; unitCost?: number; reason?: string },
+): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    if (!movementId) return { ok: false, error: "Movimentação inválida." };
+    const quantity = Number(input.quantity);
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      return { ok: false, error: "Quantidade deve ser maior que zero." };
+    }
+    await correctMovement(
+      movementId,
+      {
+        quantity,
+        unitCost: input.unitCost !== undefined ? Number(input.unitCost) : undefined,
+        reason: input.reason,
+      },
+      user.id,
+    );
     revalidateStore();
     return { ok: true };
   } catch (e) {

@@ -50,7 +50,7 @@ export default async function OrderConfirmedPage({
   const whatsappMessage = `Olá! Acabei de fazer o pedido ${orderNumber} na FullBoost e gostaria de acompanhar o andamento.`;
 
   return (
-    <section className="py-16 sm:py-24">
+    <section className="py-10 sm:py-16 lg:py-24">
       <Container>
         <div className="relative mx-auto max-w-xl overflow-hidden rounded-2xl border border-border bg-card">
           <span aria-hidden className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-40" />
@@ -111,7 +111,7 @@ export default async function OrderConfirmedPage({
             </div>
 
             {/* Ações */}
-            <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
+            <div className="mt-8 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
               <Button asChild size="lg" className="gap-2">
                 <Link href="/produtos">
                   Ver mais produtos

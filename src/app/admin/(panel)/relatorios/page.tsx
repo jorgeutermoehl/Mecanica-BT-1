@@ -290,9 +290,9 @@ export default async function RelatoriosPage({
                 })}
               </div>
 
-              <form method="get" action="/admin/relatorios" className="flex flex-wrap items-end gap-3">
+              <form method="get" action="/admin/relatorios" className="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:gap-3">
                 <input type="hidden" name="tab" value="lancamentos" />
-                <div className="grid gap-1">
+                <div className="grid w-full gap-1 sm:w-auto">
                   <label
                     htmlFor="report-from"
                     className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
@@ -304,10 +304,10 @@ export default async function RelatoriosPage({
                     type="date"
                     name="from"
                     defaultValue={from}
-                    className="w-38 font-mono"
+                    className="w-full font-mono sm:w-38"
                   />
                 </div>
-                <div className="grid gap-1">
+                <div className="grid w-full gap-1 sm:w-auto">
                   <label
                     htmlFor="report-to"
                     className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
@@ -319,10 +319,10 @@ export default async function RelatoriosPage({
                     type="date"
                     name="to"
                     defaultValue={to}
-                    className="w-38 font-mono"
+                    className="w-full font-mono sm:w-38"
                   />
                 </div>
-                <div className="grid gap-1">
+                <div className="grid w-full gap-1 sm:w-auto">
                   <label
                     htmlFor="report-direction"
                     className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
@@ -340,7 +340,7 @@ export default async function RelatoriosPage({
                     <option value="OUT">Só saídas</option>
                   </select>
                 </div>
-                <Button type="submit" size="sm" variant="secondary" className="gap-1.5">
+                <Button type="submit" size="sm" variant="secondary" className="w-full gap-1.5 sm:w-auto">
                   <Filter className="size-3.5" aria-hidden />
                   Filtrar
                 </Button>
@@ -659,7 +659,7 @@ export default async function RelatoriosPage({
               </div>
 
               {/* Rodapé de totais em destaque */}
-              <div className="grid grid-cols-2 gap-4 border-t-2 border-border pt-4 xl:grid-cols-5">
+              <div className="grid grid-cols-1 gap-3 border-t-2 border-border pt-4 sm:grid-cols-2 sm:gap-4 xl:grid-cols-5">
                 <Card size="sm">
                   <CardContent>
                     <p className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">

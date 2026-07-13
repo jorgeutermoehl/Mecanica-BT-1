@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   BadgePercent,
   Bell,
-  Boxes,
   Calculator,
   ExternalLink,
   FileBarChart,
@@ -13,6 +12,7 @@ import {
   Package,
   ShoppingCart,
   Users,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,7 +30,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/produtos", label: "Produtos", icon: Package },
-  { href: "/admin/estoque", label: "Estoque", icon: Boxes },
+  { href: "/admin/estoque", label: "Estoque", icon: Warehouse },
   { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
   { href: "/admin/clientes", label: "Clientes", icon: Users },
   { href: "/admin/promocoes", label: "Promoções", icon: BadgePercent },

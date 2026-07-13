@@ -59,7 +59,7 @@ export default async function AdminProductsPage({
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase tracking-tight">
             Produtos
@@ -68,7 +68,7 @@ export default async function AdminProductsPage({
             Anúncios da loja — produtos ativos são publicados imediatamente.
           </p>
         </div>
-        <Button asChild className="gap-2">
+        <Button asChild className="w-full gap-2 sm:w-auto">
           <Link href="/admin/produtos/novo">
             <Plus className="size-4" />
             Novo produto
@@ -102,6 +102,7 @@ export default async function AdminProductsPage({
       {/* Tabela */}
       <Card>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -203,6 +204,7 @@ export default async function AdminProductsPage({
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

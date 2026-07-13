@@ -77,7 +77,7 @@ export default function LoginPage() {
   }
 
   return (
-    <section className="relative overflow-hidden py-16 sm:py-24">
+    <section className="relative overflow-hidden py-10 sm:py-16 lg:py-24">
       <span aria-hidden className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-72" />
       <Container className="relative">
         <div className="mx-auto max-w-md">

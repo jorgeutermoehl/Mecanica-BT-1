@@ -4,32 +4,20 @@ import {
   ArrowDownToLine,
   ArrowRight,
   ArrowUpFromLine,
-  Boxes,
+  FileBarChart,
   Info,
+  Warehouse,
 } from "lucide-react";
-import {
-  getCurrentStockReport,
-  getMovementsReport,
-  type MovementsReport,
-} from "@/server/reports";
-import { listProductOptions } from "@/server/inventory";
+import { getMovementsReport, getCurrentStockReport } from "@/server/reports";
+import { listMovements, listProductOptions, type MovementRow } from "@/server/inventory";
 import {
   MOVEMENT_TYPE_LABEL,
-  SALE_CHANNEL_LABEL,
   type MovementType,
-  type SaleChannel,
 } from "@/lib/validations";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -39,214 +27,237 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StockDialogs } from "@/components/admin/stock-dialogs";
+import {
+  AdjustDialog,
+  EntryDialog,
+  OutDialog,
+  SaleDialog,
+} from "@/components/admin/stock-dialogs";
+import { MovementActions } from "@/components/admin/estoque/movement-actions";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Estoque",
-};
-
-type ReportRow = MovementsReport["rows"][number];
-
-/** Limite visual por card — o histórico completo fica em Relatórios. */
-const VISIBLE_LIMIT = 50;
+export const metadata: Metadata = { title: "Estoque" };
 
 const dateTimeFormat = new Intl.DateTimeFormat("pt-BR", {
-  dateStyle: "short",
-  timeStyle: "short",
+  day: "2-digit",
+  month: "2-digit",
+  year: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
 });
-
-/** Cores por canal de venda (tokens do design system). */
-const CHANNEL_BADGE: Record<SaleChannel, string> = {
-  SITE: "bg-info/15 text-info",
-  INSTAGRAM: "bg-primary/15 text-primary",
-  WHATSAPP: "bg-success/15 text-success",
-  LOJA: "bg-secondary text-secondary-foreground",
-};
 
 function movementLabel(type: string): string {
   return MOVEMENT_TYPE_LABEL[type as MovementType] ?? type;
 }
 
 /* ------------------------------------------------------------------ */
-/* KPI do mês                                                          */
+/* Card grande de seção (Entradas | Saídas) — seletor da listagem      */
 /* ------------------------------------------------------------------ */
 
-const KPI_TONE = {
-  success: { icon: "bg-success/10 text-success", value: "text-success" },
-  destructive: { icon: "bg-destructive/10 text-destructive", value: "text-destructive" },
-  info: { icon: "bg-info/10 text-info", value: "" },
-} as const;
-
-function KpiCard({
-  label,
-  value,
-  hint,
-  icon: Icon,
-  tone,
+function SectionCard({
+  section,
+  selected,
+  monthQty,
+  monthValue,
+  children,
 }: {
-  label: string;
-  value: string;
-  hint: string;
-  icon: React.ComponentType<{ className?: string }>;
-  tone: keyof typeof KPI_TONE;
+  section: "entradas" | "saidas";
+  selected: boolean;
+  monthQty: number;
+  monthValue: number;
+  children: React.ReactNode; // botões de registrar
 }) {
+  const isIn = section === "entradas";
+  const Icon = isIn ? ArrowDownToLine : ArrowUpFromLine;
+
   return (
-    <Card>
-      <CardContent className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            {label}
-          </p>
-          <p
-            className={cn(
-              "mt-2 truncate font-display text-3xl font-bold tracking-tight",
-              KPI_TONE[tone].value,
-            )}
-          >
-            {value}
-          </p>
-          <p className="mt-1 font-mono text-xs text-muted-foreground">{hint}</p>
+    <Card
+      className={cn(
+        "relative transition-all",
+        selected
+          ? "ring-2 ring-primary bg-primary/5"
+          : "hover:border-primary/40 hover:shadow-md",
+      )}
+    >
+      {/* Área clicável do card (atrás dos botões) */}
+      <Link
+        href={`/admin/estoque?secao=${section}`}
+        aria-label={`Ver lançamentos de ${isIn ? "entrada" : "saída"}`}
+        className="absolute inset-0 rounded-xl"
+      />
+      <CardContent className="relative flex flex-col gap-4 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span
+              className={cn(
+                "flex size-12 shrink-0 items-center justify-center rounded-xl",
+                isIn ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive",
+              )}
+            >
+              <Icon className="size-6" aria-hidden />
+            </span>
+            <div>
+              <h2 className="font-display text-xl font-bold uppercase tracking-tight">
+                {isIn ? "Entradas" : "Saídas"}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {isIn ? "Compras e reposições" : "Vendas e baixas"}
+              </p>
+            </div>
+          </div>
+          {selected ? (
+            <Badge className="pointer-events-none font-mono text-[10px] uppercase">
+              Selecionado
+            </Badge>
+          ) : null}
         </div>
-        <span
-          className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-lg",
-            KPI_TONE[tone].icon,
-          )}
-        >
-          <Icon className="size-5" />
-        </span>
+
+        <p className="font-mono text-sm text-muted-foreground">
+          Este mês:{" "}
+          <span className={cn("font-semibold", isIn ? "text-success" : "text-destructive")}>
+            {isIn ? "+" : "−"}
+            {monthQty} un
+          </span>{" "}
+          · {formatBRL(monthValue)}
+        </p>
+
+        {/* Botões acima da área clicável */}
+        <div className="relative z-10 grid grid-cols-1 gap-2 sm:grid-cols-2 [&_button]:w-full">
+          {children}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Card de movimentações (entradas OU saídas)                          */
+/* Listagem compacta (estilo ERP denso) da seção selecionada           */
 /* ------------------------------------------------------------------ */
 
-function MovementsCard({
-  direction,
-  rows,
-  totalQty,
-  totalValue,
-}: {
-  direction: "IN" | "OUT";
-  rows: ReportRow[];
-  totalQty: number;
-  totalValue: number;
-}) {
-  const isIn = direction === "IN";
-  const Icon = isIn ? ArrowDownToLine : ArrowUpFromLine;
+function CompactListing({ section, rows }: { section: "entradas" | "saidas"; rows: MovementRow[] }) {
+  const isIn = section === "entradas";
+  const totalQty = rows.reduce((s, r) => s + r.quantity, 0);
+  const totalValue = rows.reduce((s, r) => s + r.unitCost * r.quantity, 0);
   const sign = isIn ? "+" : "−";
   const signColor = isIn ? "text-success" : "text-destructive";
-  const visible = rows.slice(0, VISIBLE_LIMIT);
 
   return (
     <Card>
-      <CardHeader className="border-b">
-        <CardTitle className="flex items-center gap-2 uppercase tracking-wide">
-          <Icon className={cn("size-4", signColor)} aria-hidden />
-          {isIn ? "Entradas de estoque" : "Saídas de estoque"}
-        </CardTitle>
-        <CardAction>
-          <span className="font-mono text-xs text-muted-foreground">
-            {rows.length} {rows.length === 1 ? "lançamento" : "lançamentos"}
-          </span>
-        </CardAction>
-      </CardHeader>
       <CardContent className="px-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 pb-3 sm:px-6">
+          <h3 className="font-display text-sm font-bold uppercase tracking-wide">
+            Lançamentos de {isIn ? "entrada" : "saída"}
+          </h3>
+          <span className="font-mono text-xs text-muted-foreground">
+            {rows.length} {rows.length === 1 ? "registro" : "registros"}
+          </span>
+        </div>
+
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>Data/hora</TableHead>
-                <TableHead>Produto</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Qtd.</TableHead>
-                <TableHead className="text-right">Custo un.</TableHead>
-                <TableHead className="text-right">Valor total</TableHead>
-                <TableHead className="text-right">Saldo</TableHead>
-                <TableHead>Quem</TableHead>
+                <TableHead className="h-8 text-xs">Data</TableHead>
+                <TableHead className="h-8 text-xs">Produto</TableHead>
+                <TableHead className="h-8 text-xs">Tipo</TableHead>
+                <TableHead className="h-8 text-right text-xs">Qtd.</TableHead>
+                <TableHead className="h-8 text-right text-xs">Custo un.</TableHead>
+                <TableHead className="h-8 text-right text-xs">Valor</TableHead>
+                <TableHead className="h-8 text-right text-xs">Saldo</TableHead>
+                <TableHead className="h-8 text-xs">Origem</TableHead>
+                <TableHead className="h-8 text-xs">Usuário</TableHead>
+                <TableHead className="h-8 text-right text-xs">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visible.length === 0 ? (
+              {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-28 text-center text-muted-foreground">
+                  <TableCell colSpan={10} className="h-24 text-center text-sm text-muted-foreground">
                     {isIn
-                      ? "Nenhuma entrada registrada ainda. Use “Registrar entrada” para dar entrada nas primeiras peças."
-                      : "Nenhuma saída registrada ainda — vendas e baixas aparecem aqui."}
+                      ? "Nenhuma entrada ainda — registre a primeira compra de peças."
+                      : "Nenhuma saída ainda — vendas e baixas aparecem aqui."}
                   </TableCell>
                 </TableRow>
               ) : (
-                visible.map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+                rows.map((m, i) => (
+                  <TableRow
+                    key={m.id}
+                    className={cn(
+                      i % 2 === 1 && "bg-muted/20",
+                      m.isReversed && "opacity-60",
+                    )}
+                  >
+                    <TableCell className="whitespace-nowrap py-1.5 font-mono text-xs text-muted-foreground">
                       {dateTimeFormat.format(new Date(m.createdAt))}
                     </TableCell>
-                    <TableCell>
-                      <div className="max-w-[180px]">
-                        <p className="truncate text-sm font-medium" title={m.productName}>
-                          {m.productName}
-                        </p>
-                        <p className="font-mono text-xs text-muted-foreground">{m.sku}</p>
-                      </div>
+                    <TableCell className="py-1.5">
+                      <p className="max-w-[200px] truncate text-xs font-medium sm:text-sm" title={m.productName}>
+                        {m.productName}
+                      </p>
+                      <p className="font-mono text-[10px] text-muted-foreground">{m.sku}</p>
                     </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "gap-1",
-                          isIn
-                            ? "border-success/30 bg-success/10 text-success"
-                            : "border-destructive/30 bg-destructive/10 text-destructive",
-                        )}
-                      >
-                        {movementLabel(m.type)}
-                      </Badge>
-                      {m.orderNumber ? (
-                        <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <span className="font-mono text-[10px] text-muted-foreground">
-                            {m.orderNumber}
-                          </span>
-                          {m.channel ? (
-                            <Badge
-                              variant="secondary"
-                              className={cn("px-1.5 py-0 text-[10px]", CHANNEL_BADGE[m.channel])}
-                            >
-                              {SALE_CHANNEL_LABEL[m.channel]}
-                            </Badge>
-                          ) : null}
-                        </span>
-                      ) : null}
+                    <TableCell className="py-1.5">
+                      <span className="flex flex-wrap items-center gap-1">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "px-1.5 py-0 text-[10px]",
+                            isIn
+                              ? "border-success/30 bg-success/10 text-success"
+                              : "border-destructive/30 bg-destructive/10 text-destructive",
+                          )}
+                        >
+                          {movementLabel(m.type)}
+                        </Badge>
+                        {m.isReversal ? (
+                          <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                            Estorno
+                          </Badge>
+                        ) : null}
+                        {m.isReversed ? (
+                          <Badge variant="outline" className="px-1.5 py-0 text-[10px] text-muted-foreground">
+                            Estornada
+                          </Badge>
+                        ) : null}
+                      </span>
                     </TableCell>
-                    <TableCell
-                      className={cn(
-                        "text-right font-mono text-sm font-semibold",
-                        signColor,
-                      )}
-                    >
+                    <TableCell className={cn("whitespace-nowrap py-1.5 text-right font-mono text-xs font-semibold", signColor)}>
                       {sign}
                       {m.quantity}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-right font-mono text-xs text-muted-foreground">
+                    <TableCell className="whitespace-nowrap py-1.5 text-right font-mono text-xs text-muted-foreground">
                       {formatBRL(m.unitCost)}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-right font-mono text-sm font-medium">
-                      {formatBRL(m.totalValue)}
+                    <TableCell className="whitespace-nowrap py-1.5 text-right font-mono text-xs font-medium">
+                      {formatBRL(m.unitCost * m.quantity)}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                    <TableCell className="whitespace-nowrap py-1.5 text-right font-mono text-xs">
                       <span className="text-muted-foreground">{m.balanceBefore}</span>
-                      <span aria-hidden className="px-1 text-muted-foreground/60">→</span>
+                      <span aria-hidden className="px-0.5 text-muted-foreground/60">→</span>
                       <span className="font-semibold">{m.balanceAfter}</span>
                     </TableCell>
-                    <TableCell
-                      className="max-w-[90px] truncate text-xs text-muted-foreground"
-                      title={m.userName}
-                    >
+                    <TableCell className="whitespace-nowrap py-1.5 font-mono text-[10px] text-muted-foreground">
+                      {m.orderNumber ?? m.invoiceNumber ?? "—"}
+                    </TableCell>
+                    <TableCell className="max-w-[90px] truncate py-1.5 text-xs text-muted-foreground" title={m.userName}>
                       {m.userName}
+                    </TableCell>
+                    <TableCell className="py-1 text-right">
+                      <MovementActions
+                        movement={{
+                          id: m.id,
+                          type: m.type,
+                          quantity: m.quantity,
+                          unitCost: m.unitCost,
+                          reason: m.reason,
+                          sku: m.sku,
+                          canModify: m.canModify,
+                          isReversal: m.isReversal,
+                          isReversed: m.isReversed,
+                          orderNumber: m.orderNumber,
+                        }}
+                      />
                     </TableCell>
                   </TableRow>
                 ))
@@ -255,37 +266,23 @@ function MovementsCard({
             {rows.length > 0 ? (
               <TableFooter className="border-t-2">
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={3} className="text-sm font-semibold uppercase tracking-wide">
-                    Total {isIn ? "de entradas" : "de saídas"}
+                  <TableCell colSpan={3} className="text-xs font-semibold uppercase tracking-wide">
+                    Total de {isIn ? "entradas" : "saídas"}
                   </TableCell>
-                  <TableCell
-                    className={cn("text-right font-mono text-base font-bold", signColor)}
-                  >
+                  <TableCell className={cn("text-right font-mono text-sm font-bold", signColor)}>
                     {sign}
                     {totalQty} un
                   </TableCell>
                   <TableCell />
-                  <TableCell className="whitespace-nowrap text-right font-mono text-base font-bold">
+                  <TableCell className="whitespace-nowrap text-right font-mono text-sm font-bold">
                     {formatBRL(totalValue)}
                   </TableCell>
-                  <TableCell colSpan={2} />
+                  <TableCell colSpan={4} />
                 </TableRow>
               </TableFooter>
             ) : null}
           </Table>
         </div>
-        {rows.length > VISIBLE_LIMIT ? (
-          <p className="border-t border-border px-4 pt-3 font-mono text-xs text-muted-foreground">
-            Exibindo os {VISIBLE_LIMIT} lançamentos mais recentes — veja tudo em{" "}
-            <Link
-              href="/admin/relatorios"
-              className="text-primary underline-offset-2 hover:underline"
-            >
-              Relatórios
-            </Link>
-            .
-          </p>
-        ) : null}
       </CardContent>
     </Card>
   );
@@ -295,96 +292,102 @@ function MovementsCard({
 /* Página                                                              */
 /* ------------------------------------------------------------------ */
 
-export default async function EstoquePage() {
+export default async function EstoquePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ secao?: string }>;
+}) {
+  const { secao } = await searchParams;
+  const section: "entradas" | "saidas" = secao === "saidas" ? "saidas" : "entradas";
+
   const now = new Date();
   const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const monthLabel = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-  const [monthReport, report, stockReport, products] = await Promise.all([
+  const [monthReport, movements, stockReport, products] = await Promise.all([
     getMovementsReport({ from: monthStart }),
-    getMovementsReport(),
+    listMovements({ take: 300 }),
     getCurrentStockReport(),
     listProductOptions(),
   ]);
 
-  const entries = report.rows.filter((r) => r.direction === "IN");
-  const outs = report.rows.filter((r) => r.direction === "OUT");
+  const rows = movements.filter((m) => (section === "entradas" ? m.direction === "IN" : m.direction === "OUT"));
 
   return (
-    <div className="space-y-6">
-      {/* Cabeçalho + barra de ações */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Cabeçalho */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold uppercase tracking-tight">
-            Estoque
-          </h1>
+          <h1 className="font-display text-2xl font-bold uppercase tracking-tight">Estoque</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Entradas, saídas, vendas manuais e ajustes — o livro-razão completo do seu
-            inventário.
+            Selecione uma seção para ver os lançamentos — {formatBRL(stockReport.totals.totalCost)} em
+            estoque ({stockReport.totals.units} un).
           </p>
         </div>
-        <StockDialogs products={products} />
+        <div className="[&_button]:w-full sm:[&_button]:w-auto">
+          <AdjustDialog products={products} />
+        </div>
       </div>
 
-      {/* KPIs do mês */}
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            Resumo de {monthLabel}
-          </h2>
-          <Button asChild variant="outline" size="sm" className="gap-1">
-            <Link href="/admin/relatorios">
-              Ver relatórios
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <KpiCard
-            label="Entradas do mês"
-            value={formatBRL(monthReport.totals.entriesValue)}
-            hint={`${monthReport.totals.entriesQty} un em ${monthReport.totals.entriesCount} ${monthReport.totals.entriesCount === 1 ? "lançamento" : "lançamentos"}`}
-            icon={ArrowDownToLine}
-            tone="success"
-          />
-          <KpiCard
-            label="Saídas do mês"
-            value={formatBRL(monthReport.totals.outsValue)}
-            hint={`${monthReport.totals.outsQty} un em ${monthReport.totals.outsCount} ${monthReport.totals.outsCount === 1 ? "lançamento" : "lançamentos"}`}
-            icon={ArrowUpFromLine}
-            tone="destructive"
-          />
-          <KpiCard
-            label="Valor em estoque"
-            value={formatBRL(stockReport.totals.totalCost)}
-            hint={`${stockReport.totals.units} un em ${stockReport.totals.products} produtos (a custo)`}
-            icon={Boxes}
-            tone="info"
-          />
-        </div>
-      </section>
+      {/* Seletor: cards grandes Entradas | Saídas + Relatórios */}
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+        <SectionCard
+          section="entradas"
+          selected={section === "entradas"}
+          monthQty={monthReport.totals.entriesQty}
+          monthValue={monthReport.totals.entriesValue}
+        >
+          <EntryDialog products={products} />
+        </SectionCard>
+        <SectionCard
+          section="saidas"
+          selected={section === "saidas"}
+          monthQty={monthReport.totals.outsQty}
+          monthValue={monthReport.totals.outsValue}
+        >
+          <OutDialog products={products} />
+          <SaleDialog products={products} />
+        </SectionCard>
+      </div>
 
-      {/* Banner: livro-razão append-only */}
-      <div className="flex items-center gap-2.5 rounded-lg border border-info/30 bg-info/5 px-4 py-2.5 text-sm text-muted-foreground">
+      {/* Relatórios (ainda em Estoque) */}
+      <Link
+        href="/admin/relatorios"
+        className="group flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-4 transition-all hover:border-primary/50 hover:shadow-md sm:px-6"
+      >
+        <span className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <FileBarChart className="size-5" aria-hidden />
+          </span>
+          <span>
+            <span className="block font-display text-sm font-bold uppercase tracking-wide">
+              Relatórios
+            </span>
+            <span className="block text-xs text-muted-foreground sm:text-sm">
+              Lançamentos por período, filtros e posição atual do estoque
+            </span>
+          </span>
+        </span>
+        <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+      </Link>
+
+      {/* Aviso append-only */}
+      <div className="flex items-center gap-2.5 rounded-lg border border-info/30 bg-info/5 px-4 py-2.5 text-xs text-muted-foreground sm:text-sm">
         <Info className="size-4 shrink-0 text-info" aria-hidden />
-        <p>Movimentações são permanentes — correções geram lançamento de ajuste.</p>
+        <p>
+          Movimentações são permanentes: corrigir estorna e relança; excluir gera estorno. Nada é
+          apagado do histórico.
+        </p>
       </div>
 
-      {/* Entradas e saídas lado a lado */}
-      <div className="grid items-start gap-4 xl:grid-cols-2">
-        <MovementsCard
-          direction="IN"
-          rows={entries}
-          totalQty={report.totals.entriesQty}
-          totalValue={report.totals.entriesValue}
-        />
-        <MovementsCard
-          direction="OUT"
-          rows={outs}
-          totalQty={report.totals.outsQty}
-          totalValue={report.totals.outsValue}
-        />
-      </div>
+      {/* Listagem compacta da seção selecionada */}
+      <CompactListing section={section} rows={rows} />
+
+      {/* Valor em estoque (referência) */}
+      <p className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+        <Warehouse className="size-3.5" aria-hidden />
+        Posição atual: {stockReport.totals.units} un · {formatBRL(stockReport.totals.totalCost)} a custo ·
+        potencial de venda {formatBRL(stockReport.totals.totalSale)}
+      </p>
     </div>
   );
 }

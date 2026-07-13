@@ -267,6 +267,8 @@ model ProductApplication {
 // ===========================================================================
 
 /// Livro-razão de estoque (APPEND-ONLY). Saldo é derivado dos lançamentos.
+/// Correção/exclusão NUNCA apaga: cria movimento reverso apontando o original
+/// via `reversalOfId` (o par fica marcado como estornado na interface).
 model InventoryMovement {
   id            String      @id @default(cuid())
   productId     String
@@ -285,6 +287,10 @@ model InventoryMovement {
   order         Order?      @relation(fields: [orderId], references: [id])
   stockEntryId  String?
   stockEntry    StockEntry? @relation(fields: [stockEntryId], references: [id])
+  /// Aponta o movimento original quando este lançamento é um estorno.
+  reversalOfId  String?     @unique
+  reversalOf    InventoryMovement? @relation("MovementReversal", fields: [reversalOfId], references: [id])
+  reversedBy    InventoryMovement? @relation("MovementReversal")
   createdAt     DateTime    @default(now())
 
   @@index([productId])

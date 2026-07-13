@@ -89,6 +89,7 @@ export default async function OrderDetailPage({
             </CardHeader>
             <CardContent>
               <TooltipProvider>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -132,6 +133,7 @@ export default async function OrderDetailPage({
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </TooltipProvider>
             </CardContent>
           </Card>

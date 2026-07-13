@@ -84,7 +84,7 @@ export function ApplyPromoDialog({
         <BadgePercent className="size-3.5" />
         Aplicar promoção
       </Button>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Aplicar promoção</DialogTitle>
           <DialogDescription>
@@ -122,7 +122,7 @@ export function ApplyPromoDialog({
               </p>
             ) : null}
           </div>
-          <DialogFooter>
+          <DialogFooter className="grid grid-cols-2 gap-2">
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={submitting}>
                 Cancelar
@@ -181,7 +181,7 @@ export function RemovePromoButton({
             {formatBRL(salePrice)}.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
+        <AlertDialogFooter className="grid grid-cols-2 gap-2">
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={handleRemove}>
             Remover promoção

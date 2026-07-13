@@ -89,7 +89,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <KpiCard
           label="Faturamento hoje"
           value={formatBRL(data.revenueToday)}
@@ -157,7 +157,7 @@ export default async function AdminDashboardPage() {
       )}
 
       {/* Pedidos e movimentações */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         {/* Últimos pedidos */}
         <Card>
           <CardHeader>
@@ -169,6 +169,7 @@ export default async function AdminDashboardPage() {
                 Nenhum pedido registrado ainda.
               </p>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -212,6 +213,7 @@ export default async function AdminDashboardPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -227,6 +229,7 @@ export default async function AdminDashboardPage() {
                 Nenhuma movimentação de estoque ainda.
               </p>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -271,6 +274,7 @@ export default async function AdminDashboardPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>

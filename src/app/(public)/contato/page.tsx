@@ -138,9 +138,9 @@ export default function ContatoPage() {
           aria-hidden
           className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-[320px]"
         />
-        <Container className="relative py-16 lg:py-20">
+        <Container className="relative py-12 sm:py-16 lg:py-20">
           <Eyebrow>Atendimento · Suporte técnico</Eyebrow>
-          <h1 className="mt-5 max-w-2xl text-balance text-4xl font-bold uppercase leading-[0.95] tracking-tight sm:text-5xl">
+          <h1 className="mt-5 max-w-2xl text-balance text-3xl font-bold uppercase leading-[0.95] tracking-tight sm:text-4xl lg:text-5xl">
             Fale com um <span className="text-boost">especialista</span>
           </h1>
           <p className="mt-5 max-w-xl text-pretty text-lg text-muted-foreground">
@@ -151,7 +151,7 @@ export default function ContatoPage() {
       </section>
 
       {/* ===================== FORMULÁRIO + CANAIS ===================== */}
-      <section className="py-16">
+      <section className="py-10 sm:py-14 lg:py-16">
         <Container>
           <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
             {/* ---------- Coluna esquerda: formulário ---------- */}
@@ -381,9 +381,9 @@ export default function ContatoPage() {
       </section>
 
       {/* ===================== CTA FINAL ===================== */}
-      <section className="pb-20">
+      <section className="pb-12 sm:pb-16 lg:pb-20">
         <Container>
-          <div className="racing-clip relative overflow-hidden rounded-2xl bg-boost px-8 py-12 text-white">
+          <div className="racing-clip relative overflow-hidden rounded-2xl bg-boost px-5 py-8 text-white sm:px-8 sm:py-12">
             <span aria-hidden className="absolute inset-0 bg-carbon opacity-10" />
             <div className="relative flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
               <div>

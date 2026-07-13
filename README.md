@@ -10,7 +10,8 @@ E-commerce de **peças automotivas de performance** (rodas, turbo, motor, escape
 # 1. Instalar dependências
 npm install
 
-# 2. Criar o banco local (SQLite) e popular com o catálogo demo
+# 2. Criar o banco local (SQLite) com a base mínima de demonstração
+#    (1 exemplo de cada cadastro: produto, entrada, pedido, cliente, cupom...)
 npx prisma migrate dev
 npm run db:seed
 

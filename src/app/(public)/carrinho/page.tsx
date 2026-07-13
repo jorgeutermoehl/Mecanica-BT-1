@@ -226,7 +226,7 @@ export default function CartPage() {
     return (
       <section className="py-16 sm:py-24">
         <Container>
-          <div className="mx-auto flex max-w-md flex-col items-center rounded-2xl border border-border bg-card px-8 py-16 text-center">
+          <div className="mx-auto flex max-w-md flex-col items-center rounded-2xl border border-border bg-card px-6 py-12 text-center sm:px-8 sm:py-16">
             <span className="flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
               <ShoppingCart className="size-7" />
             </span>
@@ -302,7 +302,7 @@ export default function CartPage() {
 
           {/* Resumo do pedido */}
           <aside className="lg:sticky lg:top-24">
-            <div className="rounded-xl border border-border bg-card p-6">
+            <div className="rounded-xl border border-border bg-card p-5 sm:p-6">
               <h2 className="font-display text-lg font-bold uppercase tracking-tight">
                 Resumo do pedido
               </h2>
