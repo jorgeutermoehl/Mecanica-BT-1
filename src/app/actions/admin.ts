@@ -34,7 +34,7 @@ function fail(e: unknown): AdminActionResult {
 
 /** Revalida as rotas afetadas por mudanças de catálogo/estoque. */
 function revalidateStore() {
-  for (const path of ["/", "/produtos", "/promocoes", "/categorias", "/admin", "/admin/produtos", "/admin/estoque", "/admin/pedidos"]) {
+  for (const path of ["/", "/produtos", "/promocoes", "/admin", "/admin/produtos", "/admin/estoque", "/admin/pedidos"]) {
     revalidatePath(path);
   }
 }
