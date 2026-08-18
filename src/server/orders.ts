@@ -231,13 +231,22 @@ export async function registerManualSale(input: ManualSaleInput, userId: string)
     }
 
     const total = input.unitPrice * input.quantity;
-    const customerName = input.customerName?.trim() || "Cliente balcão";
     const now = new Date();
 
-    // Cliente: reaproveita cadastro pelo nome exato, senão cria.
-    let customer = await tx.customer.findFirst({ where: { name: customerName, deletedAt: null } });
+    // Cliente: preferir o selecionado pela lupa; senão, cadastro rápido pelo nome.
+    let customer =
+      input.customerId && input.customerId !== ""
+        ? await tx.customer.findFirst({ where: { id: input.customerId, deletedAt: null } })
+        : null;
+    if (input.customerId && !customer) {
+      throw new Error("Cliente selecionado não encontrado — atualize a página.");
+    }
     if (!customer) {
-      customer = await tx.customer.create({ data: { name: customerName } });
+      const customerName = input.customerName?.trim() || "Cliente balcão";
+      customer = await tx.customer.findFirst({ where: { name: customerName, deletedAt: null } });
+      if (!customer) {
+        customer = await tx.customer.create({ data: { name: customerName } });
+      }
     }
 
     const count = await tx.order.count();

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { getMovementsReport, getCurrentStockReport } from "@/server/reports";
 import { listMovements, listProductOptions, type MovementRow } from "@/server/inventory";
+import { listCustomerOptions } from "@/server/customers";
 import {
   MOVEMENT_TYPE_LABEL,
   type MovementType,
@@ -303,11 +304,12 @@ export default async function EstoquePage({
   const now = new Date();
   const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 
-  const [monthReport, movements, stockReport, products] = await Promise.all([
+  const [monthReport, movements, stockReport, products, customers] = await Promise.all([
     getMovementsReport({ from: monthStart }),
     listMovements({ take: 300 }),
     getCurrentStockReport(),
     listProductOptions(),
+    listCustomerOptions(),
   ]);
 
   const rows = movements.filter((m) => (section === "entradas" ? m.direction === "IN" : m.direction === "OUT"));
@@ -345,7 +347,7 @@ export default async function EstoquePage({
           monthValue={monthReport.totals.outsValue}
         >
           <OutDialog products={products} />
-          <SaleDialog products={products} />
+          <SaleDialog products={products} customers={customers} />
         </SectionCard>
       </div>
 

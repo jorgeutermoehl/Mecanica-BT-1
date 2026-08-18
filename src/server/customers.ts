@@ -42,6 +42,22 @@ export async function listCustomers(search?: string) {
 
 export type CustomerRow = Awaited<ReturnType<typeof listCustomers>>[number];
 
+/** Opções leves para a busca de cliente ("lupa") em formulários do painel. */
+export async function listCustomerOptions() {
+  const customers = await prisma.customer.findMany({
+    where: { deletedAt: null },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, phone: true, document: true },
+  });
+  return customers.map((c) => ({
+    id: c.id,
+    name: c.name,
+    hint: c.phone ?? c.document ?? "",
+  }));
+}
+
+export type CustomerOption = Awaited<ReturnType<typeof listCustomerOptions>>[number];
+
 export async function createCustomer(input: CustomerFormInput, userId: string) {
   const email = input.email?.toLowerCase().trim();
   if (email) {

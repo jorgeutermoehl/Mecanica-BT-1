@@ -129,9 +129,27 @@ export const manualSaleSchema = z.object({
   quantity: z.coerce.number().int().positive("Quantidade deve ser maior que zero"),
   unitPrice: z.coerce.number().positive("Preço deve ser maior que zero"),
   channel: z.enum(SALE_CHANNELS),
+  /** Cliente já cadastrado (via lupa) — preferido. */
+  customerId: z.string().optional().or(z.literal("")),
+  /** Cadastro rápido: nome de um cliente novo (quando não há customerId). */
   customerName: z.string().max(120).optional().or(z.literal("")),
   paymentMethod: z.enum(PAYMENT_METHODS).default("PIX"),
 });
+
+/** Consentimento de cookies (LGPD) com dados de origem da visita. */
+export const consentSchema = z.object({
+  sessionId: z.string().min(8).max(64),
+  necessary: z.literal(true),
+  analytics: z.boolean(),
+  marketing: z.boolean(),
+  referrer: z.string().max(500).optional().or(z.literal("")),
+  utmSource: z.string().max(100).optional().or(z.literal("")),
+  utmMedium: z.string().max(100).optional().or(z.literal("")),
+  utmCampaign: z.string().max(100).optional().or(z.literal("")),
+  locale: z.string().max(20).optional().or(z.literal("")),
+  timezone: z.string().max(60).optional().or(z.literal("")),
+});
+export type ConsentInput = z.infer<typeof consentSchema>;
 
 export const couponSchema = z.object({
   code: z

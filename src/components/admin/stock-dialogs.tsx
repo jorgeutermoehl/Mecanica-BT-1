@@ -46,6 +46,8 @@ import {
   stockEntryAction,
   stockOutAction,
 } from "@/app/actions/admin";
+import { CustomerPicker } from "@/components/admin/customer-picker";
+import type { CustomerOption } from "@/server/customers";
 
 /** Opção de produto vinda de listProductOptions() (src/server/inventory). */
 export type ProductOption = {
@@ -522,7 +524,13 @@ export function OutDialog({ products }: { products: ProductOption[] }) {
 /* Dialog: Registrar venda (manual — Instagram/WhatsApp/loja/site)     */
 /* ------------------------------------------------------------------ */
 
-export function SaleDialog({ products }: { products: ProductOption[] }) {
+export function SaleDialog({
+  products,
+  customers = [],
+}: {
+  products: ProductOption[];
+  customers?: CustomerOption[];
+}) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -530,7 +538,7 @@ export function SaleDialog({ products }: { products: ProductOption[] }) {
   const [quantity, setQuantity] = React.useState("");
   const [unitPrice, setUnitPrice] = React.useState("");
   const [channel, setChannel] = React.useState<SaleChannel>("LOJA");
-  const [customerName, setCustomerName] = React.useState("");
+  const [customer, setCustomer] = React.useState({ customerId: "", customerName: "" });
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>("PIX");
 
   const selected = products.find((p) => p.id === productId);
@@ -544,7 +552,7 @@ export function SaleDialog({ products }: { products: ProductOption[] }) {
     setQuantity("");
     setUnitPrice("");
     setChannel("LOJA");
-    setCustomerName("");
+    setCustomer({ customerId: "", customerName: "" });
     setPaymentMethod("PIX");
   }
 
@@ -560,7 +568,8 @@ export function SaleDialog({ products }: { products: ProductOption[] }) {
       quantity,
       unitPrice,
       channel,
-      customerName,
+      customerId: customer.customerId,
+      customerName: customer.customerName,
       paymentMethod,
     });
     setSubmitting(false);
@@ -687,14 +696,16 @@ export function SaleDialog({ products }: { products: ProductOption[] }) {
             </div>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="sale-customer">Cliente (opcional)</Label>
-            <Input
-              id="sale-customer"
-              placeholder="Cliente balcão"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
+            <Label>Cliente (opcional)</Label>
+            <CustomerPicker
+              customers={customers}
+              value={customer}
+              onChange={setCustomer}
               disabled={submitting}
             />
+            <p className="text-xs text-muted-foreground">
+              Cadastrou uma vez? É só buscar — sem redigitar. Vazio = “Cliente balcão”.
+            </p>
           </div>
           {saleTotal !== null ? (
             <p className="rounded-lg bg-muted/50 px-3 py-2 text-right font-mono text-sm">
