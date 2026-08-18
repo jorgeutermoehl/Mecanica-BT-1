@@ -1,0 +1,67 @@
+# Integrações de pagamento — manual de preparação
+
+> Levantamento verificado dos manuais oficiais (18/08/2026). Objetivo: deixar o código pronto para "só adicionar chaves e ligar".
+
+- Arquitetura única antes de qualquer provedor: interface `PaymentProvider { createCharge, getStatus, parseWebhook }` em src/server/payments; route handler dinâmico /api/webhooks/[provider]/route.ts; status AWAITING_PAYMENT no domínio orders (com expiração e liberação de estoque reservado); .env.example documentando todas as chaves. Ativar qualquer provedor = preencher env + cadastrar URL do webhook.
+- Mercado Pago — FASE 1 (Checkout Pro, redirect, PIX incluso, sem PCI): server action createPreference com preços recalculados no servidor; envs MP_ACCESS_TOKEN, NEXT_PUBLIC_MP_PUBLIC_KEY, MP_WEBHOOK_SECRET; páginas /checkout/retorno (success|failure|pending). Manual: https://www.mercadopago.com.br/developers/pt/docs/checkout-pro/landing
+- Mercado Pago — PIX transparente (QR na própria tela): POST /v1/payments com payment_method_id=pix → renderizar qr_code_base64 + copia-e-cola na tela AWAITING_PAYMENT, com webhook/polling para virar PAID. Manual: https://www.mercadopago.com.br/developers/pt/docs/checkout-api/landing
+- Mercado Pago — Webhook: validar x-signature (HMAC com MP_WEBHOOK_SECRET), responder 200 em <22s, depois consultar GET /v1/payments/{id} e atualizar o pedido em transação Prisma (baixa de estoque já existente no domínio). Manual: https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks
+- Mercado Pago — FASE 2 (Bricks, checkout 100% dentro do site, melhor conversão vinda do Instagram): Payment Brick + Status Screen Brick via SDK https://sdk.mercadopago.com/js/v2 e endpoint POST /api/payments/process. Manual: https://www.mercadopago.com.br/developers/pt/docs/checkout-bricks/landing
+- Cresol (conta da esposa, cooperada): pedir NA AGÊNCIA a habilitação da API Pix Cresol + credenciais e Swagger (não há portal público de desenvolvedores). Se demorar, plano B: receber via MP e transferir. O adapter PIX genérico cobre os dois cenários sem retrabalho.
+- Efí (ex-Gerencianet) — plano B de PIX 'marca própria': conta + certificado mTLS .p12 + OAuth2; envs EFI_CLIENT_ID/SECRET/CERT/PIX_KEY reservadas no .env.example. Manual: https://dev.efipay.com.br/docs/api-pix/credenciais/
+- Asaas — fallback de menor atrito (só API key, PIX+boleto+cartão): envs ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN reservadas; usar o índice para LLMs para gerar o adapter rápido. Manuais: https://docs.asaas.com/ e https://docs.asaas.com/llms.txt
+- PicPay — futuro (parcelamento até 36x para peças caras): exige conta PicPay Empresas + liberação comercial da API E-commerce (OAuth2); apenas reservar envs PICPAY_CLIENT_ID/SECRET. Manual: https://developers-business.picpay.com/checkout/docs/api/ecommerce-checkout-api
+- Nubank — decisão registrada: NÃO existe API aberta de recebimento; NuPay é só via contato comercial (oi-nupay@nubank.com.br) para varejo grande. Cliente Nubank paga via PIX do MP. Não investir tempo. Referência: https://docs.nupaybusiness.com.br/checkout/docs/openapi/index.html
+
+## Detalhes por provedor (pesquisa)
+
+### Mercado Pago — Checkout Pro (https://www.mercadopago.com.br/developers/pt/docs/checkout-pro/landing)
+Checkout Pro é o modelo por redirecionamento: o backend cria uma 'preferência de pagamento' via Preferences API (com Access Token), o cliente é levado ao ambiente do Mercado Pago, paga (cartão, PIX, boleto, saldo MP, Linha de Crédito — PIX já incluso sem contrato extra) e volta pelas back_urls. Confirmação chega por webhook/IPN. É a integração de menor esforço e sem escopo PCI para a loja.
+
+*Como preparar:* Melhor primeiro passo para a FullBoost: criar server action 'createPreference' em src/app/actions que monta a preferência com os itens do pedido (preços recalculados no servidor, como já é invariante do projeto), salvar preferenceId no pedido, e redirecionar. Deixar pronto: env vars MP_ACCESS_TOKEN e NEXT_PUBLIC_MP_PUBLIC_KEY, rota /api/webhooks/mercadopago, e páginas de retorno /checkout/retorno?status=success|failure|pending mapeadas nas back_urls.
+
+### Mercado Pago — Checkout Bricks (https://www.mercadopago.com.br/developers/pt/docs/checkout-bricks/landing)
+Bricks são componentes de UI embutidos no próprio site (Payment Brick, Card Payment Brick, Wallet Brick, Status Screen Brick), carregados pelo SDK JS com a Public Key; o pagamento é processado pelo backend da loja com o Access Token. Suporta cartão, PIX, boleto e conta MP dentro da sua página, com visual customizável — sem redirecionamento.
+
+*Como preparar:* Fase 2 da FullBoost: quando quiser checkout 100% dentro do site (melhor conversão vindo do Instagram, sem 'sair' da marca), trocar o redirect do Checkout Pro pelo Payment Brick + Status Screen Brick. O código a preparar: componente client que injeta o SDK (https://sdk.mercadopago.com/js/v2) usando NEXT_PUBLIC_MP_PUBLIC_KEY e endpoint POST /api/payments/process que recebe o formData do Brick e chama a API de Pagamentos com MP_ACCESS_TOKEN.
+
+### Mercado Pago — API de Pagamentos / Checkout Transparente (https://www.mercadopago.com.br/developers/pt/docs/checkout-api/landing)
+A API direta ('Checkout Transparente' / Orders API) processa cartão, PIX e boleto sem sair do site, mas exige tokenização de cartão no front (para não tocar em dados PCI), conta vendedor ativa e chave PIX cadastrada na conta MP. Fluxo oficial: criar aplicação em 'Suas integrações' → credenciais de teste/produção → configurar notificações → homologar (o MP mede 'qualidade de integração') → produção.
+
+*Como preparar:* Para a FullBoost, usar só o modo PIX desta API já resolve 'PIX com QR Code na finalização': POST /v1/payments com payment_method_id=pix devolve qr_code (copia-e-cola) e qr_code_base64 (imagem) para renderizar na tela de confirmação do pedido. Deixar pronto: tela de pedido com estado AWAITING_PAYMENT exibindo QR + polling/webhook para virar PAID.
+
+### Mercado Pago — Webhooks (https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks)
+Webhooks são configurados no painel 'Suas integrações' (por aplicação) ou por transação via notification_url (esta tem prioridade). Cada POST traz header x-signature no formato 'ts=...,v1=...' que deve ser validado por HMAC com o secret gerado no painel. O endpoint DEVE responder 200/201 em até 22 segundos; senão o MP reenvia a cada 15 min. Após receber, deve-se consultar a API do recurso (ex.: GET /v1/payments/{id}) para obter o status real — o webhook só avisa o evento.
+
+*Como preparar:* Especificação exata do endpoint que a FullBoost deve deixar pronto: route handler POST /api/webhooks/mercadopago que (1) valida x-signature com env MP_WEBHOOK_SECRET, (2) responde 200 imediatamente, (3) busca o pagamento na API e atualiza o pedido dentro de transação Prisma (baixa de estoque/movimento já existente no domínio orders). Env vars finais: MP_ACCESS_TOKEN, NEXT_PUBLIC_MP_PUBLIC_KEY, MP_WEBHOOK_SECRET — 'só colar as chaves e ligar'.
+
+### PicPay — Ecommerce Checkout API (https://developers-business.picpay.com/checkout/docs/api/ecommerce-checkout-api) + ajuda lojista (https://ajudaempresas.picpay.com/hc/pt-br/articles/22746757591195-Como-usar-a-API-E-commerce)
+A API E-commerce do PicPay SEGUE ATIVA em 2026 (v1.5.0 na doc), com três modelos: Checkout Padrão (redirect), Lightbox e Transparente; aceita PIX, cartão (com 3DS, card vault) e saldo PicPay, parcelamento em até 36x com crédito pré-aprovado. Autenticação migrou para OAuth 2.0 client_credentials (JWT Bearer) — a versão antiga de token está sendo descontinuada. Adesão NÃO é self-service: exige conta PicPay Empresas e liberação comercial (há relatos no Reclame Aqui de lojistas com dificuldade para obter acesso à API).
+
+*Como preparar:* Tratar PicPay como integração opcional/futura: o valor real é o parcelamento em até 36x para peças caras (turbina, kit de injeção), forte para o público entusiasta. Antes de codar, o cliente deve abrir conta PicPay Empresas e solicitar acesso à API E-commerce. No código, deixar apenas a abstração de 'payment provider' preparada (interface única para criar cobrança + webhook), com envs PICPAY_CLIENT_ID/PICPAY_CLIENT_SECRET reservadas.
+
+### Nubank — NuPay for Business (https://docs.nupaybusiness.com.br/checkout/docs/openapi/index.html)
+Fato verificado: o Nubank NÃO tem API aberta de recebimento tipo 'API do banco'. O que existe é o NuPay for Business — meio de pagamento para e-commerce (débito em conta Nu à vista ou parcelado em até 24x, aprovado dentro do app do Nubank) com API REST ativa (produção api.spinpay.com.br, sandbox sandbox-api.spinpay.com.br, auth por X-Merchant-Key/X-Merchant-Token, webhooks de status). Porém a adesão é por contato comercial (oi-nupay@nubank.com.br), sem onboarding self-service — voltado a varejistas maiores e plataformas parceiras.
+
+*Como preparar:* Para a FullBoost, o caminho realista de 'receber de clientes Nubank' é simplesmente PIX (qualquer PSP/checkout MP gera QR que o cliente paga pelo app do Nu). Não vale investir em integração NuPay direta agora; se um dia o volume justificar, o contato é o e-mail comercial acima. Registrar isso na decisão de arquitetura para não perder tempo procurando 'API do Nubank'.
+
+### Cresol — API Pix / Cobrança (blog.cresol.com.br/api-pix-solucao-para-automatizacao-de-pagamentos + implementação ACBr: https://www.projetoacbr.com.br/forum/topic/75505-api-cresol-cobran%C3%A7a-boletos-implementado/)
+Fato verificado: a Cresol NÃO tem portal público de desenvolvedores (não existe developers.cresol.com.br aberto). Ela possui API Pix (criar cobrança com QR dinâmico, consultar liquidação, devolução) e API de Cobrança/boletos seguindo o padrão do Bacen, mas as credenciais (usuário/senha/certificado) e a documentação Swagger são fornecidas PELA AGÊNCIA ao cooperado que contrata o serviço — é assim que ERPs como ACBr e XKEY integram. Cresol participa do Open Finance (obrigatório), mas isso serve a iniciadores de pagamento, não é o caminho simples para a loja.
+
+*Como preparar:* Como a esposa do cliente é cooperada: pedir na agência Cresol a habilitação da 'API Pix Cresol' da conta PJ/PF e as credenciais + manual Swagger. Se a agência demorar ou a API for só Pix-recebimento sem webhook amigável, o plano B é receber pelo Mercado Pago/Efí e transferir para a conta Cresol. No código, o adapter PIX genérico (criar cobrança / consultar / webhook) cobre os dois cenários sem retrabalho.
+
+### Efí (ex-Gerencianet) — API Pix (https://dev.efipay.com.br/docs/api-pix/credenciais/)
+Modelo de referência de PIX direto via PSP: exige conta Efí, certificado mTLS .p12 anexado a TODA requisição, client_id/client_secret com escopos (cob.write/cob.read, pix.read, webhook.write...), token OAuth2 via /oauth/token, chave Pix cadastrada na conta, e webhook configurado via API para confirmar recebimento. Ambientes separados: produção pix.api.efipay.com.br e homologação pix-h.api.efipay.com.br. Importante: o dinheiro cai na conta do PSP (Efí), não direto no banco do lojista.
+
+*Como preparar:* Se a FullBoost quiser PIX 'de marca própria' (QR na própria tela, sem checkout de terceiro) sem esperar a Cresol: abrir conta Efí, gerar certificado .p12 e credenciais no painel. Deixar pronto no código: envs EFI_CLIENT_ID, EFI_CLIENT_SECRET, EFI_CERT_PATH (ou base64), EFI_PIX_KEY; serviço server-side que cria 'cob' e devolve QR; endpoint /api/webhooks/pix (a Efí exige HTTPS válido com mTLS opcional no webhook).
+
+### Asaas — documentação (https://docs.asaas.com/ — inclui índice para LLMs em https://docs.asaas.com/llms.txt)
+Alternativa de PSP mais simples que a Efí: API única para PIX, boleto e cartão autenticada por API key simples (sem certificado mTLS), com sandbox, guias de integração, referência OpenAPI completa e webhooks de cobrança. O detalhe útil para o nosso stack: eles publicam docs.asaas.com/llms.txt, um índice da documentação formatado para IA — dá para gerar o client da integração com precisão.
+
+*Como preparar:* Candidato a PSP secundário/fallback da FullBoost por ter o menor atrito de setup (só API key). Se o casal preferir não depender do Mercado Pago, o par 'Asaas para PIX+boleto' cobre tudo com envs ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN e o mesmo endpoint genérico /api/webhooks/{provider} já proposto. Usar o llms.txt para gerar o adapter rapidamente.
+
+### Síntese de arquitetura (todas as docs acima)
+Padrão comum a TODOS os provedores verificados: (1) par de credenciais em env vars, (2) criação da cobrança sempre server-side com preços recalculados, (3) webhook HTTP POST que deve responder 2xx rápido e depois consultar a API para confirmar status, (4) tela de retorno/estado do pedido (pago/pendente/falhou). Só mudam a autenticação (token simples MP/Asaas vs OAuth2 PicPay vs mTLS Efí vs credenciais de agência Cresol) e o formato do payload.
+
+*Como preparar:* Deixar a FullBoost 'pronta para ligar chaves': criar em src/server/payments uma interface PaymentProvider { createCharge, getStatus, parseWebhook } com implementação MercadoPago primeiro; route handler dinâmico /api/webhooks/[provider]/route.ts; status de pedido AWAITING_PAYMENT no domínio orders (com expiração e liberação de estoque reservado); .env.example documentando MP_ACCESS_TOKEN, NEXT_PUBLIC_MP_PUBLIC_KEY, MP_WEBHOOK_SECRET e placeholders EFI_*/ASAAS_*/PICPAY_*. Assim, ativar qualquer provedor vira só preencher env e apontar a URL do webhook no painel dele.
+
