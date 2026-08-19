@@ -19,7 +19,7 @@ import { createProduct, setProductStatus, updateProduct } from "@/server/product
 import { adjustStock, correctMovement, registerEntry, registerOut, reverseMovement } from "@/server/inventory";
 import { registerManualSale, updateOrderStatus } from "@/server/orders";
 import { createCoupon, setCouponActive, setPromoPrice, clearPromoPrice } from "@/server/promotions";
-import { createCustomer } from "@/server/customers";
+import { createCustomer, findPossibleDuplicates } from "@/server/customers";
 
 export type AdminActionResult = { ok: boolean; error?: string };
 
@@ -231,6 +231,20 @@ export async function createCustomerAction(input: unknown): Promise<AdminActionR
     await createCustomer(parsed.data, user.id);
     revalidatePath("/admin/clientes");
     return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Possíveis duplicados — SÓ sob demanda (botão), sobre colunas normalizadas indexadas. */
+export async function findDuplicatesAction(
+  customerId: string,
+): Promise<AdminActionResult & { duplicates?: Awaited<ReturnType<typeof findPossibleDuplicates>> }> {
+  try {
+    await requireStaff();
+    if (!customerId) return { ok: false, error: "Cliente inválido." };
+    const duplicates = await findPossibleDuplicates(customerId);
+    return { ok: true, duplicates };
   } catch (e) {
     return fail(e);
   }

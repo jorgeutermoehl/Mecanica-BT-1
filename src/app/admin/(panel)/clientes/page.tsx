@@ -129,11 +129,17 @@ export default async function CustomersPage({
                     <TableRow key={customer.id}>
                       <TableCell>
                         <div className="max-w-[240px]">
-                          <p className="truncate font-medium" title={customer.name}>
+                          <Link
+                            href={`/admin/clientes/${customer.id}`}
+                            className="block truncate font-medium text-primary underline-offset-2 hover:underline"
+                            title={customer.name}
+                          >
                             {customer.name}
-                          </p>
+                          </Link>
                           <p className="font-mono text-xs text-muted-foreground">
-                            {customer.document ?? "—"}
+                            {customer.instagramHandle
+                              ? `@${customer.instagramHandle}`
+                              : (customer.document ?? "—")}
                           </p>
                         </div>
                       </TableCell>

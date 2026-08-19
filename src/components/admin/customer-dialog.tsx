@@ -17,7 +17,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createCustomerAction } from "@/app/actions/admin";
+import { SALE_CHANNELS, SALE_CHANNEL_LABEL, type SaleChannel } from "@/lib/validations";
 
 /** Dialog "Novo cliente" — cadastro manual pelo painel (balcão/Instagram/WhatsApp). */
 export function CustomerDialog() {
@@ -28,6 +36,9 @@ export function CustomerDialog() {
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [document, setDocument] = React.useState("");
+  const [instagram, setInstagram] = React.useState("");
+  const [whatsapp, setWhatsapp] = React.useState("");
+  const [channel, setChannel] = React.useState<SaleChannel | "">("");
   const [notes, setNotes] = React.useState("");
 
   function reset() {
@@ -35,13 +46,25 @@ export function CustomerDialog() {
     setEmail("");
     setPhone("");
     setDocument("");
+    setInstagram("");
+    setWhatsapp("");
+    setChannel("");
     setNotes("");
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
-    const result = await createCustomerAction({ name, email, phone, document, notes });
+    const result = await createCustomerAction({
+      name,
+      email,
+      phone,
+      document,
+      instagram,
+      whatsapp,
+      ...(channel ? { acquisitionChannel: channel } : {}),
+      notes,
+    });
     setSubmitting(false);
     if (result.ok) {
       toast.success("Cliente cadastrado", {
@@ -124,6 +147,55 @@ export function CustomerDialog() {
                 className="font-mono"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="customer-instagram">Instagram (opcional)</Label>
+              <Input
+                id="customer-instagram"
+                placeholder="@cliente"
+                maxLength={40}
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+                disabled={submitting}
+                autoComplete="off"
+                className="font-mono"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="customer-whatsapp">WhatsApp (opcional)</Label>
+              <Input
+                id="customer-whatsapp"
+                type="tel"
+                inputMode="tel"
+                placeholder="(11) 99999-9999"
+                maxLength={20}
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                disabled={submitting}
+                autoComplete="off"
+                className="font-mono"
+              />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="customer-channel">Por onde chegou? (opcional)</Label>
+            <Select
+              value={channel}
+              onValueChange={(v) => setChannel(v as SaleChannel)}
+              disabled={submitting}
+            >
+              <SelectTrigger id="customer-channel" className="w-full">
+                <SelectValue placeholder="Canal de aquisição" />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {SALE_CHANNELS.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {SALE_CHANNEL_LABEL[c]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="customer-notes">Observações (opcional)</Label>

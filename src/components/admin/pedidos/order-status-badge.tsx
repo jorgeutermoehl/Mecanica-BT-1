@@ -1,20 +1,19 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusBadge, type StatusTone } from "@/components/shared/status-badge";
 import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/validations";
 
 /**
- * Badge de status de pedido com as cores semânticas do painel:
+ * Status de pedido sobre o StatusBadge único:
  * PAID/DELIVERED = success · SEPARATING/SHIPPED = info ·
  * AWAITING_PAYMENT = warning · CANCELLED = destructive · RETURNED = muted.
  */
-const STATUS_CLASS: Record<OrderStatus, string> = {
-  AWAITING_PAYMENT: "bg-warning/15 text-warning",
-  PAID: "bg-success/15 text-success",
-  SEPARATING: "bg-info/15 text-info",
-  SHIPPED: "bg-info/15 text-info",
-  DELIVERED: "bg-success/15 text-success",
-  CANCELLED: "bg-destructive/10 text-destructive",
-  RETURNED: "bg-muted text-muted-foreground",
+const STATUS_TONE: Record<OrderStatus, StatusTone> = {
+  AWAITING_PAYMENT: "warning",
+  PAID: "success",
+  SEPARATING: "info",
+  SHIPPED: "info",
+  DELIVERED: "success",
+  CANCELLED: "destructive",
+  RETURNED: "muted",
 };
 
 export function OrderStatusBadge({
@@ -25,11 +24,8 @@ export function OrderStatusBadge({
   className?: string;
 }) {
   return (
-    <Badge
-      variant="outline"
-      className={cn("border-transparent font-medium", STATUS_CLASS[status], className)}
-    >
+    <StatusBadge tone={STATUS_TONE[status]} className={className}>
       {ORDER_STATUS_LABEL[status]}
-    </Badge>
+    </StatusBadge>
   );
 }

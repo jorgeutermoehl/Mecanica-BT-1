@@ -539,7 +539,12 @@ export function SaleDialog({
   const [unitPrice, setUnitPrice] = React.useState("");
   const [channel, setChannel] = React.useState<SaleChannel>("LOJA");
   const [customer, setCustomer] = React.useState({ customerId: "", customerName: "" });
+  const [customerInstagram, setCustomerInstagram] = React.useState("");
+  const [customerWhatsapp, setCustomerWhatsapp] = React.useState("");
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>("PIX");
+
+  /** Cadastro rápido "cliente Instagram": só quando é cliente novo (sem lupa). */
+  const quickCreate = !customer.customerId && customer.customerName.trim() !== "";
 
   const selected = products.find((p) => p.id === productId);
   const qtyNumber = Number(quantity);
@@ -553,6 +558,8 @@ export function SaleDialog({
     setUnitPrice("");
     setChannel("LOJA");
     setCustomer({ customerId: "", customerName: "" });
+    setCustomerInstagram("");
+    setCustomerWhatsapp("");
     setPaymentMethod("PIX");
   }
 
@@ -570,6 +577,8 @@ export function SaleDialog({
       channel,
       customerId: customer.customerId,
       customerName: customer.customerName,
+      customerInstagram: quickCreate ? customerInstagram : "",
+      customerWhatsapp: quickCreate ? customerWhatsapp : "",
       paymentMethod,
     });
     setSubmitting(false);
@@ -707,6 +716,42 @@ export function SaleDialog({
               Cadastrou uma vez? É só buscar — sem redigitar. Vazio = “Cliente balcão”.
             </p>
           </div>
+          {quickCreate ? (
+            <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/30 p-3">
+              <div className="grid gap-2">
+                <Label htmlFor="sale-customer-instagram">Instagram (opcional)</Label>
+                <Input
+                  id="sale-customer-instagram"
+                  placeholder="@cliente"
+                  value={customerInstagram}
+                  onChange={(e) => setCustomerInstagram(e.target.value)}
+                  disabled={submitting}
+                  maxLength={40}
+                  autoComplete="off"
+                  className="font-mono"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="sale-customer-whatsapp">WhatsApp (opcional)</Label>
+                <Input
+                  id="sale-customer-whatsapp"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="(00) 00000-0000"
+                  value={customerWhatsapp}
+                  onChange={(e) => setCustomerWhatsapp(e.target.value)}
+                  disabled={submitting}
+                  maxLength={20}
+                  autoComplete="off"
+                  className="font-mono"
+                />
+              </div>
+              <p className="col-span-2 text-xs text-muted-foreground">
+                Se já existir cliente com esse @ ou WhatsApp, o cadastro é reaproveitado
+                automaticamente — nada de duplicar.
+              </p>
+            </div>
+          ) : null}
           {saleTotal !== null ? (
             <p className="rounded-lg bg-muted/50 px-3 py-2 text-right font-mono text-sm">
               Total da venda:{" "}
