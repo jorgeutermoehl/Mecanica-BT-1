@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Catalog } from "@/components/public/produtos/catalog";
 import { getStoreCategories, getStoreProducts } from "@/server/catalog";
 
-export const dynamic = "force-dynamic";
+// Catálogo servido pelo cache com tag "catalog" (revalidateTag no painel).
 
 export const metadata: Metadata = {
   title: "Produtos",

@@ -38,8 +38,12 @@ export async function saveConsentAction(input: unknown): Promise<{ ok: boolean }
       necessary: true,
       analytics: d.analytics,
       marketing: d.marketing,
+      utmSource: d.utmSource || null,
+      utmMedium: d.utmMedium || null,
+      utmCampaign: d.utmCampaign || null,
+      consentVersion: d.consentVersion,
       ip,
-      // userAgent guarda também a origem consolidada (schema enxuto do SQLite).
+      // userAgent guarda também a origem consolidada (referrer/locale/tz).
       userAgent: [userAgent, origin].filter(Boolean).join(" || ").slice(0, 900) || null,
     },
   });

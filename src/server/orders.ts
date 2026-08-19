@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { CheckoutInput, ManualSaleInput, OrderStatus, SaleChannel } from "@/lib/validations";
+import { logAudit } from "@/server/audit";
+import { recalcCustomerStats, resolveCustomer, upsertCustomerAddress } from "@/server/customers";
 
 /**
  * Serviço de vendas. Invariantes:
@@ -65,18 +67,36 @@ export async function placeOrder(input: CheckoutInput) {
     const shippingCost = shippingFor(subtotal);
     const total = Math.max(0, subtotal - discount) + shippingCost;
 
-    // 3. Cliente (upsert por e-mail).
+    // 3. Cliente: identity resolution por documento/e-mail/telefone normalizados.
     const email = input.customer.email.toLowerCase().trim();
-    let customer = await tx.customer.findFirst({ where: { email, deletedAt: null } });
-    if (!customer) {
-      customer = await tx.customer.create({
-        data: {
-          name: input.customer.name.trim(),
-          email,
-          phone: input.customer.phone,
-          document: input.customer.document || null,
-        },
+    const resolved = await resolveCustomer(tx, {
+      name: input.customer.name,
+      document: input.customer.document || null,
+      email,
+      phone: input.customer.phone,
+      acquisitionChannel: "SITE",
+    });
+    const customer = await tx.customer.findUniqueOrThrow({ where: { id: resolved.id } });
+
+    // 3b. Origem da visita (UTM/referrer) — SÓ com consentimento de marketing (LGPD).
+    const sessionId = input.sessionId?.trim() || null;
+    if (sessionId && !customer.firstUtmSource) {
+      const consent = await tx.cookieConsent.findFirst({
+        where: { sessionId, marketing: true },
+        orderBy: { createdAt: "desc" },
       });
+      if (consent) {
+        const referrer = consent.userAgent?.match(/ref=([^|]+)/)?.[1]?.trim() ?? null;
+        await tx.customer.update({
+          where: { id: customer.id },
+          data: {
+            firstUtmSource: consent.utmSource,
+            firstUtmMedium: consent.utmMedium,
+            firstUtmCampaign: consent.utmCampaign,
+            referrer,
+          },
+        });
+      }
     }
 
     // 4. Pedido (demo: Pix/cartão aprovam na hora; boleto fica aguardando).
@@ -110,6 +130,7 @@ export async function placeOrder(input: CheckoutInput) {
         shipDistrict: input.shipping.district || null,
         shipCity: input.shipping.city,
         shipState: input.shipping.state.toUpperCase(),
+        sessionId,
         items: {
           create: lines.map((l) => ({
             productId: l.product.id,
@@ -198,19 +219,18 @@ export async function placeOrder(input: CheckoutInput) {
       });
     }
 
-    // 8. Cliente: total comprado / última compra.
-    await tx.customer.update({
-      where: { id: customer.id },
-      data: { totalSpent: { increment: total }, lastPurchaseAt: now },
-    });
+    // 8. Endereço do checkout vira Address reutilizável (snapshot ship* preservado).
+    await upsertCustomerAddress(tx, customer.id, input.shipping);
 
-    await tx.auditLog.create({
-      data: {
-        action: "CREATE",
-        entity: "Order",
-        entityId: order.id,
-        description: `Pedido ${number} criado pela loja (${lines.length} itens, total R$ ${total.toFixed(2)})`,
-      },
+    // 9. Métricas do cliente pelo escritor único (idempotente).
+    await recalcCustomerStats(tx, customer.id);
+
+    await logAudit(tx, {
+      userId: null,
+      action: "ORDER_CREATE",
+      entity: "Order",
+      entityId: order.id,
+      description: `Pedido ${number} criado pela loja (${lines.length} itens, total R$ ${total.toFixed(2)})`,
     });
 
     return { orderNumber: number, total, status: orderStatus };
@@ -233,7 +253,8 @@ export async function registerManualSale(input: ManualSaleInput, userId: string)
     const total = input.unitPrice * input.quantity;
     const now = new Date();
 
-    // Cliente: preferir o selecionado pela lupa; senão, cadastro rápido pelo nome.
+    // Cliente: preferir o selecionado pela lupa; senão, cadastro rápido
+    // "cliente Instagram" (nome + @ + WhatsApp) com identity resolution.
     let customer =
       input.customerId && input.customerId !== ""
         ? await tx.customer.findFirst({ where: { id: input.customerId, deletedAt: null } })
@@ -243,10 +264,14 @@ export async function registerManualSale(input: ManualSaleInput, userId: string)
     }
     if (!customer) {
       const customerName = input.customerName?.trim() || "Cliente balcão";
-      customer = await tx.customer.findFirst({ where: { name: customerName, deletedAt: null } });
-      if (!customer) {
-        customer = await tx.customer.create({ data: { name: customerName } });
-      }
+      const resolved = await resolveCustomer(tx, {
+        name: customerName,
+        instagramHandle: input.customerInstagram || null,
+        whatsapp: input.customerWhatsapp || null,
+        phone: input.customerWhatsapp || null,
+        acquisitionChannel: input.channel,
+      });
+      customer = await tx.customer.findUniqueOrThrow({ where: { id: resolved.id } });
     }
 
     const count = await tx.order.count();
@@ -333,18 +358,13 @@ export async function registerManualSale(input: ManualSaleInput, userId: string)
         userId,
       },
     });
-    await tx.customer.update({
-      where: { id: customer.id },
-      data: { totalSpent: { increment: total }, lastPurchaseAt: now },
-    });
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: "CREATE",
-        entity: "Order",
-        entityId: order.id,
-        description: `Venda manual ${number} via ${input.channel} (${input.quantity}x ${product.sku}, R$ ${total.toFixed(2)})`,
-      },
+    await recalcCustomerStats(tx, customer.id);
+    await logAudit(tx, {
+      userId,
+      action: "ORDER_CREATE",
+      entity: "Order",
+      entityId: order.id,
+      description: `Venda manual ${number} via ${input.channel} (${input.quantity}x ${product.sku}, R$ ${total.toFixed(2)})`,
     });
 
     return { orderNumber: number, total };
@@ -526,14 +546,17 @@ export async function updateOrderStatus(id: string, next: OrderStatus, userId: s
     await tx.orderStatusHistory.create({
       data: { orderId: id, status: next, note: note ?? null, userId },
     });
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: "STATUS_CHANGE",
-        entity: "Order",
-        entityId: id,
-        description: `Pedido ${order.number}: ${order.status} → ${next}`,
-      },
+    if (order.customerId) {
+      await recalcCustomerStats(tx, order.customerId);
+    }
+    await logAudit(tx, {
+      userId,
+      action: next === "CANCELLED" ? "ORDER_CANCEL" : "ORDER_STATUS_CHANGE",
+      entity: "Order",
+      entityId: id,
+      description: `Pedido ${order.number}: ${order.status} → ${next}`,
+      before: { status: order.status },
+      after: { status: next },
     });
   });
 }

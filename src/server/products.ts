@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { ProductInput, ProductStatus } from "@/lib/validations";
+import { logAudit } from "@/server/audit";
 
 /**
  * Serviço de produtos do painel. Regras:
@@ -150,14 +151,12 @@ export async function createProduct(input: ProductInput, userId: string) {
       });
     }
 
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: "CREATE",
-        entity: "Product",
-        entityId: product.id,
-        description: `Produto ${sku} cadastrado e publicado na loja`,
-      },
+    await logAudit(tx, {
+      userId,
+      action: "PRODUCT_CREATE",
+      entity: "Product",
+      entityId: product.id,
+      description: `Produto ${sku} cadastrado e publicado na loja`,
     });
 
     return { id: product.id, slug: product.slug };
@@ -217,14 +216,17 @@ export async function updateProduct(id: string, input: ProductInput, userId: str
       }
     }
 
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: "UPDATE",
-        entity: "Product",
-        entityId: id,
-        description: `Produto ${sku} atualizado`,
-      },
+    const priceChanged =
+      Number(current.salePrice) !== input.salePrice ||
+      (current.promoPrice !== null ? Number(current.promoPrice) : undefined) !== promo;
+    await logAudit(tx, {
+      userId,
+      action: priceChanged ? "PRICE_CHANGE" : "PRODUCT_UPDATE",
+      entity: "Product",
+      entityId: id,
+      description: `Produto ${sku} atualizado`,
+      before: { salePrice: Number(current.salePrice), promoPrice: current.promoPrice !== null ? Number(current.promoPrice) : null },
+      after: { salePrice: input.salePrice, promoPrice: promo ?? null },
     });
   });
 }
@@ -236,18 +238,18 @@ export async function setProductStatus(id: string, active: boolean, userId: stri
 
   const status = active ? (product.stockQuantity > 0 ? (product.promoPrice ? "PROMOTION" : "ACTIVE") : "OUT_OF_STOCK") : "INACTIVE";
 
-  await prisma.$transaction([
-    prisma.product.update({ where: { id }, data: { status } }),
-    prisma.auditLog.create({
-      data: {
-        userId,
-        action: active ? "ACTIVATE" : "DEACTIVATE",
-        entity: "Product",
-        entityId: id,
-        description: `Produto ${product.sku} ${active ? "reativado na loja" : "removido da loja (soft delete)"}`,
-      },
-    }),
-  ]);
+  await prisma.$transaction(async (tx) => {
+    await tx.product.update({ where: { id }, data: { status } });
+    await logAudit(tx, {
+      userId,
+      action: active ? "PRODUCT_UPDATE" : "PRODUCT_DEACTIVATE",
+      entity: "Product",
+      entityId: id,
+      description: `Produto ${product.sku} ${active ? "reativado na loja" : "removido da loja (soft delete)"}`,
+      before: { status: product.status },
+      after: { status },
+    });
+  });
 }
 
 /** Categorias para selects do painel. */

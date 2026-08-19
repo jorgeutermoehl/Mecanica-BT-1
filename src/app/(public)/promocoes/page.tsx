@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { getStoreProducts } from "@/server/catalog";
 import { CouponCard, type Coupon } from "@/components/public/promocoes/coupon-card";
 
-export const dynamic = "force-dynamic";
+// Promoções servidas pelo cache com tag "catalog" (revalidateTag no painel).
 
 export const metadata: Metadata = {
   title: "Promoções",

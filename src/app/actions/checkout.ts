@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CATALOG_TAG } from "@/server/catalog";
 import { placeOrder } from "@/server/orders";
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations";
 
@@ -17,9 +18,8 @@ export async function placeOrderAction(input: CheckoutInput): Promise<CheckoutRe
 
   try {
     const result = await placeOrder(parsed.data);
-    // Estoque mudou → vitrine e painel precisam refletir.
-    revalidatePath("/");
-    revalidatePath("/produtos");
+    // Estoque mudou → vitrine (cache com tag) e painel precisam refletir.
+    revalidateTag(CATALOG_TAG, "max");
     revalidatePath("/admin");
     return { ok: true, ...result };
   } catch (e) {

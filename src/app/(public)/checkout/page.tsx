@@ -195,6 +195,9 @@ export default function CheckoutPage() {
       },
       paymentMethod: method,
       couponCode: get("couponCode").toUpperCase(),
+      // Mesma sessão do banner de cookies — liga o pedido à origem da visita
+      // (UTM/Instagram) respeitando o consentimento dado.
+      sessionId: localStorage.getItem("fb-session-id") ?? "",
       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
     };
 

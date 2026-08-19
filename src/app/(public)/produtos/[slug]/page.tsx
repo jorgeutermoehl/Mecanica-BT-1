@@ -34,7 +34,7 @@ import type { StoreProduct } from "@/types/store";
 import { formatBRL, installment, discountPercent } from "@/lib/format";
 import { whatsappLink } from "@/lib/constants";
 
-export const dynamic = "force-dynamic";
+// PDP servida pelo cache com tag "catalog" (revalidateTag no painel).
 
 /* ------------------------------------------------------------------ */
 /* Metadata                                                            */

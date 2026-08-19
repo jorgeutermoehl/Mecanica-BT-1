@@ -133,6 +133,9 @@ export const manualSaleSchema = z.object({
   customerId: z.string().optional().or(z.literal("")),
   /** Cadastro rápido: nome de um cliente novo (quando não há customerId). */
   customerName: z.string().max(120).optional().or(z.literal("")),
+  /** Cadastro rápido "cliente Instagram": handle e WhatsApp opcionais. */
+  customerInstagram: z.string().max(40).optional().or(z.literal("")),
+  customerWhatsapp: z.string().max(20).optional().or(z.literal("")),
   paymentMethod: z.enum(PAYMENT_METHODS).default("PIX"),
 });
 
@@ -148,6 +151,7 @@ export const consentSchema = z.object({
   utmCampaign: z.string().max(100).optional().or(z.literal("")),
   locale: z.string().max(20).optional().or(z.literal("")),
   timezone: z.string().max(60).optional().or(z.literal("")),
+  consentVersion: z.string().max(10).default("v1"),
 });
 export type ConsentInput = z.infer<typeof consentSchema>;
 
@@ -176,6 +180,9 @@ export const customerFormSchema = z.object({
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
   phone: z.string().max(20).optional().or(z.literal("")),
   document: z.string().max(20).optional().or(z.literal("")),
+  instagram: z.string().max(40).optional().or(z.literal("")),
+  whatsapp: z.string().max(20).optional().or(z.literal("")),
+  acquisitionChannel: z.enum(SALE_CHANNELS).optional(),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 
@@ -217,6 +224,8 @@ export const checkoutSchema = z.object({
   }),
   paymentMethod: z.enum(["PIX", "CREDIT_CARD", "BOLETO"]),
   couponCode: z.string().max(30).optional().or(z.literal("")),
+  /** Sessão de consentimento (localStorage fb-session-id) — liga pedido à origem da visita. */
+  sessionId: z.string().max(64).optional().or(z.literal("")),
   items: z
     .array(
       z.object({

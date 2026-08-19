@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { matchesProductQuery } from "@/lib/search";
 import { useMemo, useState } from "react";
 import {
   Search,
@@ -358,11 +359,7 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
 
     const list = products.filter((p) => {
       const price = priceOf(p);
-      if (q) {
-        const haystack =
-          `${p.name} ${p.sku} ${p.fitment ?? ""} ${p.brand ?? ""}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
+      if (q && !matchesProductQuery(p, q)) return false;
       if (cats.length && !cats.includes(p.categorySlug)) return false;
       if (brands.length && (!p.brand || !brands.includes(p.brand))) return false;
       if (price < range.min || price > range.max) return false;

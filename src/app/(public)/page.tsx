@@ -18,7 +18,8 @@ import { whatsappLink } from "@/lib/constants";
 import { BRANDS } from "@/lib/constants";
 import { getHomeData } from "@/server/catalog";
 
-export const dynamic = "force-dynamic";
+// Vitrine servida pelo cache com tag "catalog" — mudanças no painel
+// disparam revalidateTag e aparecem na hora, sem custo por request.
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (

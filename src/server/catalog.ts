@@ -1,10 +1,18 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { matchesProductQuery } from "@/lib/search";
 import type { StoreCategory, StoreProduct } from "@/types/store";
 
 /**
  * Leituras da vitrine (loja pública). Converte Decimal → number e devolve
  * tipos JSON-safe (StoreProduct/StoreCategory) prontos para client components.
+ *
+ * Cache com tag "catalog" (ESPEC-V2, Onda 1 item 8): as páginas públicas leem
+ * daqui sem ir ao banco a cada request; os server actions de produto/preço
+ * disparam revalidateTag("catalog") e o cadastro aparece imediatamente na loja.
  */
+
+export const CATALOG_TAG = "catalog";
 
 const NEW_DAYS = 45;
 
@@ -74,16 +82,25 @@ function toStoreProduct(p: ProductWithRelations, sold: number): StoreProduct {
   };
 }
 
-/** Todos os produtos publicados na loja. */
-export async function getStoreProducts(): Promise<StoreProduct[]> {
-  const [products, sold] = await Promise.all([fetchProducts(), soldByProduct()]);
-  return products.map((p) => toStoreProduct(p, sold.get(p.id) ?? 0));
-}
+/** Todos os produtos publicados na loja (cacheado por tag). */
+export const getStoreProducts = unstable_cache(
+  async (): Promise<StoreProduct[]> => {
+    const [products, sold] = await Promise.all([fetchProducts(), soldByProduct()]);
+    return products.map((p) => toStoreProduct(p, sold.get(p.id) ?? 0));
+  },
+  ["store-products"],
+  { tags: [CATALOG_TAG] },
+);
 
 export async function getStoreProduct(slug: string): Promise<StoreProduct | null> {
-  const [products, sold] = await Promise.all([fetchProducts({ slug }), soldByProduct()]);
-  const p = products[0];
-  return p ? toStoreProduct(p, sold.get(p.id) ?? 0) : null;
+  const all = await getStoreProducts();
+  return all.find((p) => p.slug === slug) ?? null;
+}
+
+/** Busca única do catálogo — implementação interna trocável (tsvector no Postgres). */
+export async function searchProducts(query: string): Promise<StoreProduct[]> {
+  const all = await getStoreProducts();
+  return all.filter((p) => matchesProductQuery(p, query));
 }
 
 export async function getRelatedProducts(product: StoreProduct, limit = 4): Promise<StoreProduct[]> {
@@ -91,26 +108,30 @@ export async function getRelatedProducts(product: StoreProduct, limit = 4): Prom
   return all.filter((p) => p.categorySlug === product.categorySlug && p.id !== product.id).slice(0, limit);
 }
 
-export async function getStoreCategories(): Promise<StoreCategory[]> {
-  const cats = await prisma.category.findMany({
-    where: { deletedAt: null },
-    orderBy: { position: "asc" },
-    include: {
-      _count: {
-        select: { products: { where: { deletedAt: null, status: { not: "INACTIVE" } } } },
+export const getStoreCategories = unstable_cache(
+  async (): Promise<StoreCategory[]> => {
+    const cats = await prisma.category.findMany({
+      where: { deletedAt: null },
+      orderBy: { position: "asc" },
+      include: {
+        _count: {
+          select: { products: { where: { deletedAt: null, status: { not: "INACTIVE" } } } },
+        },
       },
-    },
-  });
-  return cats.map((c) => ({
-    id: c.id,
-    name: c.name,
-    slug: c.slug,
-    icon: c.icon ?? c.slug,
-    featured: c.featured,
-    description: c.description,
-    count: c._count.products,
-  }));
-}
+    });
+    return cats.map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      icon: c.icon ?? c.slug,
+      featured: c.featured,
+      description: c.description,
+      count: c._count.products,
+    }));
+  },
+  ["store-categories"],
+  { tags: [CATALOG_TAG] },
+);
 
 /** Dados agregados da home (uma ida ao banco para a lista, depois fatia). */
 export async function getHomeData() {

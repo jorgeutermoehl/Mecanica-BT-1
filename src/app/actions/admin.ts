@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CATALOG_TAG } from "@/server/catalog";
 import { requireStaff } from "@/lib/auth";
 import {
   productSchema,
@@ -34,6 +35,8 @@ function fail(e: unknown): AdminActionResult {
 
 /** Revalida as rotas afetadas por mudanças de catálogo/estoque. */
 function revalidateStore() {
+  // Loja pública lê do cache com tag — invalidar a tag publica na hora.
+  revalidateTag(CATALOG_TAG, "max");
   for (const path of ["/", "/produtos", "/promocoes", "/admin", "/admin/produtos", "/admin/estoque", "/admin/pedidos"]) {
     revalidatePath(path);
   }

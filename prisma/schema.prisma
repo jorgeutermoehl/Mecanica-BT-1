@@ -74,27 +74,47 @@ model User {
 // ===========================================================================
 
 model Customer {
-  id                String              @id @default(cuid())
-  userId            String?             @unique
-  user              User?               @relation(fields: [userId], references: [id])
-  name              String
-  document          String? // CPF/CNPJ
-  personType        String              @default("INDIVIDUAL") // INDIVIDUAL | COMPANY
-  email             String?
-  phone             String?
-  notes             String?
-  totalSpent        Decimal             @default(0)
-  lastPurchaseAt    DateTime?
-  addresses         Address[]
-  orders            Order[]
-  receivables       AccountReceivable[]
-  couponRedemptions CouponRedemption[]
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  deletedAt         DateTime?
+  id                 String              @id @default(cuid())
+  userId             String?             @unique
+  user               User?               @relation(fields: [userId], references: [id])
+  name               String
+  document           String? // CPF/CNPJ
+  /// Só dígitos do CPF/CNPJ — chave de identity resolution (unicidade garantida na aplicação).
+  documentNormalized String?
+  personType         String              @default("INDIVIDUAL") // INDIVIDUAL | COMPANY
+  email              String?
+  phone              String?
+  /// Telefone em E.164 (+5511999998888) — número curto/inválido fica null (não-matchável).
+  phoneNormalized    String?
+  /// Handle do Instagram normalizado: lowercase, sem @.
+  instagramHandle    String?
+  whatsapp           String?
+  /// Canal de aquisição: SITE | INSTAGRAM | WHATSAPP | LOJA (Zod em validations).
+  acquisitionChannel String?
+  /// UTMs da primeira visita — SÓ gravados com CookieConsent.marketing=true (LGPD).
+  firstUtmSource     String?
+  firstUtmMedium     String?
+  firstUtmCampaign   String?
+  referrer           String?
+  notes              String?
+  totalSpent         Decimal             @default(0)
+  ordersCount        Int                 @default(0)
+  lastPurchaseAt     DateTime?
+  /// Preenchido quando este cadastro for fundido em outro (merge futuro).
+  mergedIntoId       String?
+  addresses          Address[]
+  orders             Order[]
+  receivables        AccountReceivable[]
+  couponRedemptions  CouponRedemption[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  deletedAt          DateTime?
 
   @@index([document])
   @@index([email])
+  @@index([documentNormalized])
+  @@index([phoneNormalized])
+  @@index([instagramHandle])
 }
 
 model Address {
@@ -379,6 +399,9 @@ model Order {
   userId String? // vendedor responsável
   user   User?   @relation(fields: [userId], references: [id])
 
+  /// Sessão de consentimento (CookieConsent.sessionId) da visita que gerou o pedido.
+  sessionId String?
+
   items             OrderItem[]
   payments          Payment[]
   movements         InventoryMovement[]
@@ -603,16 +626,21 @@ model ContactMessage {
 }
 
 model CookieConsent {
-  id        String   @id @default(cuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
-  sessionId String?
-  necessary Boolean  @default(true)
-  analytics Boolean  @default(false)
-  marketing Boolean  @default(false)
-  ip        String?
-  userAgent String?
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id])
+  sessionId      String?
+  necessary      Boolean  @default(true)
+  analytics      Boolean  @default(false)
+  marketing      Boolean  @default(false)
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  /// Versão do texto de consentimento aceito (prova de qual aviso o titular viu).
+  consentVersion String   @default("v1")
+  ip             String?
+  userAgent     String?
+  createdAt      DateTime @default(now())
 
   @@index([sessionId])
 }

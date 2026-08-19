@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { StockAdjustInput, StockEntryInput, StockOutInput } from "@/lib/validations";
+import { logAudit } from "@/server/audit";
 
 /**
  * Serviço de estoque. Invariantes:
@@ -126,14 +127,12 @@ export async function registerEntry(input: StockEntryInput, userId: string) {
       },
     });
 
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: "STOCK_ENTRY",
-        entity: "StockEntry",
-        entityId: entry.id,
-        description: `Entrada de ${input.quantity}x ${product.sku} (saldo ${before} → ${after})`,
-      },
+    await logAudit(tx, {
+      userId,
+      action: "STOCK_ENTRY",
+      entity: "StockEntry",
+      entityId: entry.id,
+      description: `Entrada de ${input.quantity}x ${product.sku} (saldo ${before} → ${after})`,
     });
 
     return { entryId: entry.id, balanceAfter: after };
@@ -174,14 +173,12 @@ export async function registerOut(input: StockOutInput, userId: string) {
       },
     });
 
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: "STOCK_OUT",
-        entity: "Product",
-        entityId: product.id,
-        description: `Saída (${input.type}) de ${input.quantity}x ${product.sku}: ${input.reason} (saldo ${before} → ${after})`,
-      },
+    await logAudit(tx, {
+      userId,
+      action: "STOCK_OUT",
+      entity: "Product",
+      entityId: product.id,
+      description: `Saída (${input.type}) de ${input.quantity}x ${product.sku}: ${input.reason} (saldo ${before} → ${after})`,
     });
 
     return { balanceAfter: after };
@@ -220,14 +217,14 @@ export async function adjustStock(input: StockAdjustInput, userId: string) {
       },
     });
 
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: "STOCK_ADJUSTMENT",
-        entity: "Product",
-        entityId: product.id,
-        description: `Ajuste de inventário ${product.sku}: ${before} → ${after} (${input.reason})`,
-      },
+    await logAudit(tx, {
+      userId,
+      action: "STOCK_ADJUSTMENT",
+      entity: "Product",
+      entityId: product.id,
+      description: `Ajuste de inventário ${product.sku}: ${before} → ${after} (${input.reason})`,
+      before: { stockQuantity: before },
+      after: { stockQuantity: after },
     });
 
     return { balanceAfter: after };
@@ -356,14 +353,12 @@ async function applyReversal(tx: Tx, movementId: string, userId: string) {
     });
   }
 
-  await tx.auditLog.create({
-    data: {
-      userId,
-      action: "STOCK_REVERSAL",
-      entity: "InventoryMovement",
-      entityId: movement.id,
-      description: `Estorno de ${MOVEMENT_LABEL[movement.type] ?? movement.type} de ${movement.quantity}x ${product.sku} (saldo ${before} → ${after})`,
-    },
+  await logAudit(tx, {
+    userId,
+    action: "STOCK_REVERSAL",
+    entity: "InventoryMovement",
+    entityId: movement.id,
+    description: `Estorno de ${MOVEMENT_LABEL[movement.type] ?? movement.type} de ${movement.quantity}x ${product.sku} (saldo ${before} → ${after})`,
   });
 
   return { movement, product: updated };
@@ -500,14 +495,12 @@ export async function correctMovement(
       },
     });
 
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: "STOCK_CORRECTION",
-        entity: "InventoryMovement",
-        entityId: movementId,
-        description: `Correção de ${MOVEMENT_LABEL[movement.type] ?? movement.type} de ${product.sku}: agora ${data.quantity} un (saldo ${before} → ${after})`,
-      },
+    await logAudit(tx, {
+      userId,
+      action: "STOCK_CORRECTION",
+      entity: "InventoryMovement",
+      entityId: movementId,
+      description: `Correção de ${MOVEMENT_LABEL[movement.type] ?? movement.type} de ${product.sku}: agora ${data.quantity} un (saldo ${before} → ${after})`,
     });
 
     return { balanceAfter: after };
