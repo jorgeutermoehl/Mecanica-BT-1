@@ -61,6 +61,7 @@ model User {
   contactMessages ContactMessage[]    @relation("ContactHandler")
   cashFlowEntries CashFlowEntry[]
   cookieConsents  CookieConsent[]
+  mediaFiles      MediaFile[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -175,6 +176,8 @@ model Category {
   slug        String      @unique
   description String?
   imageUrl    String?
+  imageFileId String?
+  imageFile   MediaFile? @relation("CategoryImage", fields: [imageFileId], references: [id])
   /// Chave do ícone exibido na loja (turbo, motor, freios, rodas...).
   icon        String?
   /// Categoria destacada na home (ex.: Rodas).
@@ -282,15 +285,48 @@ model Product {
 }
 
 model ProductImage {
-  id        String  @id @default(cuid())
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  url       String
-  alt       String?
-  position  Int     @default(0)
-  isPrimary Boolean @default(false)
+  id          String     @id @default(cuid())
+  productId   String
+  product     Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Retrocompatibilidade (hotlinks do seed) — mediaFileId é o canônico.
+  url         String
+  mediaFileId String?
+  mediaFile   MediaFile? @relation(fields: [mediaFileId], references: [id])
+  alt         String?
+  position    Int        @default(0)
+  isPrimary   Boolean    @default(false)
 
   @@index([productId])
+}
+
+/// Fonte ÚNICA de arquivos (ESPEC-V2, Onda 2 item 9).
+/// Content-Type SEMPRE derivado daqui (nunca da extensão da URL).
+model MediaFile {
+  id             String    @id @default(cuid())
+  /// Chave content-addressed no storage (regex estrita no route handler).
+  storageKey     String    @unique
+  originalName   String
+  mimeType       String
+  sizeBytes      Int
+  width          Int?
+  height         Int?
+  /// SHA-256 do binário — dedup de upload repetido.
+  checksumSha256 String
+  /// JSON com as variantes geradas (thumb/card/detail/zoom). /// json
+  variants       String?
+  /// PRODUCT_IMAGE | CATEGORY_IMAGE | BRAND_LOGO | ATTACHMENT (Zod).
+  kind           String
+  uploadedById   String?
+  uploadedBy     User?     @relation(fields: [uploadedById], references: [id])
+  deletedAt      DateTime?
+
+  productImages  ProductImage[]
+  categoryImages Category[]     @relation("CategoryImage")
+
+  createdAt DateTime @default(now())
+
+  @@index([checksumSha256])
+  @@index([kind])
 }
 
 /// Compatibilidade da peça com veículos. Modelo ÚNICO de fitment:

@@ -105,3 +105,18 @@ export async function requireStaff(): Promise<SessionUser> {
   }
   return session;
 }
+
+/**
+ * Separação de dever para ações destrutivas/financeiras (ESPEC-V2, Onda 3
+ * item 17): estornos, reprocessamento de webhook, limpeza de mídia, merge.
+ * Operação diária continua em requireStaff().
+ */
+export async function requireRole(roleSlug: string): Promise<SessionUser> {
+  const session = await getSession();
+  if (!session) throw new Error("NOT_AUTHENTICATED");
+  const user = await prisma.user.findUnique({ where: { id: session.id }, include: { role: true } });
+  if (!user || !user.isActive || user.deletedAt || !user.role || user.role.slug !== roleSlug) {
+    throw new Error("NOT_AUTHORIZED");
+  }
+  return session;
+}

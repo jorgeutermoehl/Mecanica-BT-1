@@ -53,3 +53,6 @@ prisma/*.db-journal
 /screenshots/
 .next-prod.log
 .claude/
+
+# Arquivos de mídia enviados pelo painel (servidos por /api/media)
+/uploads/
