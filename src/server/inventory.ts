@@ -521,3 +521,29 @@ export async function listProductOptions() {
     costPrice: Number(p.costPrice),
   }));
 }
+
+// ===========================================================================
+// Disponibilidade com reservas (ESPEC-V2, Onda 3 item 5)
+// ===========================================================================
+
+/**
+ * Disponível = físico − reservas ATIVAS não expiradas. Função ÚNICA de
+ * disponibilidade: groupBy sobre os IDs pedidos (nunca N+1) e SEM escrever
+ * nada — reserva vencida é ignorada logicamente; quem marca EXPIRED é o cron.
+ */
+export async function getAvailable(productIds: string[]): Promise<Map<string, number>> {
+  if (productIds.length === 0) return new Map();
+  const [products, reserved] = await Promise.all([
+    prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, stockQuantity: true },
+    }),
+    prisma.stockReservation.groupBy({
+      by: ["productId"],
+      where: { productId: { in: productIds }, status: "ACTIVE", expiresAt: { gt: new Date() } },
+      _sum: { quantity: true },
+    }),
+  ]);
+  const reservedBy = new Map(reserved.map((r) => [r.productId, r._sum.quantity ?? 0]));
+  return new Map(products.map((p) => [p.id, p.stockQuantity - (reservedBy.get(p.id) ?? 0)]));
+}

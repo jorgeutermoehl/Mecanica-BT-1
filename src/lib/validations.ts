@@ -294,6 +294,8 @@ export const checkoutSchema = z.object({
   /** "Meu Carro" no momento da compra → garagem do cliente + snapshot no pedido. */
   myCarVersionId: z.string().max(40).optional().or(z.literal("")),
   myCarLabel: z.string().max(120).optional().or(z.literal("")),
+  /** Idempotência: UUID gerado uma vez por tentativa de checkout (double-click/retry). */
+  externalReference: z.string().uuid().optional().or(z.literal("")),
   items: z
     .array(
       z.object({

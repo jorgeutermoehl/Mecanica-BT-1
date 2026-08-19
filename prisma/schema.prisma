@@ -270,6 +270,7 @@ model Product {
   movements       InventoryMovement[]
   stockEntryItems StockEntryItem[]
   promotions      Promotion[]
+  reservations    StockReservation[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -460,6 +461,7 @@ model InventoryMovement {
   @@index([productId])
   @@index([type])
   @@index([createdAt])
+  @@index([productId, createdAt])
 }
 
 model StockEntry {
@@ -549,12 +551,19 @@ model Order {
   /// Snapshot do veículo "Meu Carro" no checkout (ex.: "VW Golf GTI Mk7 2016").
   vehicleLabel String?
 
-  items             OrderItem[]
-  payments          Payment[]
-  movements         InventoryMovement[]
-  receivables       AccountReceivable[]
-  statusHistory     OrderStatusHistory[]
-  couponRedemptions CouponRedemption[]
+  /// Idempotência do checkout + chave de reconciliação do webhook (UUID).
+  externalReference String?   @unique
+  paymentProvider   String?
+  paidAt            DateTime?
+
+  items               OrderItem[]
+  payments            Payment[]
+  movements           InventoryMovement[]
+  receivables         AccountReceivable[]
+  statusHistory       OrderStatusHistory[]
+  couponRedemptions   CouponRedemption[]
+  paymentTransactions PaymentTransaction[]
+  stockReservations   StockReservation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -562,6 +571,7 @@ model Order {
   @@index([customerId])
   @@index([status])
   @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 model OrderItem {
@@ -580,6 +590,7 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+  @@index([productId, orderId])
 }
 
 model OrderStatusHistory {
@@ -606,7 +617,105 @@ model Payment {
   dueDate           DateTime?
   createdAt         DateTime  @default(now())
 
+  transactions PaymentTransaction[]
+
   @@index([orderId])
+}
+
+/// Tentativas de pagamento no gateway (ESPEC-V2, Onda 3 item 2).
+/// Payment é o registro CONTÁBIL; aqui ficam as tentativas — paymentId só é
+/// preenchido quando a transação aprova. Idempotência por provider+id externo.
+model PaymentTransaction {
+  id                    String    @id @default(cuid())
+  orderId               String
+  order                 Order     @relation(fields: [orderId], references: [id])
+  paymentId             String?
+  payment               Payment?  @relation(fields: [paymentId], references: [id])
+  /// MERCADO_PAGO | PIX_CRESOL | MANUAL (Zod).
+  provider              String
+  providerTransactionId String
+  providerPreferenceId  String?
+  /// PIX | CREDIT_CARD | BOLETO | WALLET (Zod).
+  method                String
+  /// CREATED | PENDING | APPROVED | REJECTED | REFUNDED | PARTIALLY_REFUNDED | CHARGED_BACK | CANCELLED | EXPIRED — transições monotônicas.
+  status                String    @default("CREATED")
+  amount                Decimal
+  feeAmount             Decimal   @default(0)
+  netAmount             Decimal   @default(0)
+  installments          Int?
+  /// Payload bruto do provedor — /// pii, expurgado após 90 dias (TTL no cron).
+  rawPayload            String?
+  expiresAt             DateTime?
+  approvedAt            DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  cashFlowEntries CashFlowEntry[]
+
+  @@unique([provider, providerTransactionId])
+  @@index([orderId, status])
+}
+
+/// Eventos de webhook recebidos (idempotência + reprocessamento).
+model WebhookEvent {
+  id                 String    @id @default(cuid())
+  provider           String
+  eventId            String
+  topic              String?
+  providerResourceId String?
+  /// Payload bruto — /// pii, expurgado após 90 dias (TTL no cron).
+  payloadRaw         String?
+  signatureValid     Boolean   @default(false)
+  /// RECEIVED | PROCESSED | IGNORED | ERROR.
+  status             String    @default("RECEIVED")
+  processedAt        DateTime?
+  errorMessage       String?
+  attempts           Int       @default(0)
+  createdAt          DateTime  @default(now())
+
+  @@unique([provider, eventId])
+  @@index([status])
+}
+
+/// Reserva de estoque para checkout online (ESPEC-V2, Onda 3 item 5).
+/// NÃO é movimento — o ledger só recebe SALE quando a reserva é consumida.
+/// Leitura NUNCA escreve: disponibilidade filtra ACTIVE + expiresAt > now;
+/// marcação EXPIRED é trabalho exclusivo do cron.
+model StockReservation {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id])
+  cartToken String?
+  quantity  Int
+  /// ACTIVE | CONSUMED | RELEASED | EXPIRED.
+  status    String   @default("ACTIVE")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([status, expiresAt])
+  @@index([productId])
+  @@index([orderId])
+}
+
+/// Snapshot diário de vendas (base ÚNICA de ABC, giro, cobertura, reposição).
+/// Upsert idempotente derivado de order_items; recompute pós-commit.
+model ProductSalesDaily {
+  productId    String
+  /// Data pré-truncada "YYYY-MM-DD" (portável SQLite→Postgres).
+  date         String
+  channel      String
+  qtySold      Int     @default(0)
+  grossRevenue Decimal @default(0)
+  discounts    Decimal @default(0)
+  cogs         Decimal @default(0)
+  netRevenue   Decimal @default(0)
+  ordersCount  Int     @default(0)
+
+  @@id([productId, date, channel])
+  @@index([date])
+  @@index([productId, date])
 }
 
 // ===========================================================================
@@ -657,18 +766,20 @@ model AccountReceivable {
 }
 
 model CashFlowEntry {
-  id           String   @id @default(cuid())
-  type         String // INFLOW | OUTFLOW
-  category     String?
-  description  String
-  amount       Decimal
-  date         DateTime @default(now())
-  orderId      String?
-  payableId    String?
-  receivableId String?
-  userId       String?
-  user         User?    @relation(fields: [userId], references: [id])
-  createdAt    DateTime @default(now())
+  id                   String              @id @default(cuid())
+  type                 String // INFLOW | OUTFLOW
+  category             String?
+  description          String
+  amount               Decimal
+  date                 DateTime            @default(now())
+  orderId              String?
+  payableId            String?
+  receivableId         String?
+  paymentTransactionId String?
+  paymentTransaction   PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
+  userId               String?
+  user                 User?               @relation(fields: [userId], references: [id])
+  createdAt            DateTime            @default(now())
 
   @@index([date])
   @@index([type])

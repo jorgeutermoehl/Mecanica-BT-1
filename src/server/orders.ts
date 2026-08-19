@@ -1,7 +1,12 @@
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import type { CheckoutInput, ManualSaleInput, OrderStatus, SaleChannel } from "@/lib/validations";
 import { logAudit } from "@/server/audit";
 import { recalcCustomerStats, resolveCustomer, upsertCustomerAddress } from "@/server/customers";
+import { dateKey, recomputeSalesDaily } from "@/server/reports/aggregation";
+
+/** Janela da reserva de estoque para pedidos aguardando pagamento (boleto demo). */
+const RESERVATION_HOURS = 72;
 
 /**
  * Serviço de vendas. Invariantes:
@@ -20,7 +25,14 @@ function shippingFor(subtotal: number): number {
 
 /** Finaliza a compra da loja. Retorna o número do pedido criado. */
 export async function placeOrder(input: CheckoutInput) {
-  return prisma.$transaction(async (tx) => {
+  // Idempotência (double-click/retry de rede): mesma chave → mesmo pedido.
+  const externalReference = input.externalReference?.trim() || randomUUID();
+  const existing = await prisma.order.findUnique({ where: { externalReference } });
+  if (existing) {
+    return { orderNumber: existing.number, total: Number(existing.total), status: existing.status as OrderStatus };
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
     // 1. Produtos reais do banco (preço/estoque do servidor).
     const ids = input.items.map((i) => i.productId);
     const products = await tx.product.findMany({
@@ -28,11 +40,20 @@ export async function placeOrder(input: CheckoutInput) {
     });
     const byId = new Map(products.map((p) => [p.id, p]));
 
+    // Disponível = físico − reservas ATIVAS não expiradas (dentro da transação).
+    const reserved = await tx.stockReservation.groupBy({
+      by: ["productId"],
+      where: { productId: { in: ids }, status: "ACTIVE", expiresAt: { gt: new Date() } },
+      _sum: { quantity: true },
+    });
+    const reservedBy = new Map(reserved.map((r) => [r.productId, r._sum.quantity ?? 0]));
+
     const lines = input.items.map((item) => {
       const product = byId.get(item.productId);
       if (!product) throw new Error("Um dos produtos do carrinho não está mais disponível.");
-      if (item.quantity > product.stockQuantity) {
-        throw new Error(`Estoque insuficiente para "${product.name}" (disponível: ${product.stockQuantity} un).`);
+      const available = product.stockQuantity - (reservedBy.get(product.id) ?? 0);
+      if (item.quantity > available) {
+        throw new Error(`Estoque insuficiente para "${product.name}" (disponível: ${Math.max(0, available)} un).`);
       }
       const unitPrice = Number(product.promoPrice ?? product.salePrice);
       return { product, quantity: item.quantity, unitPrice, total: unitPrice * item.quantity };
@@ -132,6 +153,9 @@ export async function placeOrder(input: CheckoutInput) {
         shipState: input.shipping.state.toUpperCase(),
         sessionId,
         vehicleLabel: input.myCarLabel?.trim() || null,
+        externalReference,
+        paymentProvider: "MANUAL",
+        paidAt: isPaid ? now : null,
         items: {
           create: lines.map((l) => ({
             productId: l.product.id,
@@ -149,31 +173,47 @@ export async function placeOrder(input: CheckoutInput) {
       },
     });
 
-    // 5. Baixa de estoque (movimento SALE por item, saldo antes/depois).
-    for (const l of lines) {
-      const before = l.product.stockQuantity;
-      const after = before - l.quantity;
-      await tx.inventoryMovement.create({
-        data: {
-          productId: l.product.id,
-          type: "SALE",
-          direction: "OUT",
-          quantity: l.quantity,
-          unitCost: l.product.costPrice,
-          balanceBefore: before,
-          balanceAfter: after,
-          reason: `Venda ${number}`,
-          orderId: order.id,
-        },
-      });
-      await tx.product.update({
-        where: { id: l.product.id },
-        data: {
-          stockQuantity: after,
-          status:
-            after <= 0 ? "OUT_OF_STOCK" : l.product.promoPrice !== null ? "PROMOTION" : "ACTIVE",
-        },
-      });
+    // 5. Estoque: pagamento aprovado baixa direto (SALE); aguardando pagamento
+    //    RESERVA (não é movimento — o ledger só recebe SALE quando aprovar).
+    if (isPaid) {
+      for (const l of lines) {
+        const before = l.product.stockQuantity;
+        const after = before - l.quantity;
+        await tx.inventoryMovement.create({
+          data: {
+            productId: l.product.id,
+            type: "SALE",
+            direction: "OUT",
+            quantity: l.quantity,
+            unitCost: l.product.costPrice,
+            balanceBefore: before,
+            balanceAfter: after,
+            reason: `Venda ${number}`,
+            orderId: order.id,
+          },
+        });
+        await tx.product.update({
+          where: { id: l.product.id },
+          data: {
+            stockQuantity: after,
+            status:
+              after <= 0 ? "OUT_OF_STOCK" : l.product.promoPrice !== null ? "PROMOTION" : "ACTIVE",
+          },
+        });
+      }
+    } else {
+      const expiresAt = new Date(now.getTime() + RESERVATION_HOURS * 3_600_000);
+      for (const l of lines) {
+        await tx.stockReservation.create({
+          data: {
+            productId: l.product.id,
+            orderId: order.id,
+            quantity: l.quantity,
+            status: "ACTIVE",
+            expiresAt,
+          },
+        });
+      }
     }
 
     // 6. Financeiro: pagamento, recebível e fluxo de caixa.
@@ -257,6 +297,10 @@ export async function placeOrder(input: CheckoutInput) {
 
     return { orderNumber: number, total, status: orderStatus };
   });
+
+  // Pós-commit (fora da transação crítica): snapshot diário idempotente.
+  await recomputeSalesDaily(dateKey(new Date()));
+  return result;
 }
 
 /**
@@ -390,6 +434,10 @@ export async function registerManualSale(input: ManualSaleInput, userId: string)
     });
 
     return { orderNumber: number, total };
+  }).then(async (r) => {
+    // Pós-commit: snapshot diário idempotente.
+    await recomputeSalesDaily(dateKey(new Date()));
+    return r;
   });
 }
 
@@ -482,16 +530,36 @@ const ALLOWED_NEXT: Record<string, OrderStatus[]> = {
 
 /** Atualiza status; cancelamento/devolução devolve itens ao estoque. */
 export async function updateOrderStatus(id: string, next: OrderStatus, userId: string, note?: string) {
-  return prisma.$transaction(async (tx) => {
+  let orderDay: string | null = null;
+  await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id }, include: { items: true } });
     if (!order) throw new Error("Pedido não encontrado.");
+    orderDay = dateKey(order.createdAt);
 
     const allowed = ALLOWED_NEXT[order.status] ?? [];
     if (!allowed.includes(next)) {
       throw new Error(`Transição inválida: ${order.status} → ${next}.`);
     }
 
-    const restock = next === "CANCELLED" || next === "RETURNED";
+    // Pedido aguardando pagamento nunca baixou estoque — tem RESERVAS, não SALE.
+    const wasAwaiting = order.status === "AWAITING_PAYMENT";
+
+    const restock = (next === "CANCELLED" || next === "RETURNED") && !wasAwaiting;
+    if (next === "CANCELLED" && wasAwaiting) {
+      // Libera as reservas (disponível volta sem tocar no ledger).
+      await tx.stockReservation.updateMany({
+        where: { orderId: order.id, status: "ACTIVE" },
+        data: { status: "RELEASED" },
+      });
+      await tx.payment.updateMany({
+        where: { orderId: order.id, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+      await tx.accountReceivable.updateMany({
+        where: { orderId: order.id },
+        data: { status: "CANCELLED" },
+      });
+    }
     if (restock) {
       for (const item of order.items) {
         if (!item.productId) continue;
@@ -544,6 +612,57 @@ export async function updateOrderStatus(id: string, next: OrderStatus, userId: s
 
     if (order.status === "AWAITING_PAYMENT" && next === "PAID") {
       const now = new Date();
+
+      // Consome as reservas e SÓ ENTÃO gera os movimentos SALE (append-only).
+      const reservations = await tx.stockReservation.findMany({
+        where: { orderId: order.id, status: "ACTIVE" },
+      });
+      await tx.stockReservation.updateMany({
+        where: { orderId: order.id, status: "ACTIVE" },
+        data: { status: "CONSUMED" },
+      });
+      for (const item of order.items) {
+        if (!item.productId) continue;
+        const hasReservation = reservations.some((r) => r.productId === item.productId);
+        if (!hasReservation) continue; // pedido antigo (fluxo sem reserva) já baixou
+        const product = await tx.product.findUnique({ where: { id: item.productId } });
+        if (!product) continue;
+        const before = product.stockQuantity;
+        if (item.quantity > before) {
+          throw new Error(`Estoque físico insuficiente para ${product.sku} — confira o inventário.`);
+        }
+        const after = before - item.quantity;
+        await tx.inventoryMovement.create({
+          data: {
+            productId: product.id,
+            type: "SALE",
+            direction: "OUT",
+            quantity: item.quantity,
+            unitCost: item.unitCostAtSale,
+            balanceBefore: before,
+            balanceAfter: after,
+            reason: `Venda ${order.number} (pagamento confirmado)`,
+            orderId: order.id,
+            userId,
+          },
+        });
+        await tx.product.update({
+          where: { id: product.id },
+          data: {
+            stockQuantity: after,
+            status:
+              product.status === "INACTIVE"
+                ? "INACTIVE"
+                : after <= 0
+                  ? "OUT_OF_STOCK"
+                  : product.promoPrice !== null
+                    ? "PROMOTION"
+                    : "ACTIVE",
+          },
+        });
+      }
+
+      await tx.order.update({ where: { id: order.id }, data: { paidAt: now } });
       await tx.payment.updateMany({
         where: { orderId: order.id, status: "PENDING" },
         data: { status: "PAID", paidAt: now },
@@ -581,4 +700,7 @@ export async function updateOrderStatus(id: string, next: OrderStatus, userId: s
       after: { status: next },
     });
   });
+
+  // Pós-commit: snapshot do DIA DO PEDIDO (cancelamento muda números passados).
+  if (orderDay) await recomputeSalesDaily(orderDay);
 }

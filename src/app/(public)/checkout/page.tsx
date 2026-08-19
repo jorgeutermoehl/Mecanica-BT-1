@@ -159,6 +159,8 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = React.useState(false);
   /** Evita o redirect para /carrinho quando o clear() acontece após a venda. */
   const placedRef = React.useRef(false);
+  /** Chave de idempotência: gerada UMA vez — double-click/retry não duplica pedido. */
+  const externalReferenceRef = React.useRef<string>(crypto.randomUUID());
 
   React.useEffect(() => {
     if (hydrated && items.length === 0 && !placedRef.current) {
@@ -198,6 +200,7 @@ export default function CheckoutPage() {
       // Mesma sessão do banner de cookies — liga o pedido à origem da visita
       // (UTM/Instagram) respeitando o consentimento dado.
       sessionId: localStorage.getItem("fb-session-id") ?? "",
+      externalReference: externalReferenceRef.current,
       ...(() => {
         // "Meu Carro" selecionado na loja → garagem do cliente + snapshot no pedido.
         try {
