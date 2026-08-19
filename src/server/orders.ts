@@ -131,6 +131,7 @@ export async function placeOrder(input: CheckoutInput) {
         shipCity: input.shipping.city,
         shipState: input.shipping.state.toUpperCase(),
         sessionId,
+        vehicleLabel: input.myCarLabel?.trim() || null,
         items: {
           create: lines.map((l) => ({
             productId: l.product.id,
@@ -221,6 +222,27 @@ export async function placeOrder(input: CheckoutInput) {
 
     // 8. Endereço do checkout vira Address reutilizável (snapshot ship* preservado).
     await upsertCustomerAddress(tx, customer.id, input.shipping);
+
+    // 8b. "Meu Carro" identificado no checkout entra na garagem do cliente.
+    const myCarVersionId = input.myCarVersionId?.trim();
+    if (myCarVersionId) {
+      const version = await tx.vehicleVersion.findUnique({ where: { id: myCarVersionId } });
+      if (version) {
+        const inGarage = await tx.customerVehicle.findFirst({
+          where: { customerId: customer.id, vehicleVersionId: myCarVersionId },
+        });
+        if (!inGarage) {
+          const garageCount = await tx.customerVehicle.count({ where: { customerId: customer.id } });
+          await tx.customerVehicle.create({
+            data: {
+              customerId: customer.id,
+              vehicleVersionId: myCarVersionId,
+              isDefault: garageCount === 0,
+            },
+          });
+        }
+      }
+    }
 
     // 9. Métricas do cliente pelo escritor único (idempotente).
     await recalcCustomerStats(tx, customer.id);

@@ -28,11 +28,31 @@ export const MOVEMENT_TYPES = [
 
 export const SALE_CHANNELS = ["SITE", "INSTAGRAM", "WHATSAPP", "LOJA"] as const;
 
+export const FUEL_TYPES = ["GASOLINE", "ETHANOL", "FLEX", "DIESEL"] as const;
+export const FITMENT_TYPES = ["UNIVERSAL", "SPECIFIC", "UNKNOWN"] as const;
+export const PRODUCT_CONDITIONS = ["NEW", "USED", "REMAN"] as const;
+
 export type ProductStatus = (typeof PRODUCT_STATUS)[number];
 export type OrderStatus = (typeof ORDER_STATUS)[number];
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export type MovementType = (typeof MOVEMENT_TYPES)[number];
 export type SaleChannel = (typeof SALE_CHANNELS)[number];
+export type FuelType = (typeof FUEL_TYPES)[number];
+export type FitmentType = (typeof FITMENT_TYPES)[number];
+export type ProductCondition = (typeof PRODUCT_CONDITIONS)[number];
+
+export const FUEL_TYPE_LABEL: Record<FuelType, string> = {
+  GASOLINE: "Gasolina",
+  ETHANOL: "Etanol",
+  FLEX: "Flex",
+  DIESEL: "Diesel",
+};
+
+export const FITMENT_TYPE_LABEL: Record<FitmentType, string> = {
+  UNIVERSAL: "Universal",
+  SPECIFIC: "Aplicação específica",
+  UNKNOWN: "Consultar compatibilidade",
+};
 
 export const SALE_CHANNEL_LABEL: Record<SaleChannel, string> = {
   SITE: "Site",
@@ -186,6 +206,51 @@ export const customerFormSchema = z.object({
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 
+// ---- Catálogo de veículos (fitment) ----
+
+export const vehicleMakeSchema = z.object({
+  name: z.string().min(2, "Informe a marca").max(60),
+});
+
+export const vehicleModelSchema = z.object({
+  makeId: z.string().min(1, "Selecione a marca"),
+  name: z.string().min(1, "Informe o modelo").max(60),
+});
+
+export const vehicleVersionSchema = z.object({
+  modelId: z.string().min(1, "Selecione o modelo"),
+  name: z.string().min(1, "Informe a versão").max(80),
+  yearStart: z.coerce.number().int().min(1950, "Ano inicial inválido").max(2100),
+  yearEnd: z.coerce
+    .number()
+    .int()
+    .min(1950)
+    .max(2100)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  engine: z.string().max(60).optional().or(z.literal("")),
+  fuel: z.enum(FUEL_TYPES).optional(),
+  chassis: z.string().max(40).optional().or(z.literal("")),
+  notes: z.string().max(300).optional().or(z.literal("")),
+}).refine((d) => d.yearEnd === undefined || d.yearEnd >= d.yearStart, {
+  message: "Ano final deve ser maior ou igual ao inicial",
+  path: ["yearEnd"],
+});
+
+export const productApplicationSchema = z.object({
+  productId: z.string().min(1),
+  vehicleVersionId: z.string().min(1, "Selecione a versão do veículo"),
+  yearStart: z.coerce.number().int().min(1950).max(2100).optional().or(z.literal("").transform(() => undefined)),
+  yearEnd: z.coerce.number().int().min(1950).max(2100).optional().or(z.literal("").transform(() => undefined)),
+  engine: z.string().max(60).optional().or(z.literal("")),
+  notes: z.string().max(300).optional().or(z.literal("")),
+});
+
+export const myCarSchema = z.object({
+  vehicleVersionId: z.string().min(1),
+  year: z.coerce.number().int().min(1950).max(2100).optional().or(z.literal("").transform(() => undefined)),
+});
+
 /** Filtros dos relatórios de estoque. */
 export const movementReportSchema = z.object({
   from: z.string().optional().or(z.literal("")),
@@ -226,6 +291,9 @@ export const checkoutSchema = z.object({
   couponCode: z.string().max(30).optional().or(z.literal("")),
   /** Sessão de consentimento (localStorage fb-session-id) — liga pedido à origem da visita. */
   sessionId: z.string().max(64).optional().or(z.literal("")),
+  /** "Meu Carro" no momento da compra → garagem do cliente + snapshot no pedido. */
+  myCarVersionId: z.string().max(40).optional().or(z.literal("")),
+  myCarLabel: z.string().max(120).optional().or(z.literal("")),
   items: z
     .array(
       z.object({
@@ -247,3 +315,7 @@ export type CouponInput = z.infer<typeof couponSchema>;
 export type PromoPriceInput = z.infer<typeof promoPriceSchema>;
 export type CustomerFormInput = z.infer<typeof customerFormSchema>;
 export type MovementReportInput = z.infer<typeof movementReportSchema>;
+export type VehicleMakeInput = z.infer<typeof vehicleMakeSchema>;
+export type VehicleModelInput = z.infer<typeof vehicleModelSchema>;
+export type VehicleVersionInput = z.infer<typeof vehicleVersionSchema>;
+export type ProductApplicationInput = z.infer<typeof productApplicationSchema>;

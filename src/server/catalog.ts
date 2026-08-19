@@ -72,7 +72,9 @@ function toStoreProduct(p: ProductWithRelations, sold: number): StoreProduct {
     originalCode: p.originalCode,
     sold,
     isNew: ageDays <= NEW_DAYS,
+    fitmentType: p.fitmentType,
     applications: p.applications.map((a) => ({
+      vehicleVersionId: a.vehicleVersionId,
       vehicleBrand: a.vehicleBrand,
       vehicleModel: a.vehicleModel,
       yearStart: a.yearStart,
@@ -132,6 +134,53 @@ export const getStoreCategories = unstable_cache(
   ["store-categories"],
   { tags: [CATALOG_TAG] },
 );
+
+/**
+ * Catálogo de veículos para o seletor "Meu Carro" (árvore completa — pequena
+ * o bastante para ir inteira ao client e alimentar a cascata sem round-trips).
+ */
+export const getVehicleCatalog = unstable_cache(
+  async () => {
+    const makes = await prisma.vehicleMake.findMany({
+      where: { isActive: true, models: { some: { isActive: true, versions: { some: { isActive: true } } } } },
+      orderBy: { name: "asc" },
+      include: {
+        models: {
+          where: { isActive: true, versions: { some: { isActive: true } } },
+          orderBy: { name: "asc" },
+          include: {
+            versions: {
+              where: { isActive: true },
+              orderBy: [{ yearStart: "desc" }, { name: "asc" }],
+            },
+          },
+        },
+      },
+    });
+    return makes.map((make) => ({
+      id: make.id,
+      name: make.name,
+      slug: make.slug,
+      models: make.models.map((model) => ({
+        id: model.id,
+        name: model.name,
+        slug: model.slug,
+        versions: model.versions.map((v) => ({
+          id: v.id,
+          name: v.name,
+          yearStart: v.yearStart,
+          yearEnd: v.yearEnd,
+          engine: v.engine,
+          label: `${v.name} ${v.yearEnd ? `${v.yearStart}–${v.yearEnd}` : `${v.yearStart}+`}${v.engine ? ` · ${v.engine}` : ""}`,
+        })),
+      })),
+    }));
+  },
+  ["vehicle-catalog"],
+  { tags: [CATALOG_TAG] },
+);
+
+export type VehicleCatalog = Awaited<ReturnType<typeof getVehicleCatalog>>;
 
 /** Dados agregados da home (uma ida ao banco para a lista, depois fatia). */
 export async function getHomeData() {

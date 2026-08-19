@@ -28,7 +28,10 @@ export type StoreProduct = {
   /** Unidades vendidas (agregado de order_items). */
   sold: number;
   isNew: boolean;
+  /** Política de compatibilidade: UNIVERSAL | SPECIFIC | UNKNOWN. */
+  fitmentType: string;
   applications: {
+    vehicleVersionId: string | null;
     vehicleBrand: string;
     vehicleModel: string;
     yearStart: number | null;
@@ -36,6 +39,25 @@ export type StoreProduct = {
     engine: string | null;
   }[];
 };
+
+/** Veículo selecionado no "Meu Carro" (localStorage + cookie p/ SSR). */
+export type MyCar = {
+  versionId: string;
+  /** Rótulo completo (ex.: "VW Golf GTI Mk7 2014–2019"). */
+  label: string;
+  year?: number;
+};
+
+/**
+ * Um produto atende o veículo selecionado?
+ * UNIVERSAL sempre aparece (badge "Universal"); SPECIFIC exige aplicação
+ * vinculada; UNKNOWN (legado) fica fora do filtro "só compatíveis".
+ */
+export function productMatchesVehicle(p: StoreProduct, versionId: string): boolean {
+  if (p.fitmentType === "UNIVERSAL") return true;
+  if (p.fitmentType === "UNKNOWN") return false;
+  return p.applications.some((a) => a.vehicleVersionId === versionId);
+}
 
 export type StoreCategory = {
   id: string;

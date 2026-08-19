@@ -20,6 +20,23 @@ import { adjustStock, correctMovement, registerEntry, registerOut, reverseMoveme
 import { registerManualSale, updateOrderStatus } from "@/server/orders";
 import { createCoupon, setCouponActive, setPromoPrice, clearPromoPrice } from "@/server/promotions";
 import { createCustomer, findPossibleDuplicates } from "@/server/customers";
+import {
+  addAllModelVersions,
+  addProductApplication,
+  copyProductApplications,
+  createVehicleMake,
+  createVehicleModel,
+  createVehicleVersion,
+  deactivateVehicleVersion,
+  getVehicleOptions,
+  removeProductApplication,
+} from "@/server/vehicles";
+import {
+  vehicleMakeSchema,
+  vehicleModelSchema,
+  vehicleVersionSchema,
+  productApplicationSchema,
+} from "@/lib/validations";
 
 export type AdminActionResult = { ok: boolean; error?: string };
 
@@ -259,6 +276,144 @@ export async function updateOrderStatusAction(orderId: string, status: string, n
     await updateOrderStatus(orderId, status as OrderStatus, user.id, note);
     revalidateStore();
     return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ===========================================================================
+// Catálogo de veículos + fitment (Onda 2)
+// ===========================================================================
+
+export async function createVehicleMakeAction(input: unknown): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    const parsed = vehicleMakeSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+    await createVehicleMake(parsed.data, user.id);
+    revalidateStore();
+    revalidatePath("/admin/veiculos");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function createVehicleModelAction(input: unknown): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    const parsed = vehicleModelSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+    await createVehicleModel(parsed.data, user.id);
+    revalidateStore();
+    revalidatePath("/admin/veiculos");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function createVehicleVersionAction(input: unknown): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    const parsed = vehicleVersionSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+    await createVehicleVersion(parsed.data, user.id);
+    revalidateStore();
+    revalidatePath("/admin/veiculos");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function deactivateVehicleVersionAction(id: string): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    if (!id) return { ok: false, error: "Versão inválida." };
+    await deactivateVehicleVersion(id, user.id);
+    revalidateStore();
+    revalidatePath("/admin/veiculos");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Opções em cascata (Marca→Modelo→Versão) para comboboxes do painel. */
+export async function getVehicleOptionsAction(
+  level: "makes" | "models" | "versions",
+  parentId?: string,
+): Promise<AdminActionResult & { options?: { id: string; label: string }[] }> {
+  try {
+    await requireStaff();
+    if (level !== "makes" && !parentId) return { ok: false, error: "Seleção incompleta." };
+    const options =
+      level === "makes"
+        ? await getVehicleOptions("makes")
+        : level === "models"
+          ? await getVehicleOptions("models", parentId!)
+          : await getVehicleOptions("versions", parentId!);
+    return { ok: true, options };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function addProductApplicationAction(input: unknown): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    const parsed = productApplicationSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+    await addProductApplication(parsed.data, user.id);
+    revalidateStore();
+    revalidatePath(`/admin/produtos/${parsed.data.productId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function removeProductApplicationAction(applicationId: string): Promise<AdminActionResult> {
+  try {
+    const user = await requireStaff();
+    if (!applicationId) return { ok: false, error: "Aplicação inválida." };
+    await removeProductApplication(applicationId, user.id);
+    revalidateStore();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function copyProductApplicationsAction(
+  fromProductId: string,
+  toProductId: string,
+): Promise<AdminActionResult & { copied?: number }> {
+  try {
+    const user = await requireStaff();
+    if (!fromProductId || !toProductId) return { ok: false, error: "Selecione o produto de origem." };
+    if (fromProductId === toProductId) return { ok: false, error: "Origem e destino são o mesmo produto." };
+    const r = await copyProductApplications(fromProductId, toProductId, user.id);
+    revalidateStore();
+    revalidatePath(`/admin/produtos/${toProductId}`);
+    return { ok: true, copied: r.copied };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function addAllModelVersionsAction(
+  productId: string,
+  modelId: string,
+): Promise<AdminActionResult & { added?: number }> {
+  try {
+    const user = await requireStaff();
+    if (!productId || !modelId) return { ok: false, error: "Selecione o modelo." };
+    const r = await addAllModelVersions(productId, modelId, user.id);
+    revalidateStore();
+    revalidatePath(`/admin/produtos/${productId}`);
+    return { ok: true, added: r.added };
   } catch (e) {
     return fail(e);
   }

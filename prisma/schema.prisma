@@ -106,6 +106,7 @@ model Customer {
   orders             Order[]
   receivables        AccountReceivable[]
   couponRedemptions  CouponRedemption[]
+  vehicles           CustomerVehicle[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   deletedAt          DateTime?
@@ -151,8 +152,11 @@ model Supplier {
   city         String?
   state        String?
   paymentTerms String?
+  /// Prazo de entrega padrão em dias (fonte única de lead time; override por produto).
+  leadTimeDays Int              @default(7)
   notes        String?
   stockEntries StockEntry[]
+  products     Product[]
   payables     AccountPayable[]
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
@@ -211,7 +215,13 @@ model Product {
   name           String
   slug           String        @unique
   internalCode   String?
-  originalCode   String? // código original/fabricante
+  originalCode   String? // código original/fabricante (= MPN)
+  /// EAN/GTIN para busca cruzada.
+  gtin           String?
+  /// JSON array de códigos OEM para busca cruzada. /// json
+  oemCodes       String?
+  /// NEW | USED | REMAN (Zod em validations).
+  condition      String        @default("NEW")
   categoryId     String
   category       Category      @relation(fields: [categoryId], references: [id])
   brandId        String?
@@ -220,14 +230,28 @@ model Product {
   manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
   description    String?
   technicalSpecs String?
-  /// Compatibilidade resumida exibida no card (ex.: "Golf GTI Mk7").
+  /// Compatibilidade resumida exibida no card — derivada das aplicações
+  /// pelo serviço, com override manual.
   fitment        String?
+  /// Política de compatibilidade: UNIVERSAL | SPECIFIC | UNKNOWN (Zod).
+  fitmentType    String        @default("SPECIFIC")
+  metaTitle       String?
+  metaDescription String?
+  searchKeywords  String?
   costPrice      Decimal       @default(0) // custo médio atual
   salePrice      Decimal       @default(0)
   promoPrice     Decimal?
   desiredMargin  Decimal? // %
+  /// Alerta de margem mínima nos relatórios (%).
+  minMarginPercent Decimal?
   stockQuantity  Int           @default(0)
   minStock       Int           @default(0)
+  /// Reposição (Onda 3): estoque de segurança e cobertura alvo em dias.
+  safetyStock          Int  @default(0)
+  targetCoverageDays   Int  @default(30)
+  leadTimeDaysOverride Int?
+  supplierId     String?
+  supplier       Supplier?     @relation(fields: [supplierId], references: [id])
   location       String?
   weightGrams    Int?
   widthCm        Decimal?
@@ -252,6 +276,9 @@ model Product {
   @@index([brandId])
   @@index([status])
   @@index([name])
+  @@index([gtin])
+  @@index([originalCode])
+  @@index([supplierId])
 }
 
 model ProductImage {
@@ -266,20 +293,101 @@ model ProductImage {
   @@index([productId])
 }
 
-/// Compatibilidade da peça com veículos (marca/modelo/ano/motor).
+/// Compatibilidade da peça com veículos. Modelo ÚNICO de fitment:
+/// vehicleVersionId aponta para o catálogo normalizado; legacyText preserva
+/// as strings antigas até a migração casá-las (badge "fitment pendente").
 model ProductApplication {
-  id           String  @id @default(cuid())
-  productId    String
-  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  vehicleBrand String
-  vehicleModel String
-  yearStart    Int?
-  yearEnd      Int?
-  engine       String?
-  notes        String?
+  id               String          @id @default(cuid())
+  productId        String
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vehicleVersionId String?
+  vehicleVersion   VehicleVersion? @relation(fields: [vehicleVersionId], references: [id])
+  /// Concatenação antiga (vehicleBrand + vehicleModel + engine) preservada.
+  legacyText       String?
+  vehicleBrand     String
+  vehicleModel     String
+  /// Override de faixa de anos sobre a faixa da versão.
+  yearStart        Int?
+  yearEnd          Int?
+  engine           String?
+  notes            String?
 
+  @@unique([productId, vehicleVersionId])
   @@index([productId])
   @@index([vehicleBrand, vehicleModel])
+  @@index([vehicleVersionId])
+  @@index([vehicleVersionId, productId])
+}
+
+// ===========================================================================
+// CATÁLOGO DE VEÍCULOS (fitment normalizado)
+// ===========================================================================
+
+model VehicleMake {
+  id       String         @id @default(cuid())
+  name     String
+  slug     String         @unique
+  logoUrl  String?
+  isActive Boolean        @default(true)
+  models   VehicleModel[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VehicleModel {
+  id       String           @id @default(cuid())
+  makeId   String
+  make     VehicleMake      @relation(fields: [makeId], references: [id], onDelete: Cascade)
+  name     String
+  slug     String
+  isActive Boolean          @default(true)
+  versions VehicleVersion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([makeId, slug])
+}
+
+model VehicleVersion {
+  id        String  @id @default(cuid())
+  modelId   String
+  model     VehicleModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  /// Ex.: "GTI Mk7", "1.0 Turbo".
+  name      String
+  yearStart Int
+  yearEnd   Int?
+  engine    String?
+  /// GASOLINE | ETHANOL | FLEX | DIESEL (Zod).
+  fuel      String?
+  chassis   String?
+  notes     String?
+  isActive  Boolean @default(true)
+
+  applications     ProductApplication[]
+  customerVehicles CustomerVehicle[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([modelId, yearStart, yearEnd])
+}
+
+/// Garagem do cliente — SEM placa (vetado por LGPD).
+model CustomerVehicle {
+  id               String         @id @default(cuid())
+  customerId       String
+  customer         Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicleVersionId String
+  vehicleVersion   VehicleVersion @relation(fields: [vehicleVersionId], references: [id])
+  year             Int?
+  nickname         String?
+  isDefault        Boolean        @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([customerId])
 }
 
 // ===========================================================================
@@ -401,6 +509,9 @@ model Order {
 
   /// Sessão de consentimento (CookieConsent.sessionId) da visita que gerou o pedido.
   sessionId String?
+
+  /// Snapshot do veículo "Meu Carro" no checkout (ex.: "VW Golf GTI Mk7 2016").
+  vehicleLabel String?
 
   items             OrderItem[]
   payments          Payment[]

@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { seedVehicles } from "./seed-vehicles";
 
 const prisma = new PrismaClient();
 
@@ -89,6 +90,10 @@ async function main() {
   console.log("🌱 Limpando dados...");
   await wipe();
 
+  console.log("🚗 Catálogo de veículos (fitment)...");
+  const v = await seedVehicles(prisma);
+  console.log(`   ${v.makes} marcas · ${v.models} modelos · ${v.versions} versões`);
+
   console.log("🔐 Papéis, permissões e usuários do painel...");
   for (const perm of PERMISSIONS) await prisma.permission.create({ data: perm });
   const roleBySlug: Record<string, string> = {};
@@ -139,6 +144,10 @@ async function main() {
 
   console.log("🔩 1 produto de exemplo (Rodas — destaque da loja)...");
   const openedAt = daysAgo(7); // abertura ANTES da venda (cronologia coerente)
+  // Fitment normalizado: liga a aplicação demo à versão do catálogo de veículos.
+  const golfTsi = await prisma.vehicleVersion.findFirst({
+    where: { name: "TSI 1.4", model: { slug: "golf", make: { slug: "volkswagen" } } },
+  });
   const product = await prisma.product.create({
     data: {
       sku: "ROD-FBW-1770",
@@ -168,7 +177,16 @@ async function main() {
         ],
       },
       applications: {
-        create: [{ vehicleBrand: "Volkswagen", vehicleModel: "Golf", yearStart: 2008, yearEnd: 2020 }],
+        create: [
+          {
+            vehicleBrand: "Volkswagen",
+            vehicleModel: "Golf",
+            yearStart: 2008,
+            yearEnd: 2020,
+            vehicleVersionId: golfTsi?.id ?? null,
+            legacyText: "Volkswagen Golf 2008–2020",
+          },
+        ],
       },
     },
   });

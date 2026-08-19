@@ -198,6 +198,17 @@ export default function CheckoutPage() {
       // Mesma sessão do banner de cookies — liga o pedido à origem da visita
       // (UTM/Instagram) respeitando o consentimento dado.
       sessionId: localStorage.getItem("fb-session-id") ?? "",
+      ...(() => {
+        // "Meu Carro" selecionado na loja → garagem do cliente + snapshot no pedido.
+        try {
+          const raw = localStorage.getItem("fullboost.myCar");
+          if (!raw) return {};
+          const car = JSON.parse(raw) as { versionId?: string; label?: string };
+          return { myCarVersionId: car.versionId ?? "", myCarLabel: car.label ?? "" };
+        } catch {
+          return {};
+        }
+      })(),
       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
     };
 
