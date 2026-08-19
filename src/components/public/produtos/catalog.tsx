@@ -46,7 +46,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import type { StoreCategory, StoreProduct } from "@/types/store";
+import {
+  productMatchesVehicle,
+  type StoreCategory,
+  type StoreProduct,
+} from "@/types/store";
+import { useMyCar } from "@/components/public/my-car/my-car-provider";
 import { whatsappLink } from "@/lib/constants";
 
 /* ---------- Configurações de filtro / ordenação ---------- */
@@ -302,6 +307,8 @@ type CatalogProps = {
 };
 
 export function Catalog({ products, categories, initialCategory }: CatalogProps) {
+  const { car, hydrated: carHydrated } = useMyCar();
+
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortId>("relevancia");
   const [cats, setCats] = useState<string[]>(
@@ -311,7 +318,11 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
   const [priceId, setPriceId] = useState("all");
   const [onlyPromo, setOnlyPromo] = useState(false);
   const [inStock, setInStock] = useState(false);
+  // "Só compatíveis" nasce LIGADO — só tem efeito quando há carro selecionado.
+  const [onlyCompatible, setOnlyCompatible] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  const compatActive = carHydrated && car !== null && onlyCompatible;
 
   // Facetas honestas com os dados: contagens derivadas do catálogo real.
   const catCounts = useMemo<Record<string, number>>(() => {
@@ -342,6 +353,7 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
     (priceId !== "all" ? 1 : 0) +
     (onlyPromo ? 1 : 0) +
     (inStock ? 1 : 0) +
+    (compatActive ? 1 : 0) +
     (query.trim() ? 1 : 0);
 
   function clearAll() {
@@ -351,6 +363,7 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
     setPriceId("all");
     setOnlyPromo(false);
     setInStock(false);
+    setOnlyCompatible(false);
   }
 
   const filtered = useMemo(() => {
@@ -365,6 +378,8 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
       if (price < range.min || price > range.max) return false;
       if (onlyPromo && p.promoPrice === null) return false;
       if (inStock && p.stock <= 0) return false;
+      if (compatActive && car && !productMatchesVehicle(p, car.versionId))
+        return false;
       return true;
     });
 
@@ -381,7 +396,7 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
         // Relevância = ordem em que o servidor entregou o catálogo.
         return list;
     }
-  }, [products, query, cats, brands, priceId, onlyPromo, inStock, sort]);
+  }, [products, query, cats, brands, priceId, onlyPromo, inStock, sort, compatActive, car]);
 
   return (
     <Container className="py-10 lg:py-14">
@@ -545,11 +560,51 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
             </div>
           </div>
 
+          {/* Filtro "Meu Carro" — só aparece com veículo selecionado */}
+          {carHydrated && car && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-border bg-card/60 px-3 py-2.5">
+              <Checkbox
+                id="so-compativeis"
+                checked={onlyCompatible}
+                onCheckedChange={(v) => setOnlyCompatible(v === true)}
+              />
+              <label
+                htmlFor="so-compativeis"
+                className="cursor-pointer text-sm"
+              >
+                Só compatíveis com{" "}
+                <span className="font-mono font-medium">{car.label}</span>
+              </label>
+              <p
+                aria-live="polite"
+                className="w-full font-mono text-xs text-muted-foreground sm:ml-auto sm:w-auto"
+              >
+                {compatActive
+                  ? `Mostrando ${filtered.length} ${
+                      filtered.length === 1
+                        ? "produto compatível"
+                        : "produtos compatíveis"
+                    }`
+                  : "Mostrando todos os produtos"}
+              </p>
+            </div>
+          )}
+
           {/* Resultados */}
           {filtered.length > 0 ? (
             <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
               {filtered.map((p) => (
-                <ProductCard key={p.id} product={p} />
+                <div key={p.id} className="relative grid">
+                  {compatActive && p.fitmentType === "UNIVERSAL" && (
+                    <Badge
+                      variant="secondary"
+                      className="pointer-events-none absolute right-2 top-2 z-10 font-mono uppercase"
+                    >
+                      Universal
+                    </Badge>
+                  )}
+                  <ProductCard product={p} />
+                </div>
               ))}
             </div>
           ) : (

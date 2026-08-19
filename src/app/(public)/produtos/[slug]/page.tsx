@@ -15,6 +15,7 @@ import { Container } from "@/components/shared/container";
 import { PartIcon } from "@/components/shared/part-icon";
 import { ProductCard } from "@/components/public/product-card";
 import { ProductActions } from "@/components/public/produto/product-actions";
+import { FitmentBadge } from "@/components/public/my-car/fitment-badge";
 import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
@@ -356,6 +357,9 @@ export default async function ProductPage({
                   </span>
                 </p>
               </div>
+
+              {/* Compatibilidade com o "Meu Carro" (client, lê o contexto) */}
+              <FitmentBadge product={product} />
 
               {/* Fitment em destaque */}
               {product.fitment && (
