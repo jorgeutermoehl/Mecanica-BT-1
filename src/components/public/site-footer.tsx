@@ -1,8 +1,16 @@
 import Link from "next/link";
-import { Mail, MapPin, Phone, Clock, ShieldCheck } from "lucide-react";
+import {
+  Clock,
+  CreditCard,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+} from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Container } from "@/components/shared/container";
-import { SITE } from "@/lib/constants";
+import { SITE, whatsappLink } from "@/lib/constants";
 import { PaymentMethods } from "@/components/public/metodos-pagamento";
 
 /* Ícones de marca (lucide removeu os brand icons) */
@@ -36,16 +44,44 @@ const SOCIAL = [
   { icon: YoutubeIcon, href: SITE.social.youtube, label: "YouTube" },
 ];
 
+const INSTITUTIONAL = [
+  { label: "Produtos", href: "/produtos" },
+  { label: "Promoções", href: "/promocoes" },
+  { label: "Contato", href: "/contato" },
+  { label: "Privacidade", href: "/privacidade" },
+  { label: "Termos de uso", href: "/termos" },
+];
+
+const CATEGORY_LINKS = [
+  { label: "Turbo", href: "/produtos?categoria=turbo" },
+  { label: "Rodas", href: "/produtos?categoria=rodas" },
+  { label: "Freios", href: "/produtos?categoria=freios" },
+  { label: "Suspensão", href: "/produtos?categoria=suspensao" },
+  { label: "Escape", href: "/produtos?categoria=escape" },
+  { label: "Acessórios", href: "/produtos?categoria=acessorios" },
+];
+
+function ColumnTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="mb-4 font-display text-sm font-semibold uppercase tracking-wide">
+      {children}
+    </h3>
+  );
+}
+
 export function SiteFooter() {
   return (
     // `.dark` mantém o rodapé escuro/premium em ambos os temas.
     <footer className="dark border-t border-border bg-background text-foreground">
       <div className="racing-rule" />
-      <Container className="py-14">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+      <Container className="py-12">
+        <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_0.9fr_0.9fr_1.1fr_1fr]">
+          {/* Marca */}
           <div className="space-y-4">
             <Logo />
-            <p className="max-w-xs text-sm text-muted-foreground">{SITE.description}</p>
+            <p className="max-w-xs text-sm text-muted-foreground">
+              {SITE.description}
+            </p>
             <div className="flex gap-2">
               {SOCIAL.map(({ icon: Icon, href, label }) => (
                 <a
@@ -62,46 +98,114 @@ export function SiteFooter() {
             </div>
           </div>
 
+          {/* Institucional */}
+          <nav aria-label="Institucional">
+            <ColumnTitle>Institucional</ColumnTitle>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              {INSTITUTIONAL.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="transition-colors hover:text-foreground"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Categorias */}
+          <nav aria-label="Categorias">
+            <ColumnTitle>Categorias</ColumnTitle>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              {CATEGORY_LINKS.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="transition-colors hover:text-foreground"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Atendimento */}
           <div>
-            <h3 className="mb-4 font-display text-sm font-semibold uppercase tracking-wide">Loja</h3>
-            <ul className="space-y-2.5 text-sm text-muted-foreground">
-              <li><Link href="/produtos" className="hover:text-foreground">Produtos</Link></li>
-              <li><Link href="/promocoes" className="hover:text-foreground">Promoções</Link></li>
-              <li><Link href="/carrinho" className="hover:text-foreground">Carrinho</Link></li>
+            <ColumnTitle>Atendimento</ColumnTitle>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              <li>
+                <a
+                  href={whatsappLink()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 transition-colors hover:text-foreground"
+                >
+                  <MessageCircle className="size-4 shrink-0" aria-hidden />
+                  WhatsApp
+                </a>
+              </li>
+              <li>
+                <a
+                  href={SITE.social.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 transition-colors hover:text-foreground"
+                >
+                  <InstagramIcon className="size-4 shrink-0" aria-hidden />
+                  @fullboostraceparts
+                </a>
+              </li>
+              <li className="flex items-center gap-2">
+                <Phone className="size-4 shrink-0" aria-hidden />
+                {SITE.phone}
+              </li>
+              <li>
+                <a
+                  href={`mailto:${SITE.email}`}
+                  className="flex items-center gap-2 transition-colors hover:text-foreground"
+                >
+                  <Mail className="size-4 shrink-0" aria-hidden />
+                  {SITE.email}
+                </a>
+              </li>
+              <li className="flex items-start gap-2">
+                <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {SITE.address}
+              </li>
+              <li className="flex items-start gap-2">
+                <Clock className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {SITE.hours}
+              </li>
             </ul>
           </div>
 
+          {/* Pagamento */}
           <div>
-            <h3 className="mb-4 font-display text-sm font-semibold uppercase tracking-wide">Institucional</h3>
-            <ul className="space-y-2.5 text-sm text-muted-foreground">
-              <li><Link href="/contato" className="hover:text-foreground">Contato</Link></li>
-              <li><Link href="/privacidade" className="hover:text-foreground">Privacidade</Link></li>
-              <li><Link href="/termos" className="hover:text-foreground">Termos de uso</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="mb-4 font-display text-sm font-semibold uppercase tracking-wide">Contato</h3>
-            <ul className="space-y-2.5 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2"><Phone className="size-4 shrink-0 text-primary" />{SITE.phone}</li>
-              <li className="flex items-center gap-2"><Mail className="size-4 shrink-0 text-primary" />{SITE.email}</li>
-              <li className="flex items-start gap-2"><MapPin className="size-4 shrink-0 text-primary" />{SITE.address}</li>
-              <li className="flex items-start gap-2"><Clock className="size-4 shrink-0 text-primary" />{SITE.hours}</li>
+            <ColumnTitle>Pagamento</ColumnTitle>
+            <PaymentMethods />
+            <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+              <li className="flex items-center gap-2">
+                <CreditCard className="size-4 shrink-0" aria-hidden />
+                Até 10x sem juros
+              </li>
+              <li className="flex items-center gap-2">
+                <ShieldCheck className="size-4 shrink-0 text-success" aria-hidden />
+                Compra 100% segura
+              </li>
             </ul>
           </div>
         </div>
 
-{/* Pagamentos e segurança */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
-          <PaymentMethods />
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <ShieldCheck className="size-4 text-success" />
-            Compra 100% segura
-          </div>
-        </div>
-        <div className="mt-6 flex flex-col items-center justify-between gap-2 text-xs text-muted-foreground sm:flex-row">
-          <p>© {new Date().getFullYear()} {SITE.name}. Todos os direitos reservados.</p>
-          <p>CNPJ 00.000.000/0001-00</p>
+        {/* Barra final */}
+        <div className="mt-10 flex flex-col items-center justify-between gap-2 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row">
+          <p>
+            © {new Date().getFullYear()} {SITE.name} · Todos os direitos
+            reservados
+          </p>
+          <p className="font-mono tabular-nums">CNPJ 00.000.000/0001-00</p>
         </div>
       </Container>
     </footer>

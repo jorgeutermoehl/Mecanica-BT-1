@@ -3,19 +3,21 @@ import {
   ArrowDownToLine,
   ArrowRight,
   ArrowUpFromLine,
-  PackageOpen,
-  PiggyBank,
-  TrendingUp,
   TriangleAlert,
-  Trophy,
-  Wallet,
 } from "lucide-react";
 import { getDashboardData } from "@/server/dashboard";
 import { formatBRL } from "@/lib/format";
-import { MOVEMENT_TYPE_LABEL, ORDER_STATUS_LABEL, type MovementType, type OrderStatus } from "@/lib/validations";
-import { Badge } from "@/components/ui/badge";
+import { MOVEMENT_TYPE_LABEL, type MovementType, type OrderStatus } from "@/lib/validations";
+import { cn } from "@/lib/utils";
+import { OrderStatusBadge } from "@/components/admin/pedidos/order-status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -29,16 +31,10 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Dashboard" };
 
-/** Cores por status do pedido (tokens do design system). */
-const ORDER_STATUS_BADGE: Record<OrderStatus, string> = {
-  AWAITING_PAYMENT: "bg-warning/15 text-warning",
-  PAID: "bg-success/15 text-success",
-  SEPARATING: "bg-info/15 text-info",
-  SHIPPED: "bg-info/15 text-info",
-  DELIVERED: "bg-success/15 text-success",
-  CANCELLED: "bg-muted text-muted-foreground",
-  RETURNED: "bg-muted text-muted-foreground",
-};
+/** Padrão Stripe: cabeçalho de tabela discreto e respiro nas bordas do card. */
+const TH_CLASS = "text-xs font-medium uppercase tracking-wide text-muted-foreground";
+const TABLE_CLASS =
+  "[&_th:first-child]:pl-4 [&_td:first-child]:pl-4 [&_th:last-child]:pr-4 [&_td:last-child]:pr-4";
 
 function formatDateTime(iso: string) {
   const d = new Date(iso);
@@ -49,26 +45,21 @@ function KpiCard({
   label,
   value,
   hint,
-  icon: Icon,
 }: {
   label: string;
   value: string;
   hint?: string;
-  icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <Card>
-      <CardContent className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            {label}
-          </p>
-          <p className="mt-2 truncate font-display text-3xl font-bold tracking-tight">{value}</p>
-          {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-        </div>
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Icon className="size-5" />
-        </span>
+    <Card size="sm">
+      <CardContent>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          {label}
+        </p>
+        <p className="mt-1 truncate font-mono text-2xl font-semibold tabular-nums tracking-tight">
+          {value}
+        </p>
+        {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
       </CardContent>
     </Card>
   );
@@ -82,70 +73,75 @@ export default async function AdminDashboardPage() {
     <div className="space-y-6">
       {/* Cabeçalho */}
       <div>
-        <h1 className="font-display text-2xl font-bold uppercase tracking-tight">Dashboard</h1>
+        <h1 className="font-display text-xl font-bold uppercase tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Visão geral da operação em {new Date().toLocaleDateString("pt-BR")}.
         </p>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Faturamento hoje"
           value={formatBRL(data.revenueToday)}
           hint={`${data.ordersToday} pedido${data.ordersToday === 1 ? "" : "s"} confirmado${data.ordersToday === 1 ? "" : "s"}`}
-          icon={Wallet}
         />
         <KpiCard
           label="Faturamento do mês"
           value={formatBRL(data.revenueMonth)}
           hint={`${data.ordersMonth} pedido${data.ordersMonth === 1 ? "" : "s"} no mês`}
-          icon={TrendingUp}
         />
         <KpiCard
           label="Pedidos pendentes"
           value={String(data.pendingCount)}
           hint="Aguardando pagamento ou separação"
-          icon={PackageOpen}
         />
         <KpiCard
           label="Lucro estimado do mês"
           value={formatBRL(data.profitMonth)}
           hint={`Margem bruta de ${data.grossMargin.toFixed(1)}%`}
-          icon={PiggyBank}
         />
       </div>
 
       {/* Alerta de estoque baixo */}
       {data.lowStock.length > 0 ? (
-        <Card className="ring-warning/50">
+        <Card size="sm" className="ring-warning/40">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 uppercase tracking-wide">
-              <TriangleAlert className="size-4 text-warning" />
-              Estoque baixo — {data.lowStock.length}{" "}
-              {data.lowStock.length === 1 ? "produto" : "produtos"}
+            <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide">
+              <TriangleAlert className="size-4 shrink-0 text-warning" />
+              Estoque baixo
+              <span className="rounded-full bg-warning/15 px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums text-warning">
+                {data.lowStock.length}{" "}
+                {data.lowStock.length === 1 ? "produto" : "produtos"}
+              </span>
             </CardTitle>
+            <CardAction>
+              <Button asChild variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+                <Link href="/admin/estoque">
+                  Ir para o estoque
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </Button>
+            </CardAction>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent>
             <ul className="divide-y divide-border">
               {data.lowStock.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-4 py-2 first:pt-0 last:pb-0">
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between gap-4 py-2 first:pt-0 last:pb-0"
+                >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{p.name}</p>
-                    <p className="font-mono text-xs text-muted-foreground">{p.sku}</p>
+                    <p className="truncate text-sm">{p.name}</p>
+                    <p className="font-mono text-[11px] text-muted-foreground">{p.sku}</p>
                   </div>
-                  <span className="shrink-0 font-mono text-xs font-medium text-warning">
-                    {p.stock} un (mín. {p.minStock})
-                  </span>
+                  <p className="shrink-0 font-mono text-xs tabular-nums">
+                    <span className="font-medium text-warning">{p.stock} un</span>
+                    <span className="text-muted-foreground"> / mín. {p.minStock}</span>
+                  </p>
                 </li>
               ))}
             </ul>
-            <Button asChild variant="outline" size="sm" className="gap-1">
-              <Link href="/admin/estoque">
-                Ir para o estoque
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -161,59 +157,56 @@ export default async function AdminDashboardPage() {
         {/* Últimos pedidos */}
         <Card>
           <CardHeader>
-            <CardTitle className="uppercase tracking-wide">Últimos pedidos</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-wide">Últimos pedidos</CardTitle>
+            <CardAction>
+              <Button asChild variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+                <Link href="/admin/pedidos">
+                  Todos
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </Button>
+            </CardAction>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {data.recentOrders.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 Nenhum pedido registrado ainda.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-              <Table>
+              <Table className={TABLE_CLASS}>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Nº</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="w-0" />
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className={TH_CLASS}>Pedido</TableHead>
+                    <TableHead className={TH_CLASS}>Cliente</TableHead>
+                    <TableHead className={TH_CLASS}>Status</TableHead>
+                    <TableHead className={cn(TH_CLASS, "text-right")}>Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.recentOrders.map((o) => (
                     <TableRow key={o.id}>
                       <TableCell>
-                        <span className="font-mono text-xs font-medium">{o.number}</span>
-                        <span className="block font-mono text-[10px] text-muted-foreground">
+                        <Link
+                          href={`/admin/pedidos/${o.id}`}
+                          className="font-mono text-xs font-medium transition-colors hover:text-primary"
+                        >
+                          {o.number}
+                        </Link>
+                        <span className="block font-mono text-[11px] text-muted-foreground">
                           {formatDateTime(o.createdAt)}
                         </span>
                       </TableCell>
                       <TableCell className="max-w-[140px] truncate">{o.customerName}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant="secondary"
-                          className={ORDER_STATUS_BADGE[o.status as OrderStatus] ?? "bg-muted text-muted-foreground"}
-                        >
-                          {ORDER_STATUS_LABEL[o.status as OrderStatus] ?? o.status}
-                        </Badge>
+                        <OrderStatusBadge status={o.status as OrderStatus} />
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs font-medium">
+                      <TableCell className="text-right font-mono text-xs font-medium tabular-nums">
                         {formatBRL(o.total)}
-                      </TableCell>
-                      <TableCell>
-                        <Button asChild variant="ghost" size="sm" className="gap-1">
-                          <Link href={`/admin/pedidos/${o.id}`}>
-                            Ver
-                            <ArrowRight className="size-3.5" />
-                          </Link>
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-              </div>
             )}
           </CardContent>
         </Card>
@@ -221,22 +214,23 @@ export default async function AdminDashboardPage() {
         {/* Últimas movimentações */}
         <Card>
           <CardHeader>
-            <CardTitle className="uppercase tracking-wide">Últimas movimentações</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-wide">
+              Últimas movimentações
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {data.recentMovements.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 Nenhuma movimentação de estoque ainda.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-              <Table>
+              <Table className={TABLE_CLASS}>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Qtd</TableHead>
-                    <TableHead>Usuário</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className={TH_CLASS}>Produto</TableHead>
+                    <TableHead className={TH_CLASS}>Tipo</TableHead>
+                    <TableHead className={cn(TH_CLASS, "text-right")}>Qtd</TableHead>
+                    <TableHead className={TH_CLASS}>Usuário</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -244,7 +238,9 @@ export default async function AdminDashboardPage() {
                     <TableRow key={m.id}>
                       <TableCell className="max-w-[150px]">
                         <span className="block truncate text-sm">{m.productName}</span>
-                        <span className="block font-mono text-[10px] text-muted-foreground">{m.sku}</span>
+                        <span className="block font-mono text-[11px] text-muted-foreground">
+                          {m.sku}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5 text-xs">
@@ -257,16 +253,17 @@ export default async function AdminDashboardPage() {
                         </span>
                       </TableCell>
                       <TableCell
-                        className={`text-right font-mono text-xs font-medium ${
-                          m.direction === "IN" ? "text-success" : "text-destructive"
-                        }`}
+                        className={cn(
+                          "text-right font-mono text-xs font-medium tabular-nums",
+                          m.direction === "IN" ? "text-success" : "text-destructive",
+                        )}
                       >
                         {m.direction === "IN" ? "+" : "−"}
                         {m.quantity}
                       </TableCell>
                       <TableCell>
                         <span className="block max-w-[100px] truncate text-xs">{m.userName}</span>
-                        <span className="block font-mono text-[10px] text-muted-foreground">
+                        <span className="block font-mono text-[11px] text-muted-foreground">
                           {formatDateTime(m.createdAt)}
                         </span>
                       </TableCell>
@@ -274,7 +271,6 @@ export default async function AdminDashboardPage() {
                   ))}
                 </TableBody>
               </Table>
-              </div>
             )}
           </CardContent>
         </Card>
@@ -283,10 +279,7 @@ export default async function AdminDashboardPage() {
       {/* Mais vendidos do mês */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 uppercase tracking-wide">
-            <Trophy className="size-4 text-primary" />
-            Mais vendidos do mês
-          </CardTitle>
+          <CardTitle className="text-sm uppercase tracking-wide">Mais vendidos do mês</CardTitle>
         </CardHeader>
         <CardContent>
           {data.topSellers.length === 0 ? (
@@ -294,24 +287,24 @@ export default async function AdminDashboardPage() {
               Nenhuma venda registrada neste mês.
             </p>
           ) : (
-            <ol className="space-y-4">
+            <ol className="space-y-3">
               {data.topSellers.map((t, i) => (
                 <li key={t.name}>
-                  <div className="mb-1.5 flex items-center justify-between gap-4">
+                  <div className="mb-1 flex items-baseline justify-between gap-4">
                     <p className="min-w-0 truncate text-sm">
-                      <span className="mr-2 font-mono text-xs text-muted-foreground">
+                      <span className="mr-2 font-mono text-xs tabular-nums text-muted-foreground">
                         {String(i + 1).padStart(2, "0")}
                       </span>
                       {t.name}
                     </p>
-                    <span className="shrink-0 font-mono text-xs font-medium">
+                    <span className="shrink-0 font-mono text-xs font-medium tabular-nums">
                       {t.quantity} un
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-primary"
-                      style={{ width: `${Math.max(4, (t.quantity / maxSold) * 100)}%` }}
+                      style={{ width: `${Math.max(3, (t.quantity / maxSold) * 100)}%` }}
                     />
                   </div>
                 </li>

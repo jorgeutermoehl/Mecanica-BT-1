@@ -238,9 +238,15 @@ async function main() {
     data: {
       name: "João da Silva",
       document: "123.456.789-09",
+      documentNormalized: "12345678909",
       personType: "INDIVIDUAL",
       email: "joao.silva@email.com",
       phone: "(47) 98888-1234",
+      phoneNormalized: "+5547988881234",
+      instagramHandle: "joao.civic",
+      whatsapp: "(47) 98888-1234",
+      acquisitionChannel: "SITE",
+      ordersCount: 1,
       createdAt: soldAt,
     },
   });
@@ -327,6 +333,20 @@ async function main() {
   await prisma.customer.update({
     where: { id: customer.id },
     data: { totalSpent: total, lastPurchaseAt: soldAt },
+  });
+  // Endereço reutilizável do cliente (mesmo padrão do upsert do checkout).
+  await prisma.address.create({
+    data: {
+      customerId: customer.id,
+      label: "Entrega",
+      zipCode: "89200-000",
+      street: "Rua das Palmeiras",
+      number: "123",
+      city: "Joinville",
+      state: "SC",
+      isDefault: true,
+      createdAt: soldAt,
+    },
   });
 
   console.log("🏷️  1 cupom + ✉️ 1 mensagem de contato...");

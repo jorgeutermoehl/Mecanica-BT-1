@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Minus,
-  Plus,
-  ShoppingCart,
-  MessageCircle,
-  Truck,
-  ShieldCheck,
-} from "lucide-react";
+import { Minus, Plus, ShoppingCart, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/cart/cart-provider";
 import { whatsappLink } from "@/lib/constants";
@@ -113,31 +106,7 @@ export function ProductActions({ product }: { product: StoreProduct }) {
         </Button>
       </div>
 
-      {/* Mini-cards de entrega e garantia */}
-      <div className="mt-2 grid gap-3 sm:grid-cols-2">
-        <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Truck className="size-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">Envio em até 24h</p>
-            <p className="text-xs text-muted-foreground">
-              Frete rastreável para todo o Brasil.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <ShieldCheck className="size-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">Garantia de 12 meses</p>
-            <p className="text-xs text-muted-foreground">
-              Peça original, com nota fiscal.
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* A linha de confiança (frete/garantia/segurança) fica na própria PDP. */}
     </div>
   );
 }

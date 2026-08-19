@@ -5,8 +5,8 @@ import { PRODUCT_STATUS_LABEL, type ProductStatus } from "@/lib/validations";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PartIcon } from "@/components/shared/part-icon";
+import { StatusBadge, type StatusTone } from "@/components/shared/status-badge";
 import { ProductStatusToggle } from "@/components/admin/products/product-status-toggle";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,11 +21,17 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const STATUS_BADGE_CLASS: Record<ProductStatus, string> = {
-  PROMOTION: "bg-primary text-primary-foreground",
-  ACTIVE: "bg-success text-success-foreground",
-  OUT_OF_STOCK: "bg-warning text-warning-foreground",
-  INACTIVE: "bg-muted text-muted-foreground",
+/** Padrão Stripe: cabeçalho de tabela discreto e respiro nas bordas do card. */
+const TH_CLASS = "text-xs font-medium uppercase tracking-wide text-muted-foreground";
+const TABLE_CLASS =
+  "[&_th:first-child]:pl-4 [&_td:first-child]:pl-4 [&_th:last-child]:pr-4 [&_td:last-child]:pr-4";
+
+/** Status do produto sobre o StatusBadge único (texto + cor, nunca cor sozinha). */
+const STATUS_TONE: Record<ProductStatus, StatusTone> = {
+  PROMOTION: "primary",
+  ACTIVE: "success",
+  OUT_OF_STOCK: "warning",
+  INACTIVE: "muted",
 };
 
 function ProductThumb({ product }: { product: AdminProduct }) {
@@ -35,15 +41,15 @@ function ProductThumb({ product }: { product: AdminProduct }) {
       <img
         src={product.image}
         alt={product.name}
-        width={40}
-        height={40}
-        className="size-10 shrink-0 rounded-md border border-border object-cover"
+        width={36}
+        height={36}
+        className="size-9 shrink-0 rounded-md border border-border object-cover"
       />
     );
   }
   return (
-    <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
-      <PartIcon icon={product.category.toLowerCase()} className="size-5" />
+    <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
+      <PartIcon icon={product.category.toLowerCase()} className="size-4" />
     </span>
   );
 }
@@ -58,10 +64,10 @@ export default async function AdminProductsPage({
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
+      {/* Cabeçalho — "Novo produto" é a única ação primária da tela */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold uppercase tracking-tight">
+          <h1 className="font-display text-xl font-bold uppercase tracking-tight">
             Produtos
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -94,7 +100,7 @@ export default async function AdminProductsPage({
             className="pl-8"
           />
         </div>
-        <Button type="submit" variant="secondary">
+        <Button type="submit" variant="outline">
           Buscar
         </Button>
       </form>
@@ -102,19 +108,18 @@ export default async function AdminProductsPage({
       {/* Tabela */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-          <Table>
+          <Table className={TABLE_CLASS}>
             <TableHeader>
-              <TableRow>
-                <TableHead>Produto</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead className="text-right">Custo</TableHead>
-                <TableHead className="text-right">Preço</TableHead>
-                <TableHead className="text-right">Promo</TableHead>
-                <TableHead className="text-right">Estoque</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className={TH_CLASS}>Produto</TableHead>
+                <TableHead className={TH_CLASS}>SKU</TableHead>
+                <TableHead className={TH_CLASS}>Categoria</TableHead>
+                <TableHead className={cn(TH_CLASS, "text-right")}>Custo</TableHead>
+                <TableHead className={cn(TH_CLASS, "text-right")}>Preço</TableHead>
+                <TableHead className={cn(TH_CLASS, "text-right")}>Promo</TableHead>
+                <TableHead className={cn(TH_CLASS, "text-right")}>Estoque</TableHead>
+                <TableHead className={TH_CLASS}>Status</TableHead>
+                <TableHead className={cn(TH_CLASS, "text-right")}>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -153,13 +158,13 @@ export default async function AdminProductsPage({
                       <TableCell className="text-muted-foreground">
                         {p.category}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                      <TableCell className="text-right font-mono text-xs tabular-nums text-muted-foreground">
                         {formatBRL(p.costPrice)}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
+                      <TableCell className="text-right font-mono text-xs tabular-nums">
                         {formatBRL(p.salePrice)}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
+                      <TableCell className="text-right font-mono text-xs tabular-nums">
                         {p.promoPrice !== null ? (
                           <span className="text-primary">
                             {formatBRL(p.promoPrice)}
@@ -171,24 +176,24 @@ export default async function AdminProductsPage({
                       <TableCell className="text-right">
                         <span
                           className={cn(
-                            "font-mono text-sm",
-                            lowStock && "font-semibold text-warning",
+                            "font-mono text-sm tabular-nums",
+                            lowStock && "font-medium text-warning",
                           )}
                         >
                           {p.stock}
                         </span>
-                        <span className="ml-1 font-mono text-[11px] text-muted-foreground">
+                        <span className="ml-1 font-mono text-[11px] tabular-nums text-muted-foreground">
                           / mín. {p.minStock}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Badge className={STATUS_BADGE_CLASS[p.status]}>
+                        <StatusBadge tone={STATUS_TONE[p.status]}>
                           {PRODUCT_STATUS_LABEL[p.status]}
-                        </Badge>
+                        </StatusBadge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm" variant="ghost">
                             <Link href={`/admin/produtos/${p.id}`}>Editar</Link>
                           </Button>
                           <ProductStatusToggle
@@ -204,11 +209,10 @@ export default async function AdminProductsPage({
               )}
             </TableBody>
           </Table>
-          </div>
         </CardContent>
       </Card>
 
-      <p className="font-mono text-xs text-muted-foreground">
+      <p className="font-mono text-xs tabular-nums text-muted-foreground">
         {products.length}{" "}
         {products.length === 1 ? "produto listado" : "produtos listados"}
         {q ? ` para a busca “${q}”` : ""}

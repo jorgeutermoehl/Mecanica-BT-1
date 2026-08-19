@@ -32,7 +32,7 @@ export function SiteHeader() {
       <Container className="flex h-16 items-center justify-between gap-4">
         <Logo />
 
-        <nav className="hidden items-center gap-0.5 lg:flex">
+        <nav aria-label="Navegação principal" className="hidden items-center gap-0.5 lg:flex">
           {PUBLIC_NAV.map((item) => (
             <Link
               key={item.href}
@@ -56,14 +56,21 @@ export function SiteHeader() {
               Entrar
             </Link>
           </Button>
-          <Button asChild size="sm" className="relative gap-2 font-medium">
-            <Link href="/carrinho">
-              <ShoppingCart className="size-4" />
-              <span className="hidden sm:inline">Carrinho</span>
+          <Button asChild variant="ghost" size="icon">
+            <Link
+              href="/carrinho"
+              aria-label={
+                hydrated && count > 0
+                  ? `Carrinho, ${count} ${count === 1 ? "item" : "itens"}`
+                  : "Carrinho"
+              }
+              className="relative"
+            >
+              <ShoppingCart className="size-5" />
               {hydrated && count > 0 && (
                 <span
-                  aria-label={`${count} itens no carrinho`}
-                  className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full border border-background bg-foreground font-mono text-[10px] font-bold text-background"
+                  aria-hidden
+                  className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-bold leading-none text-primary-foreground"
                 >
                   {count > 9 ? "9+" : count}
                 </span>
@@ -84,7 +91,7 @@ export function SiteHeader() {
                   <Logo />
                 </SheetTitle>
               </SheetHeader>
-              <nav className="mt-2 flex flex-col gap-1 px-4">
+              <nav aria-label="Menu do site" className="mt-2 flex flex-col gap-1 px-4">
                 {PUBLIC_NAV.map((item) => (
                   <Link
                     key={item.href}

@@ -22,11 +22,11 @@ export function ProductCard({ product }: { product: StoreProduct }) {
   const showImage = product.image && !imgError;
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:shadow-xl hover:shadow-primary/10">
-      {/* Imagem do produto */}
+    <div className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/50">
+      {/* Foto */}
       <Link
         href={`/produtos/${product.slug}`}
-        className="relative block aspect-square overflow-hidden bg-carbon"
+        className="relative block aspect-square overflow-hidden border-b border-border bg-carbon"
         aria-label={product.name}
       >
         {showImage ? (
@@ -35,92 +35,125 @@ export function ProductCard({ product }: { product: StoreProduct }) {
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className={cn(
+              "object-cover transition-transform duration-300 group-hover:scale-[1.03]",
+              outOfStock && "opacity-60 grayscale",
+            )}
             onError={() => setImgError(true)}
           />
         ) : (
-          <>
-            <span className="boost-glow absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <span className="absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
-              <PartIcon icon={product.icon} className="size-20 text-muted-foreground/40" />
-            </span>
-          </>
+          <span className="absolute inset-0 flex items-center justify-center">
+            <PartIcon
+              icon={product.icon}
+              className={cn(
+                "size-20 text-muted-foreground/40",
+                outOfStock && "opacity-60",
+              )}
+            />
+          </span>
         )}
 
-        {/* Badges */}
-        <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-          {hasPromo && (
-            <span className="rounded bg-primary px-2 py-0.5 font-mono text-[11px] font-bold text-primary-foreground shadow-sm">
-              -{discountPercent(product.price, product.promoPrice!)}%
-            </span>
-          )}
-          {product.isNew && (
-            <span className="rounded bg-boost px-2 py-0.5 font-mono text-[11px] font-bold text-white shadow-sm">
-              NOVO
-            </span>
-          )}
-        </div>
-        <div className="absolute right-3 top-3">
-          <span
-            className={cn(
-              "rounded px-2 py-0.5 font-mono text-[10px] font-medium uppercase shadow-sm backdrop-blur-sm",
-              outOfStock
-                ? "bg-background/80 text-muted-foreground"
-                : lowStock
-                  ? "bg-warning/90 text-warning-foreground"
-                  : "bg-success/90 text-success-foreground",
+        {(hasPromo || product.isNew) && (
+          <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
+            {hasPromo && (
+              <span className="rounded-sm bg-primary px-2 py-1 font-mono text-[11px] font-bold leading-none text-primary-foreground tabular-nums">
+                -{discountPercent(product.price, product.promoPrice!)}%
+              </span>
             )}
-          >
-            {outOfStock ? "Esgotado" : lowStock ? `Últimas ${product.stock}` : "Em estoque"}
-          </span>
-        </div>
+            {product.isNew && (
+              <span className="rounded-sm bg-foreground px-2 py-1 font-mono text-[11px] font-bold leading-none text-background">
+                NOVO
+              </span>
+            )}
+          </div>
+        )}
       </Link>
 
       {/* Conteúdo */}
       <div className="flex flex-1 flex-col p-4">
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <span className="font-mono text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        {/* Marca + SKU */}
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="truncate font-mono text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             {product.brand ?? product.category}
           </span>
-          {product.sold > 0 && (
-            <span className="font-mono text-[10px] text-muted-foreground">{product.sold} vendidos</span>
-          )}
+          <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+            {product.sku}
+          </span>
         </div>
 
-        <Link href={`/produtos/${product.slug}`}>
+        <Link href={`/produtos/${product.slug}`} className="mt-1">
           <h3 className="line-clamp-2 text-sm font-semibold leading-snug transition-colors group-hover:text-primary">
             {product.name}
           </h3>
         </Link>
 
         {product.fitment && (
-          <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{product.fitment}</p>
+          <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+            {product.fitment}
+          </p>
         )}
 
-        <div className="mt-3 flex-1" />
+        <div className="flex-1" />
 
-        {/* Preço */}
-        <div className="mb-3">
+        {/* Preço — padrão BR: PIX em destaque + parcelamento em mono */}
+        <div className="mt-3">
           {hasPromo && (
-            <span className="mr-2 font-mono text-xs text-muted-foreground line-through">
+            <p className="font-mono text-xs text-muted-foreground line-through tabular-nums">
               {formatBRL(product.price)}
-            </span>
+            </p>
           )}
-          <span className="font-display text-xl font-bold text-foreground">
-            {formatBRL(current)}
-          </span>
-          <p className="font-mono text-[11px] text-muted-foreground">
-            ou 10x de {installment(current)}
+          <p className="font-display text-xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatBRL(current)}{" "}
+            <span className="font-sans text-xs font-semibold text-success">
+              no PIX
+            </span>
+          </p>
+          <p className="font-mono text-[11px] text-muted-foreground tabular-nums">
+            ou 10x de {installment(current)} sem juros no cartão
           </p>
         </div>
 
-        {/* Ações — sempre empilhadas em largura total: espaçamento idêntico
-            em todos os cards, independente do tamanho dos rótulos. */}
-        <div className="grid gap-2">
+        {/* Estoque (texto + cor) e prova social */}
+        <p className="mt-2 flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-wide">
+          <span
+            aria-hidden
+            className={cn(
+              "size-1.5 rounded-full",
+              outOfStock
+                ? "bg-muted-foreground"
+                : lowStock
+                  ? "bg-warning"
+                  : "bg-success",
+            )}
+          />
+          <span
+            className={
+              outOfStock
+                ? "text-muted-foreground"
+                : lowStock
+                  ? "text-warning"
+                  : "text-success"
+            }
+          >
+            {outOfStock
+              ? "Esgotado"
+              : lowStock
+                ? `Últimas ${product.stock} un.`
+                : "Em estoque"}
+          </span>
+          {product.sold > 0 && (
+            <span className="ml-auto font-normal normal-case tracking-normal text-muted-foreground tabular-nums">
+              {product.sold} {product.sold === 1 ? "vendido" : "vendidos"}
+            </span>
+          )}
+        </p>
+
+        {/* Ações — uma primária, uma secundária */}
+        <div className="mt-3 grid gap-2">
           <Button
             onClick={() => addProduct(product)}
             disabled={outOfStock}
-            className="h-10 w-full gap-1.5"
+            className="h-10 w-full gap-2"
           >
             <ShoppingCart className="size-4" />
             {outOfStock ? (
