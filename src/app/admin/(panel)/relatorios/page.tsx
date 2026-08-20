@@ -3,9 +3,12 @@ import Link from "next/link";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  BarChart3,
   Boxes,
   ClipboardList,
   Filter,
+  Gauge,
+  PackagePlus,
   RefreshCw,
   TriangleAlert,
 } from "lucide-react";
@@ -239,6 +242,44 @@ export default async function RelatoriosPage({
           Lançamentos do período e posição atual do inventário — com totais e exportação para
           Excel (CSV).
         </p>
+      </div>
+
+      {/* Relatórios gerenciais (Onda 3) — atalhos para decidir compra */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        {[
+          {
+            href: "/admin/relatorios/abc",
+            icon: BarChart3,
+            title: "Curva ABC",
+            description: "Onde está o dinheiro: produtos por participação na receita do período.",
+          },
+          {
+            href: "/admin/relatorios/cobertura",
+            icon: Gauge,
+            title: "Giro e cobertura",
+            description: "Quantos dias cada peça dura no ritmo atual — e o que está encalhado.",
+          },
+          {
+            href: "/admin/relatorios/reposicao",
+            icon: PackagePlus,
+            title: "Reposição",
+            description: "Sugestão de compra por peça com lead time, classe ABC e em trânsito.",
+          },
+        ].map((item) => (
+          <Link key={item.href} href={item.href} className="group">
+            <Card size="sm" className="h-full transition-colors group-hover:border-primary/40">
+              <CardContent className="flex items-start gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground transition-colors group-hover:text-primary">
+                  <item.icon className="size-4" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{item.title}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
       </div>
 
       {/* Abas (links — funcionam server-side) */}

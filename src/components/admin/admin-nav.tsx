@@ -7,6 +7,7 @@ import {
   Bell,
   Calculator,
   Car,
+  CreditCard,
   ExternalLink,
   FileBarChart,
   LayoutDashboard,
@@ -38,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/promocoes", label: "Promoções", icon: BadgePercent },
   { href: "/admin/relatorios", label: "Relatórios", icon: FileBarChart },
   { href: "/admin/dre", label: "DRE", icon: Calculator },
+  { href: "/admin/financeiro/transacoes", label: "Transações", icon: CreditCard },
   { href: "/admin/notificacoes", label: "Notificações", icon: Bell, showBadge: true },
 ];
 
