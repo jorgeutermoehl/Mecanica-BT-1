@@ -108,6 +108,7 @@ export default async function AdminProductsPage({
       {/* Tabela */}
       <Card>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table className={TABLE_CLASS}>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -209,6 +210,7 @@ export default async function AdminProductsPage({
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

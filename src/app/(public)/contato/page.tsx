@@ -155,7 +155,7 @@ export default function ContatoPage() {
         <Container>
           <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
             {/* ---------- Coluna esquerda: formulário ---------- */}
-            <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+            <div className="min-w-0 rounded-2xl border border-border bg-card p-6 sm:p-8">
               <Eyebrow>Envie uma mensagem</Eyebrow>
               <h2 className="mt-3 font-display text-2xl font-bold uppercase tracking-tight">
                 Conte o que você procura
@@ -246,7 +246,7 @@ export default function ContatoPage() {
             </div>
 
             {/* ---------- Coluna direita: canais + mapa ---------- */}
-            <div className="flex flex-col gap-6">
+            <div className="flex min-w-0 flex-col gap-6">
               <div>
                 <Eyebrow>Canais de atendimento</Eyebrow>
                 <h2 className="mt-3 font-display text-2xl font-bold uppercase tracking-tight">
@@ -303,7 +303,7 @@ export default function ContatoPage() {
                           {label}
                         </span>
                         <span
-                          className={`mt-0.5 block text-sm font-semibold text-foreground ${
+                          className={`mt-0.5 block text-sm font-semibold text-foreground [overflow-wrap:anywhere] ${
                             mono ? "font-mono" : ""
                           }`}
                         >

@@ -55,9 +55,11 @@ export default async function AdminPanelLayout({
       </aside>
 
       {/* Conteúdo */}
-      <div className="flex min-h-svh flex-col">
+      {/* min-w-0: impede que tabelas largas alarguem a coluna 1fr do grid
+          (o conteúdo rola dentro dos wrappers overflow-x-auto, nunca a página). */}
+      <div className="flex min-h-svh min-w-0 flex-col">
         <AdminMobileHeader userName={session.name} userRole={session.role} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

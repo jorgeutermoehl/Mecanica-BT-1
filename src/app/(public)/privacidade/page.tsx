@@ -131,7 +131,8 @@ export default function PrivacidadePage() {
             </nav>
 
             {/* Texto da política */}
-            <article className="max-w-3xl">
+            {/* break-words herda para títulos/e-mails longos — sem estouro no mobile. */}
+            <article className="max-w-3xl break-words">
               {/* 01 — Introdução */}
               <SectionHeading id="introducao" icon={ShieldCheck} index={1}>
                 Introdução
@@ -461,10 +462,11 @@ export default function PrivacidadePage() {
                   <div className="flex items-center gap-3">
                     <Mail className="size-4 shrink-0 text-primary" />
                     <dt className="sr-only">E-mail</dt>
-                    <dd>
+                    {/* min-w-0 + anywhere: e-mail longo quebra em vez de alargar o card no mobile. */}
+                    <dd className="min-w-0">
                       <a
                         href={`mailto:${DPO_EMAIL}`}
-                        className="font-mono text-foreground underline-offset-4 hover:text-primary hover:underline"
+                        className="font-mono text-foreground underline-offset-4 [overflow-wrap:anywhere] hover:text-primary hover:underline"
                       >
                         {DPO_EMAIL}
                       </a>
