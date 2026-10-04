@@ -10,7 +10,7 @@ E-commerce de **peças automotivas de performance** (rodas, turbo, motor, escape
 # 1. Instalar dependências
 npm install
 
-# 2. Criar o banco local (SQLite) com a base mínima de demonstração
+# 2. Subir um Postgres local (ver .env.example), criar o banco com a base mínima de demonstração
 #    (1 exemplo de cada cadastro: produto, entrada, pedido, cliente, cupom...)
 npx prisma migrate dev
 npm run db:seed
@@ -19,7 +19,7 @@ npm run db:seed
 npm run dev            # http://localhost:3000
 ```
 
-> O banco é um arquivo SQLite local (`prisma/dev.db`) — quem clonar o repositório roda os 3 comandos acima e tem a loja completa funcionando, sem contas externas. Para produção, o schema foi desenhado para migrar para PostgreSQL/Supabase (trocar o `provider` e restaurar enums).
+> O banco é PostgreSQL (local via Docker; Supabase em produção). Deploy em nuvem: veja [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## 🔑 Painel administrativo (demo)
 
@@ -41,7 +41,7 @@ npm run dev            # http://localhost:3000
 
 ## 🧱 Stack e arquitetura
 
-Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 + shadcn/ui · Prisma (SQLite em dev; alvo Postgres/Supabase) · Zod (validação dupla client + server) · Auth de sessão própria (JWT httpOnly + bcrypt).
+Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 + shadcn/ui · Prisma (PostgreSQL / Supabase) · Zod (validação dupla client + server) · Auth de sessão própria (JWT httpOnly + bcrypt).
 
 ```
 src/

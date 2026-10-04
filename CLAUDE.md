@@ -3,10 +3,10 @@
 E-commerce de peças de performance **+ painel de gestão** (produtos, estoque rastreável, vendas; financeiro/DRE no roadmap). Especificação em [`docs/ESPECIFICACAO.md`](docs/ESPECIFICACAO.md).
 
 ## Stack
-Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Prisma · **SQLite em dev/demo** (alvo de produção: PostgreSQL/Supabase — schema usa String no lugar de enums por compatibilidade SQLite; valores validados por Zod em `src/lib/validations.ts`) · Auth de sessão própria (JWT httpOnly + bcrypt, `src/lib/auth.ts`) · Zod · Playwright. Gerenciador: **npm**.
+Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Prisma · **PostgreSQL** (Supabase em produção; schema usa String no lugar de enums, valores validados por Zod em `src/lib/validations.ts`) · deploy Vercel + Supabase ([`docs/DEPLOY.md`](docs/DEPLOY.md)) · Auth de sessão própria (JWT httpOnly + bcrypt, `src/lib/auth.ts`) · Zod · Playwright. Gerenciador: **npm**.
 
 ## Banco / demo
-- `npx prisma migrate dev` + `npm run db:seed` criam tudo (arquivo `prisma/dev.db`, gitignored).
+- Precisa de Postgres local (ver `.env.example`); `npx prisma migrate dev` + `npm run db:seed` criam tudo.
 - Painel: `/admin/login` → `admin@fullboost.com.br` / `fullboost123` (seed).
 - Imagens de produto: hotlinks Unsplash (`images.unsplash.com` liberado no `next.config.ts`).
 - Logo oficial: `public/logo-fullboost.png` (o componente `Logo` usa com fallback para wordmark).

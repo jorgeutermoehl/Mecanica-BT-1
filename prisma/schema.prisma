@@ -1,9 +1,8 @@
-// FullBoost Race Parts — schema do banco (SQLite em dev/demo; Postgres/Supabase em produção)
+// FullBoost Race Parts — schema do banco (PostgreSQL — Supabase em produção)
 //
-// NOTA SQLite: enums e Json nativos não são suportados — campos de status/tipo
-// usam String com valores validados por Zod em `src/lib/validations.ts`
-// (mesmos literais dos enums originais, ex.: "ACTIVE", "SALE", "PIX").
-// Para voltar ao Postgres: trocar provider, restaurar enums e @db.Decimal.
+// NOTA: campos de status/tipo usam String (não enum) com valores validados por Zod
+// em `src/lib/validations.ts` (ex.: "ACTIVE", "SALE", "PIX"). DATABASE_URL = pooler
+// (pgbouncer, runtime); DIRECT_URL = conexão direta (migrations).
 //
 // Invariantes:
 //  - InventoryMovement e AuditLog são APPEND-ONLY (correção = novo lançamento).
@@ -15,8 +14,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ===========================================================================
