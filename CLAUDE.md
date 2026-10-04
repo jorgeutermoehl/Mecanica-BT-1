@@ -8,7 +8,9 @@ Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Prisma 
 ## Banco / demo
 - `npx prisma migrate dev` + `npm run db:seed` criam tudo (arquivo `prisma/dev.db`, gitignored).
 - Painel: `/admin/login` → `admin@fullboost.com.br` / `fullboost123` (seed).
-- Imagens de produto: fotos dos anúncios reais em `public/produtos/` (hotlinks Unsplash continuam liberados no `next.config.ts`).
+- Imagens de produto: upload pelo painel (cadastro e galeria) → `MediaFile` + `ProductImage`, arquivos em `uploads/` (gitignored). Formato e regras: [`docs/IMAGENS-PRODUTO.md`](docs/IMAGENS-PRODUTO.md). O seed usa fotos dos anúncios em `public/produtos/`.
+- **Sem catálogo de veículos** (removido): loja de peças de tuning; aplicação da peça é texto livre em `Product.fitment`.
+- **Venda pelo WhatsApp (fase atual):** checkout cria o pedido como `AWAITING_PAYMENT` com estoque reservado (72h); o cliente finaliza Pix/cartão (link da maquininha) no WhatsApp e a loja marca **Pago** no painel, o que converte a reserva em `SALE`. Nenhum método aprova sozinho até o gateway entrar.
 - **Foco do catálogo:** transmissão (coroa e pinhão), motor (virabrequim) e gaiolas (rollcage). As demais categorias ficam cadastradas mas **ocultas na loja** até receberem o 1º produto (`getStoreCategories` filtra `count > 0`) — anunciar = desbloquear. Não fazer marketing fixo (hero, rodapé, textos) de linhas sem produto.
 - Logo oficial: `public/logo-fullboost.png` (o componente `Logo` usa com fallback para wordmark).
 

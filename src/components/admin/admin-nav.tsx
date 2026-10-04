@@ -6,7 +6,6 @@ import {
   BadgePercent,
   Bell,
   Calculator,
-  Car,
   CreditCard,
   ExternalLink,
   FileBarChart,
@@ -32,7 +31,6 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/produtos", label: "Produtos", icon: Package },
-  { href: "/admin/veiculos", label: "Veículos", icon: Car },
   { href: "/admin/estoque", label: "Estoque", icon: Warehouse },
   { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
   { href: "/admin/clientes", label: "Clientes", icon: Users },

@@ -29,16 +29,6 @@ function MastercardMark() {
   );
 }
 
-function BoletoMark() {
-  return (
-    <svg viewBox="0 0 40 24" className="h-4 w-auto" fill="#1a1a1a" aria-hidden>
-      {[4, 7, 9.5, 13.5, 16, 19.5, 22, 26, 28.5, 31.5, 34].map((x, i) => (
-        <rect key={i} x={x} y="4" width={i % 3 === 0 ? 2 : 1} height="16" />
-      ))}
-    </svg>
-  );
-}
-
 export function PaymentMethods({ className }: { className?: string }) {
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
@@ -59,9 +49,6 @@ export function PaymentMethods({ className }: { className?: string }) {
         <span className="text-[13px] font-extrabold lowercase tracking-tight text-[#111]">
           elo
         </span>
-      </Chip>
-      <Chip label="Boleto">
-        <BoletoMark />
       </Chip>
     </div>
   );

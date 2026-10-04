@@ -15,7 +15,6 @@ import { Container } from "@/components/shared/container";
 import { PartIcon } from "@/components/shared/part-icon";
 import { ProductCard } from "@/components/public/product-card";
 import { ProductActions } from "@/components/public/produto/product-actions";
-import { FitmentBadge } from "@/components/public/my-car/fitment-badge";
 import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
@@ -101,18 +100,6 @@ function parseTechnicalSpecs(
         value: entry.slice(idx + 1).trim(),
       };
     });
-}
-
-/** Faixa de anos de uma aplicação ("2008–2020", "2016+", "—"). */
-function formatYears(app: StoreProduct["applications"][number]): string {
-  if (app.yearStart && app.yearEnd) {
-    return app.yearStart === app.yearEnd
-      ? String(app.yearStart)
-      : `${app.yearStart}–${app.yearEnd}`;
-  }
-  if (app.yearStart) return `${app.yearStart}+`;
-  if (app.yearEnd) return `até ${app.yearEnd}`;
-  return "—";
 }
 
 /* ------------------------------------------------------------------ */
@@ -358,9 +345,6 @@ export default async function ProductPage({
                 </p>
               </div>
 
-              {/* Compatibilidade com o "Meu Carro" (client, lê o contexto) */}
-              <FitmentBadge product={product} />
-
               {/* Fitment em destaque */}
               {product.fitment && (
                 <p className="mt-4 flex items-center gap-2 text-sm">
@@ -470,54 +454,9 @@ export default async function ProductPage({
                     {product.fitment ?? "Multiaplicação"}
                   </span>
                 </p>
-                {product.applications.length > 0 ? (
-                  <div className="mt-4 overflow-hidden rounded-lg border border-border">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border bg-muted/50">
-                            <th className="px-4 py-2 text-left font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                              Marca
-                            </th>
-                            <th className="px-4 py-2 text-left font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                              Modelo
-                            </th>
-                            <th className="px-4 py-2 text-left font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                              Anos
-                            </th>
-                            <th className="px-4 py-2 text-left font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                              Motor
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {product.applications.map((app, i) => (
-                            <tr
-                              key={`${app.vehicleBrand}-${app.vehicleModel}-${i}`}
-                            >
-                              <td className="px-4 py-2">{app.vehicleBrand}</td>
-                              <td className="px-4 py-2">{app.vehicleModel}</td>
-                              <td className="px-4 py-2 font-mono tabular-nums">
-                                {formatYears(app)}
-                              </td>
-                              <td className="px-4 py-2 font-mono">
-                                {app.engine ?? "—"}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    Multiaplicação — confirme o encaixe com o nosso time antes
-                    de comprar.
-                  </p>
-                )}
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Não encontrou o seu carro na lista? Confirme a compatibilidade
-                  com o nosso time antes de comprar.
+                  Peça de tuning: a aplicação depende do projeto. Confirme
+                  com o nosso time no WhatsApp antes de comprar.
                 </p>
                 <Button asChild variant="outline" size="sm" className="mt-3">
                   <a

@@ -7,9 +7,7 @@ import { Logo } from "@/components/shared/logo";
 import { Container } from "@/components/shared/container";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useCart } from "@/components/cart/cart-provider";
-import { MyCarSelector } from "@/components/public/my-car/my-car-selector";
 import { Button } from "@/components/ui/button";
-import type { VehicleCatalog } from "@/server/catalog";
 import {
   Sheet,
   SheetContent,
@@ -20,7 +18,7 @@ import {
 import { PUBLIC_NAV } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
-export function SiteHeader({ vehicles }: { vehicles: VehicleCatalog }) {
+export function SiteHeader() {
   const pathname = usePathname();
   const { count, hydrated } = useCart();
 
@@ -58,7 +56,6 @@ export function SiteHeader({ vehicles }: { vehicles: VehicleCatalog }) {
               Entrar
             </Link>
           </Button>
-          <MyCarSelector vehicles={vehicles} />
           <Button asChild variant="ghost" size="icon">
             <Link
               href="/carrinho"

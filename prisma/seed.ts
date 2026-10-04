@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { seedVehicles } from "./seed-vehicles";
 
 const prisma = new PrismaClient();
 
@@ -63,8 +62,6 @@ const CATEGORIES = [
   { name: "Óleos & Fluidos", slug: "oleos", icon: "oleos", featured: false, position: 17, description: "Lubrificantes sintéticos e fluidos racing." },
 ];
 
-type VehicleRef = { make: string; model: string; version: string };
-
 /**
  * Produtos já anunciados nas redes da loja (preços/custos de exemplo —
  * ajuste no painel). Imagens: recortes dos próprios anúncios.
@@ -78,7 +75,6 @@ const PRODUCTS: {
   description: string;
   technicalSpecs: string;
   fitment: string;
-  fitmentType: "SPECIFIC" | "UNIVERSAL" | "UNKNOWN";
   costPrice: number;
   salePrice: number;
   qty: number;
@@ -86,14 +82,6 @@ const PRODUCTS: {
   location: string;
   warranty: string;
   images: { url: string; alt: string }[];
-  applications: {
-    vehicleBrand: string;
-    vehicleModel: string;
-    yearStart: number;
-    yearEnd: number;
-    engine?: string;
-    ref?: VehicleRef;
-  }[];
 }[] = [
   {
     sku: "TRA-CP-831-GBX",
@@ -104,7 +92,6 @@ const PRODUCTS: {
       "Par coroa e pinhão relação 8x31 para câmbio do Gol BX. Peça nova, embalada individualmente. Relação longa — ideal para velocidade final em rua e pista. Lote disponível: consulte quantidade no WhatsApp.",
     technicalSpecs: "Relação: 8x31 (3,875:1) | Aplicação: câmbio Gol BX | Dentes: pinhão 8 / coroa 31 | Aço cementado",
     fitment: "Câmbio Gol BX · relação 8x31",
-    fitmentType: "SPECIFIC",
     costPrice: 420,
     salePrice: 790,
     qty: 10,
@@ -114,16 +101,6 @@ const PRODUCTS: {
     images: [
       { url: "/produtos/coroa-pinhao-detalhe.webp", alt: "Coroa e pinhão 8x31 — detalhe dos dentes e do pinhão" },
       { url: "/produtos/coroa-pinhao-lote.webp", alt: "Lote de coroas e pinhões 8x31 embalados" },
-    ],
-    applications: [
-      {
-        vehicleBrand: "Volkswagen",
-        vehicleModel: "Gol",
-        yearStart: 1980,
-        yearEnd: 1986,
-        engine: "1.6 a ar",
-        ref: { make: "volkswagen", model: "gol", version: "BX (ar)" },
-      },
     ],
   },
   {
@@ -135,7 +112,6 @@ const PRODUCTS: {
       "Virabrequim medida STD em aço para motores VW a ar (Fusca e derivados). Peça nova, pronta para montagem — base confiável para motor de rua ou preparação.",
     technicalSpecs: "Medida: STD | Material: aço | Motor: VW a ar 1300/1500/1600",
     fitment: "Motor VW a ar · Fusca 1300/1500/1600",
-    fitmentType: "SPECIFIC",
     costPrice: 750,
     salePrice: 1290,
     qty: 2,
@@ -143,16 +119,6 @@ const PRODUCTS: {
     location: "Corredor M · Prateleira 2",
     warranty: "3 meses contra defeitos de fabricação",
     images: [],
-    applications: [
-      {
-        vehicleBrand: "Volkswagen",
-        vehicleModel: "Fusca",
-        yearStart: 1959,
-        yearEnd: 1996,
-        engine: "1.3–1.6 a ar",
-        ref: { make: "volkswagen", model: "fusca", version: "1300/1500/1600" },
-      },
-    ],
   },
   {
     sku: "GAI-RC-SOBMED",
@@ -164,7 +130,6 @@ const PRODUCTS: {
       "Gaiola de proteção (rollcage) fabricada sob medida na nossa oficina. Opções para carros com ou sem bancos traseiros, furando ou desviando o painel, com ou sem suporte de paraquedas — para carros de rua ou pista. Confirme o modelo do carro no WhatsApp antes do pedido.",
     technicalSpecs: "Tubo de aço sem costura | Dobras em dobradeira CNC | Opções: com/sem bancos · furando/desviando painel · com/sem suporte de paraquedas · rua ou pista",
     fitment: "Sob medida — informe o modelo do carro",
-    fitmentType: "UNKNOWN",
     costPrice: 1800,
     salePrice: 3900,
     qty: 2,
@@ -172,7 +137,6 @@ const PRODUCTS: {
     location: "Oficina · Área de solda",
     warranty: "12 meses na estrutura e soldas",
     images: [{ url: "/produtos/gaiola-rollcage.webp", alt: "Gaiola de proteção rollcage em tubo de aço" }],
-    applications: [],
   },
 ];
 
@@ -191,7 +155,6 @@ async function wipe() {
   await prisma.order.deleteMany();
   await prisma.stockEntryItem.deleteMany();
   await prisma.stockEntry.deleteMany();
-  await prisma.productApplication.deleteMany();
   await prisma.productImage.deleteMany();
   await prisma.promotion.deleteMany();
   await prisma.financialResult.deleteMany();
@@ -211,10 +174,6 @@ async function wipe() {
 async function main() {
   console.log("🌱 Limpando dados...");
   await wipe();
-
-  console.log("🚗 Catálogo de veículos (fitment)...");
-  const v = await seedVehicles(prisma);
-  console.log(`   ${v.makes} marcas · ${v.models} modelos · ${v.versions} versões`);
 
   console.log("🔐 Papéis, permissões e usuários do painel...");
   for (const perm of PERMISSIONS) await prisma.permission.create({ data: perm });
@@ -268,24 +227,6 @@ async function main() {
   const openedAt = daysAgo(7); // abertura ANTES da venda (cronologia coerente)
   const products: { id: string; name: string; sku: string; costPrice: number; salePrice: number; qty: number }[] = [];
   for (const p of PRODUCTS) {
-    const applications = [];
-    for (const a of p.applications) {
-      // Fitment normalizado: liga a aplicação à versão do catálogo de veículos.
-      const version = a.ref
-        ? await prisma.vehicleVersion.findFirst({
-            where: { name: a.ref.version, model: { slug: a.ref.model, make: { slug: a.ref.make } } },
-          })
-        : null;
-      applications.push({
-        vehicleBrand: a.vehicleBrand,
-        vehicleModel: a.vehicleModel,
-        yearStart: a.yearStart,
-        yearEnd: a.yearEnd,
-        engine: a.engine ?? null,
-        vehicleVersionId: version?.id ?? null,
-        legacyText: `${a.vehicleBrand} ${a.vehicleModel} ${a.yearStart}–${a.yearEnd}`,
-      });
-    }
     const created = await prisma.product.create({
       data: {
         sku: p.sku,
@@ -296,7 +237,6 @@ async function main() {
         description: p.description,
         technicalSpecs: p.technicalSpecs,
         fitment: p.fitment,
-        fitmentType: p.fitmentType,
         costPrice: p.costPrice,
         salePrice: p.salePrice,
         stockQuantity: p.qty,
@@ -308,7 +248,6 @@ async function main() {
         images: {
           create: p.images.map((img, i) => ({ ...img, isPrimary: i === 0, position: i })),
         },
-        applications: { create: applications },
       },
     });
     products.push({ id: created.id, name: created.name, sku: created.sku, costPrice: p.costPrice, salePrice: p.salePrice, qty: p.qty });

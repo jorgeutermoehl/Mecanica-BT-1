@@ -10,7 +10,6 @@ import {
   Truck,
   CreditCard,
   QrCode,
-  Barcode,
   Lock,
   ShieldCheck,
   Tag,
@@ -50,10 +49,11 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 /* ---------- Métodos de pagamento aceitos na loja ---------- */
 type Method = CheckoutInput["paymentMethod"];
 
+// Fase WhatsApp: o pagamento é combinado no chat após o pedido (Pix ou link
+// de pagamento da maquininha para cartão). Boleto fica fora até o gateway.
 const PAYMENTS: { value: Method; hint: string; icon: LucideIcon }[] = [
-  { value: "PIX", hint: "Aprovação na hora — pedido segue direto para separação", icon: QrCode },
-  { value: "CREDIT_CARD", hint: "Em até 10x sem juros", icon: CreditCard },
-  { value: "BOLETO", hint: "Compensação em até 3 dias úteis", icon: Barcode },
+  { value: "PIX", hint: "Chave Pix enviada no WhatsApp", icon: QrCode },
+  { value: "CREDIT_CARD", hint: "Link de pagamento no WhatsApp · até 10x", icon: CreditCard },
 ];
 
 /* ---------- Card de seção numerada ---------- */
@@ -201,17 +201,6 @@ export default function CheckoutPage() {
       // (UTM/Instagram) respeitando o consentimento dado.
       sessionId: localStorage.getItem("fb-session-id") ?? "",
       externalReference: externalReferenceRef.current,
-      ...(() => {
-        // "Meu Carro" selecionado na loja → garagem do cliente + snapshot no pedido.
-        try {
-          const raw = localStorage.getItem("fullboost.myCar");
-          if (!raw) return {};
-          const car = JSON.parse(raw) as { versionId?: string; label?: string };
-          return { myCarVersionId: car.versionId ?? "", myCarLabel: car.label ?? "" };
-        } catch {
-          return {};
-        }
-      })(),
       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
     };
 
@@ -432,9 +421,8 @@ export default function CheckoutPage() {
                 })}
               </RadioGroup>
               <p className="mt-4 font-mono text-[11px] text-muted-foreground">
-                {method === "BOLETO"
-                  ? "O pedido fica aguardando pagamento até a compensação do boleto."
-                  : "Pagamento aprovado na hora — o pedido já entra na fila de separação."}
+                Suas peças ficam reservadas por 72h. Depois de confirmar, você
+                finaliza o pagamento e o frete com o nosso time no WhatsApp.
               </p>
             </SectionCard>
           </div>

@@ -18,7 +18,8 @@ export type MediaKind = (typeof MEDIA_KINDS)[number];
 export const mediaKindSchema = z.enum(MEDIA_KINDS);
 
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8MB
-export const MIN_IMAGE_DIMENSION = 600;
+/** Menor lado mínimo aceito (fotos de celular/stories passam); recomendado ≥ 1200px. */
+export const MIN_IMAGE_DIMENSION = 400;
 export const MAX_IMAGES_PER_PRODUCT = 8;
 
 export const VARIANTS = [
@@ -71,8 +72,10 @@ export async function storeImage(opts: {
   const meta = await sharp(data).metadata();
   const width = meta.width ?? 0;
   const height = meta.height ?? 0;
-  if (width < MIN_IMAGE_DIMENSION || height < MIN_IMAGE_DIMENSION) {
-    throw new Error(`Imagem muito pequena — mínimo ${MIN_IMAGE_DIMENSION}x${MIN_IMAGE_DIMENSION}px.`);
+  if (Math.min(width, height) < MIN_IMAGE_DIMENSION) {
+    throw new Error(
+      `Imagem muito pequena (${width}x${height}px) — o menor lado precisa ter pelo menos ${MIN_IMAGE_DIMENSION}px.`,
+    );
   }
 
   const checksum = createHash("sha256").update(data).digest("hex");

@@ -10,7 +10,7 @@ import { formatBRL } from "@/lib/format";
 import { ORDER_STATUS, ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/validations";
 
 export const metadata: Metadata = {
-  title: "Pedido confirmado",
+  title: "Pedido recebido",
   description: "Seu pedido foi registrado com sucesso na FullBoost Race Parts.",
 };
 
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 const STATUS_MESSAGE: Partial<Record<OrderStatus, string>> = {
   PAID: "Pagamento aprovado — já estamos separando suas peças.",
   AWAITING_PAYMENT:
-    "Aguardando pagamento do boleto. Assim que compensar, o pedido segue para separação.",
+    "Peças reservadas por 72h. Finalize o pagamento (Pix ou cartão) e confirme o frete com o nosso time no WhatsApp.",
 };
 
 function first(value: string | string[] | undefined): string {
@@ -47,7 +47,10 @@ export default async function OrderConfirmedPage({
     (status && STATUS_MESSAGE[status]) ??
     "Recebemos seu pedido e enviaremos todas as atualizações por e-mail.";
 
-  const whatsappMessage = `Olá! Acabei de fazer o pedido ${orderNumber} na FullBoost e gostaria de acompanhar o andamento.`;
+  const whatsappMessage =
+    status === "AWAITING_PAYMENT"
+      ? `Olá! Acabei de fazer o pedido ${orderNumber} na FullBoost${hasTotal ? ` (total ${formatBRL(total)})` : ""} e quero finalizar o pagamento e o frete.`
+      : `Olá! Acabei de fazer o pedido ${orderNumber} na FullBoost e gostaria de acompanhar o andamento.`;
 
   return (
     <section className="py-10 sm:py-16 lg:py-24">
@@ -62,7 +65,7 @@ export default async function OrderConfirmedPage({
             </span>
 
             <h1 className="mt-6 font-display text-3xl font-bold uppercase tracking-tight sm:text-4xl">
-              Pedido confirmado!
+              Pedido recebido!
             </h1>
             <p className="mt-3 max-w-md text-pretty text-muted-foreground">{message}</p>
 
@@ -110,25 +113,25 @@ export default async function OrderConfirmedPage({
               </dl>
             </div>
 
-            {/* Ações */}
+            {/* Ações — WhatsApp em destaque: é onde o pagamento é finalizado */}
             <div className="mt-8 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
               <Button asChild size="lg" className="gap-2">
+                <a href={whatsappLink(whatsappMessage)} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="size-4" />
+                  {status === "AWAITING_PAYMENT" ? "Finalizar no WhatsApp" : "Falar no WhatsApp"}
+                </a>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="gap-2">
                 <Link href="/produtos">
                   Ver mais produtos
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="gap-2">
-                <a href={whatsappLink(whatsappMessage)} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle className="size-4" />
-                  Falar no WhatsApp
-                </a>
-              </Button>
             </div>
 
             <p className="mt-6 inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
               <Mail className="size-3.5" />
-              Enviamos a confirmação e o rastreio para o seu e-mail.
+              O código de rastreio é enviado assim que o pedido for despachado.
             </p>
           </div>
         </div>

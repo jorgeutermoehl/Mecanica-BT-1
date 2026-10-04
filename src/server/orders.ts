@@ -120,8 +120,12 @@ export async function placeOrder(input: CheckoutInput) {
       }
     }
 
-    // 4. Pedido (demo: Pix/cartão aprovam na hora; boleto fica aguardando).
-    const isPaid = input.paymentMethod !== "BOLETO";
+    // 4. Pedido. Fase WhatsApp: sem gateway integrado NENHUM método aprova
+    //    sozinho — o pedido nasce AGUARDANDO PAGAMENTO com estoque reservado e
+    //    o cliente finaliza no WhatsApp (Pix ou link da maquininha). A loja
+    //    confirma no painel (Pedidos → Pago), que converte a reserva em SALE.
+    //    Quando o gateway entrar, a aprovação vem do webhook (src/server/payments.ts).
+    const isPaid = false;
     const orderStatus: OrderStatus = isPaid ? "PAID" : "AWAITING_PAYMENT";
     const count = await tx.order.count();
     const number = `PED-${String(count + 1).padStart(4, "0")}`;
@@ -152,7 +156,6 @@ export async function placeOrder(input: CheckoutInput) {
         shipCity: input.shipping.city,
         shipState: input.shipping.state.toUpperCase(),
         sessionId,
-        vehicleLabel: input.myCarLabel?.trim() || null,
         externalReference,
         paymentProvider: "MANUAL",
         paidAt: isPaid ? now : null,
@@ -262,27 +265,6 @@ export async function placeOrder(input: CheckoutInput) {
 
     // 8. Endereço do checkout vira Address reutilizável (snapshot ship* preservado).
     await upsertCustomerAddress(tx, customer.id, input.shipping);
-
-    // 8b. "Meu Carro" identificado no checkout entra na garagem do cliente.
-    const myCarVersionId = input.myCarVersionId?.trim();
-    if (myCarVersionId) {
-      const version = await tx.vehicleVersion.findUnique({ where: { id: myCarVersionId } });
-      if (version) {
-        const inGarage = await tx.customerVehicle.findFirst({
-          where: { customerId: customer.id, vehicleVersionId: myCarVersionId },
-        });
-        if (!inGarage) {
-          const garageCount = await tx.customerVehicle.count({ where: { customerId: customer.id } });
-          await tx.customerVehicle.create({
-            data: {
-              customerId: customer.id,
-              vehicleVersionId: myCarVersionId,
-              isDefault: garageCount === 0,
-            },
-          });
-        }
-      }
-    }
 
     // 9. Métricas do cliente pelo escritor único (idempotente).
     await recalcCustomerStats(tx, customer.id);

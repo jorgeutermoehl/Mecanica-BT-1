@@ -307,7 +307,8 @@ export function ProductGalleryManager({
             </span>
           </CardTitle>
           <CardDescription>
-            JPEG, PNG, WebP ou AVIF até {MAX_UPLOAD_MB}MB, mínimo 600x600px. Cada imagem
+            JPEG, PNG, WebP ou AVIF até {MAX_UPLOAD_MB}MB, menor lado com no mínimo
+            400px (ideal 1200x1200px, quadrada). Cada imagem
             precisa de um texto alternativo — descreva o que aparece na foto.
           </CardDescription>
         </CardHeader>

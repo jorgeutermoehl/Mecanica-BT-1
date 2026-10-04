@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Rocket } from "lucide-react";
+import { ImagePlus, Rocket, X } from "lucide-react";
 import { createProductAction, updateProductAction } from "@/app/actions/admin";
+import { uploadProductImageAction } from "@/app/actions/media";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -97,11 +98,80 @@ function initialValues(product?: ProductFormProduct): FormValues {
   };
 }
 
+// Espelho client dos limites de src/server/media.ts (o servidor revalida tudo).
+const MAX_PHOTOS = 8;
+const MAX_PHOTO_MB = 8;
+const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+
+type PendingPhoto = { file: File; preview: string };
+
 export function ProductForm({ categories, product }: ProductFormProps) {
   const router = useRouter();
   const isEdit = product !== undefined;
   const [values, setValues] = useState<FormValues>(() => initialValues(product));
   const [submitting, setSubmitting] = useState(false);
+  // Fotos escolhidas no cadastro — enviadas logo após criar o produto.
+  const [photos, setPhotos] = useState<PendingPhoto[]>([]);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const photosRef = useRef(photos);
+  useEffect(() => {
+    photosRef.current = photos;
+  }, [photos]);
+
+  // Libera os object URLs das prévias ao sair da página.
+  useEffect(
+    () => () => photosRef.current.forEach((p) => URL.revokeObjectURL(p.preview)),
+    [],
+  );
+
+  function addPhotos(files: FileList | null) {
+    if (!files) return;
+    const next: PendingPhoto[] = [];
+    for (const file of Array.from(files)) {
+      if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) {
+        toast.error(`${file.name}: envie JPEG, PNG, WebP ou AVIF.`);
+        continue;
+      }
+      if (file.size > MAX_PHOTO_MB * 1024 * 1024) {
+        toast.error(`${file.name}: arquivo acima de ${MAX_PHOTO_MB}MB.`);
+        continue;
+      }
+      next.push({ file, preview: URL.createObjectURL(file) });
+    }
+    setPhotos((prev) => {
+      const merged = [...prev, ...next];
+      if (merged.length > MAX_PHOTOS) {
+        toast.error(`Máximo de ${MAX_PHOTOS} fotos por produto.`);
+        merged.slice(MAX_PHOTOS).forEach((p) => URL.revokeObjectURL(p.preview));
+      }
+      return merged.slice(0, MAX_PHOTOS);
+    });
+    if (photoInputRef.current) photoInputRef.current.value = "";
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((prev) => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
+
+  /** Envia as fotos em sequência (a 1ª vira a principal). Retorna quantas falharam. */
+  async function uploadPhotos(productId: string, name: string): Promise<number> {
+    let failed = 0;
+    for (const [i, photo] of photos.entries()) {
+      const fd = new FormData();
+      fd.set("productId", productId);
+      fd.set("alt", `${name} — foto ${i + 1}`);
+      fd.set("file", photo.file);
+      const r = await uploadProductImageAction(fd);
+      if (!r.ok) {
+        failed++;
+        toast.error(`${photo.file.name}: ${r.error ?? "falha no envio"}`);
+      }
+    }
+    return failed;
+  }
 
   function set<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -143,6 +213,19 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       : await createProductAction(payload);
 
     if (result.ok) {
+      const createdId = !isEdit && "id" in result ? result.id : undefined;
+      if (typeof createdId === "string" && photos.length > 0) {
+        const failed = await uploadPhotos(createdId, payload.name);
+        toast.success(
+          failed === 0
+            ? `Produto publicado na loja com ${photos.length} foto(s)`
+            : `Produto publicado — ${failed} foto(s) não enviada(s); reenvie na galeria`,
+        );
+        // Abre a edição para conferir a galeria (principal/ordem).
+        router.push(`/admin/produtos/${createdId}`);
+        router.refresh();
+        return;
+      }
       toast.success(isEdit ? "Produto atualizado" : "Produto publicado na loja");
       router.push("/admin/produtos");
       router.refresh();
@@ -151,8 +234,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       setSubmitting(false);
     }
   }
-
-  const previewUrl = values.imageUrl.trim();
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -192,7 +273,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               id="product-sku"
               value={values.sku}
               onChange={(e) => set("sku", e.target.value)}
-              placeholder="Ex.: TRB-T3T4-63"
+              placeholder="Ex.: TRA-CP-831-GBX"
               className="font-mono uppercase"
               maxLength={40}
               required
@@ -222,7 +303,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               id="product-brand"
               value={values.brandName}
               onChange={(e) => set("brandName", e.target.value)}
-              placeholder="Ex.: Garrett"
+              placeholder="Ex.: FullBoost"
               maxLength={60}
             />
           </div>
@@ -238,12 +319,12 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="product-fitment">Fitment / compatibilidade</Label>
+            <Label htmlFor="product-fitment">Aplicação</Label>
             <Input
               id="product-fitment"
               value={values.fitment}
               onChange={(e) => set("fitment", e.target.value)}
-              placeholder="Ex.: VW Golf GTI Mk7 2014–2020 · Audi A3 8V"
+              placeholder="Ex.: Câmbio Gol BX · relação 8x31 (texto livre)"
               maxLength={160}
             />
           </div>
@@ -270,41 +351,78 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         </CardContent>
       </Card>
 
-      {/* ============ Imagem ============ */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display uppercase tracking-wide">Imagem</CardTitle>
-          <CardDescription>
-            URL da foto principal exibida na vitrine da loja.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="product-image">URL da imagem</Label>
-            <Input
-              id="product-image"
-              type="url"
-              value={values.imageUrl}
-              onChange={(e) => set("imageUrl", e.target.value)}
-              placeholder="https://images.unsplash.com/..."
-              className="font-mono"
+      {/* ============ Fotos (só no cadastro; na edição a galeria fica abaixo) ============ */}
+      {!isEdit && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display uppercase tracking-wide">
+              Fotos do produto{" "}
+              <span className="font-mono text-sm tabular-nums text-muted-foreground">
+                ({photos.length} de {MAX_PHOTOS})
+              </span>
+            </CardTitle>
+            <CardDescription>
+              JPEG, PNG, WebP ou AVIF até {MAX_PHOTO_MB}MB. Ideal: quadrada,
+              1200x1200px, peça centralizada e fundo limpo (mínimo 400px no
+              menor lado). A primeira foto vira a capa na loja.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <input
+              ref={photoInputRef}
+              id="product-photos"
+              type="file"
+              accept={ACCEPTED_PHOTO_TYPES.join(",")}
+              multiple
+              className="sr-only"
+              onChange={(e) => addPhotos(e.target.files)}
             />
-          </div>
-          {previewUrl !== "" && (
-            <div className="flex items-center gap-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewUrl}
-                alt={`Pré-visualização de ${values.name || "produto"}`}
-                className="size-24 rounded-lg border border-border bg-muted object-cover"
-              />
-              <p className="text-sm text-muted-foreground">
-                Pré-visualização — confira se a imagem carrega antes de salvar.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {photos.length > 0 && (
+              <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                {photos.map((p, i) => (
+                  <li
+                    key={p.preview}
+                    className="relative overflow-hidden rounded-lg border border-border bg-muted"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.preview}
+                      alt={`Prévia da foto ${i + 1}`}
+                      className="aspect-square w-full object-cover"
+                    />
+                    {i === 0 && (
+                      <span className="absolute left-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 font-mono text-[10px] uppercase text-primary-foreground">
+                        Capa
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="absolute right-1.5 top-1.5 size-7"
+                      onClick={() => removePhoto(i)}
+                      aria-label={`Remover foto ${i + 1}`}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {photos.length < MAX_PHOTOS && (
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={() => photoInputRef.current?.click()}
+              >
+                <ImagePlus className="size-4" />
+                Adicionar fotos
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ============ Descrição ============ */}
       <Card>
