@@ -6,8 +6,7 @@ import { PartIcon } from "@/components/shared/part-icon";
 import { ProductCard } from "@/components/public/product-card";
 import { TrustStrip } from "@/components/public/trust-strip";
 import { Button } from "@/components/ui/button";
-import { whatsappLink } from "@/lib/constants";
-import { BRANDS } from "@/lib/constants";
+import { SPECIALTIES, whatsappLink } from "@/lib/constants";
 import { getHomeData } from "@/server/catalog";
 
 // Vitrine servida pelo cache com tag "catalog" — mudanças no painel
@@ -62,8 +61,14 @@ function SectionHeader({
 }
 
 export default async function HomePage() {
-  const { categories, bestSellers, onSale, wheels, newArrivals } =
-    await getHomeData();
+  const {
+    categories,
+    bestSellers,
+    onSale,
+    featuredCategory,
+    featuredProducts,
+    newArrivals,
+  } = await getHomeData();
 
   return (
     <>
@@ -71,14 +76,14 @@ export default async function HomePage() {
       <section className="bg-carbon">
         <Container className="grid items-center gap-10 py-16 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:py-24">
           <div>
-            <Eyebrow>Turbo · Suspensão · Freios · Rodas</Eyebrow>
+            <Eyebrow>Transmissão · Motor · Gaiolas</Eyebrow>
             <h1 className="mt-4 text-balance font-display text-4xl font-bold uppercase leading-[0.95] tracking-tight sm:text-5xl lg:text-6xl">
               Peças de <span className="text-boost">performance</span> para o
               seu projeto
             </h1>
             <p className="mt-4 max-w-lg text-pretty text-base text-muted-foreground sm:text-lg">
-              Turbinas, rodas, freios e suspensão selecionados a dedo — com
-              estoque real, nota fiscal e envio para todo o Brasil.
+              Coroa e pinhão, virabrequins e gaiolas (rollcage) para rua e pista
+              — com estoque real, nota fiscal e envio para todo o Brasil.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="gap-2">
@@ -100,12 +105,12 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Foto real de motor — sem moldura decorativa */}
+          {/* Foto real de anúncio da loja (gaiola feita na oficina) */}
           <div className="relative hidden lg:block">
             <div className="relative mx-auto aspect-[4/3] w-full max-w-lg overflow-hidden rounded-lg border border-border">
               <Image
-                src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=1600&auto=format&fit=crop"
-                alt="Motor de alta performance"
+                src="/produtos/gaiola-rollcage.webp"
+                alt="Gaiola de proteção (rollcage) em tubo de aço"
                 fill
                 priority
                 sizes="(max-width: 1024px) 0px, 32rem"
@@ -173,47 +178,56 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ===================== RODAS EM DESTAQUE ===================== */}
-      <section className="py-12 sm:py-16">
-        <Container>
-          <div className="relative overflow-hidden rounded-lg border border-border">
-            <Image
-              src="https://images.unsplash.com/photo-1542377281-73d08e3a10aa?q=80&w=1600&auto=format&fit=crop"
-              alt="Roda esportiva de liga leve"
-              fill
-              sizes="(max-width: 1280px) 100vw, 1280px"
-              className="object-cover"
-            />
-            <span
-              aria-hidden
-              className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/25"
-            />
-            <div className="relative flex flex-col items-start gap-4 px-4 py-12 sm:px-8 sm:py-16 lg:px-12">
-              <Eyebrow>Destaque</Eyebrow>
-              <h2 className="max-w-xl font-display text-3xl font-bold uppercase leading-none tracking-tight sm:text-4xl">
-                Rodas para todos os projetos
-              </h2>
-              <p className="max-w-md text-pretty text-muted-foreground">
-                Esportivas, forjadas e réplicas — aro 15 ao 20.
-              </p>
-              <Button asChild size="lg" variant="secondary" className="mt-2 gap-2">
-                <Link href="/produtos?categoria=rodas">
-                  Ver todas as rodas
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
+      {/* ============ CATEGORIA EM DESTAQUE (featured + com anúncio) ============ */}
+      {featuredCategory && featuredProducts.length > 0 && (
+        <section className="py-12 sm:py-16">
+          <Container>
+            <div className="relative overflow-hidden rounded-lg border border-border">
+              {featuredProducts[0].image && (
+                <Image
+                  src={featuredProducts[0].image}
+                  alt={featuredProducts[0].name}
+                  fill
+                  sizes="(max-width: 1280px) 100vw, 1280px"
+                  className="object-cover"
+                />
+              )}
+              <span
+                aria-hidden
+                className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/25"
+              />
+              <div className="relative flex flex-col items-start gap-4 px-4 py-12 sm:px-8 sm:py-16 lg:px-12">
+                <Eyebrow>Destaque</Eyebrow>
+                <h2 className="max-w-xl font-display text-3xl font-bold uppercase leading-none tracking-tight sm:text-4xl">
+                  {featuredCategory.name}
+                </h2>
+                {featuredCategory.description && (
+                  <p className="max-w-md text-pretty text-muted-foreground">
+                    {featuredCategory.description}
+                  </p>
+                )}
+                <Button
+                  asChild
+                  size="lg"
+                  variant="secondary"
+                  className="mt-2 gap-2"
+                >
+                  <Link href={`/produtos?categoria=${featuredCategory.slug}`}>
+                    Ver {featuredCategory.name.toLowerCase()}
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              </div>
             </div>
-          </div>
 
-          {wheels.length > 0 && (
             <div className={`mt-6 ${PRODUCT_GRID}`}>
-              {wheels.map((p) => (
+              {featuredProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>
-          )}
-        </Container>
-      </section>
+          </Container>
+        </section>
+      )}
 
       {/* ===================== EM PROMOÇÃO ===================== */}
       {onSale.length > 0 && (
@@ -253,14 +267,14 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ===================== MARCAS ===================== */}
+      {/* ===================== ESPECIALIDADES ===================== */}
       <section className="py-12 sm:py-16">
         <Container>
           <p className="mb-6 text-center font-mono text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            Marcas parceiras
+            Especialidades da casa
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-            {BRANDS.map((b) => (
+            {SPECIALTIES.map((b) => (
               <span
                 key={b}
                 className="font-display text-lg font-semibold uppercase tracking-wide text-muted-foreground/70 transition-colors hover:text-foreground"

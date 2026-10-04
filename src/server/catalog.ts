@@ -110,6 +110,11 @@ export async function getRelatedProducts(product: StoreProduct, limit = 4): Prom
   return all.filter((p) => p.categorySlug === product.categorySlug && p.id !== product.id).slice(0, limit);
 }
 
+/**
+ * Categorias VISÍVEIS na loja: só as que têm ao menos 1 produto publicado.
+ * O cadastro estrutural (todas as categorias) continua no painel — a categoria
+ * "desbloqueia" na vitrine sozinha assim que o primeiro anúncio dela é feito.
+ */
 export const getStoreCategories = unstable_cache(
   async (): Promise<StoreCategory[]> => {
     const cats = await prisma.category.findMany({
@@ -121,15 +126,17 @@ export const getStoreCategories = unstable_cache(
         },
       },
     });
-    return cats.map((c) => ({
-      id: c.id,
-      name: c.name,
-      slug: c.slug,
-      icon: c.icon ?? c.slug,
-      featured: c.featured,
-      description: c.description,
-      count: c._count.products,
-    }));
+    return cats
+      .filter((c) => c._count.products > 0)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        icon: c.icon ?? c.slug,
+        featured: c.featured,
+        description: c.description,
+        count: c._count.products,
+      }));
   },
   ["store-categories"],
   { tags: [CATALOG_TAG] },
@@ -187,12 +194,18 @@ export async function getHomeData() {
   const [products, categories] = await Promise.all([getStoreProducts(), getStoreCategories()]);
   const inStock = products.filter((p) => p.stock > 0);
   const bySold = [...inStock].sort((a, b) => b.sold - a.sold);
+  // Destaque da home: primeira categoria marcada como `featured` que já tem anúncio.
+  const featuredCategory = categories.find((c) => c.featured) ?? null;
+  const featuredProducts = featuredCategory
+    ? products.filter((p) => p.categorySlug === featuredCategory.slug).slice(0, 4)
+    : [];
 
   return {
     categories,
     bestSellers: bySold.slice(0, 4),
     onSale: products.filter((p) => p.promoPrice !== null).slice(0, 8),
-    wheels: products.filter((p) => p.categorySlug === "rodas").slice(0, 4),
+    featuredCategory,
+    featuredProducts,
     newArrivals: products.filter((p) => p.isNew).slice(0, 4),
     totalProducts: products.length,
   };

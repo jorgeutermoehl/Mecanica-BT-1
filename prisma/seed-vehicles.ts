@@ -42,8 +42,10 @@ const CATALOG: MakeSpec[] = [
         versions: [
           { name: "G5/G6 1.6", yearStart: 2008, yearEnd: 2016, engine: "1.6 8v", fuel: "FLEX" },
           { name: "GTI (quadrado)", yearStart: 1989, yearEnd: 1994, engine: "2.0 8v", fuel: "GASOLINE" },
+          { name: "BX (ar)", yearStart: 1980, yearEnd: 1986, engine: "1.6 a ar", fuel: "GASOLINE" },
         ],
       },
+      { name: "Fusca", versions: [{ name: "1300/1500/1600", yearStart: 1959, yearEnd: 1996, engine: "1.3–1.6 a ar", fuel: "GASOLINE" }] },
       {
         name: "Jetta",
         versions: [

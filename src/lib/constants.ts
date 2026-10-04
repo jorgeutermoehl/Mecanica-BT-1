@@ -7,7 +7,7 @@ export const SITE = {
   shortName: "FullBoost",
   tagline: "Race Parts",
   description:
-    "Peças automotivas, race parts e acessórios de performance selecionados para elevar o desempenho do seu carro. Qualidade premium, entrega para todo o Brasil.",
+    "Coroa e pinhão, virabrequins e gaiolas (rollcage) para rua e pista. Peças de transmissão, motor e segurança com nota fiscal e entrega para todo o Brasil.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   // Número no formato internacional, somente dígitos (ex.: 5547999999999)
   whatsapp: process.env.NEXT_PUBLIC_WHATSAPP ?? "5500000000000",
@@ -30,16 +30,18 @@ export const PUBLIC_NAV = [
   { label: "Contato", href: "/contato" },
 ] as const;
 
-/** Marcas parceiras exibidas na vitrine (bloco institucional). */
-export const BRANDS = [
-  "Garrett",
-  "Bosch",
-  "NGK",
-  "Brembo",
-  "Motul",
-  "K&N",
-  "Enkei",
-  "BBS",
+/**
+ * Linhas de produto que a loja trabalha hoje (vitrine institucional).
+ * Ao anunciar uma linha nova, acrescente aqui — as categorias da loja já
+ * aparecem sozinhas quando recebem o primeiro produto.
+ */
+export const SPECIALTIES = [
+  "Coroa e pinhão",
+  "Virabrequim",
+  "Gaiola / Rollcage",
+  "Transmissão",
+  "Motor a ar",
+  "Rua & pista",
 ] as const;
 
 /** Mensagem padrão ao abrir o WhatsApp. */

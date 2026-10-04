@@ -57,7 +57,7 @@ export async function generateMetadata({
   const fullName = `${found.make.name} ${found.model.name}`;
   return {
     title: `Peças de performance para ${fullName}`,
-    description: `Turbo, escape, freios, suspensão e mais peças de performance compatíveis com ${fullName}. Compre com garantia e nota fiscal na FullBoost Race Parts.`,
+    description: `Coroa e pinhão, virabrequins, gaiolas e mais peças de performance compatíveis com ${fullName}. Compre com garantia e nota fiscal na FullBoost Race Parts.`,
   };
 }
 

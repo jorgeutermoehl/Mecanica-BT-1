@@ -7,7 +7,7 @@ import { getStoreCategories, getStoreProducts } from "@/server/catalog";
 export const metadata: Metadata = {
   title: "Produtos",
   description:
-    "Catálogo completo de peças de performance: turbo, motor, escape, freios, suspensão e mais. Filtre por categoria, marca e preço.",
+    "Catálogo de peças de performance: coroa e pinhão, virabrequins e gaiolas (rollcage). Filtre por categoria, marca e preço.",
 };
 
 export default async function ProdutosPage({

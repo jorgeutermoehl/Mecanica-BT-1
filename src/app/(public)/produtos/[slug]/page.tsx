@@ -143,7 +143,7 @@ export default async function ProductPage({
   const specLines = parseTechnicalSpecs(product.technicalSpecs);
   const baseSpecs: { label: string; value: string }[] = [
     { label: "Código (SKU)", value: product.sku },
-    { label: "Marca", value: brandLabel },
+    ...(product.brand ? [{ label: "Marca", value: product.brand }] : []),
     { label: "Categoria", value: product.category },
     ...(product.originalCode
       ? [{ label: "Código original", value: product.originalCode }]
@@ -158,8 +158,8 @@ export default async function ProductPage({
 
   const faqs = [
     {
-      q: "Preciso de reprogramação (remap) para usar essa peça?",
-      a: "Depende do seu objetivo. Em setups de rua, boa parte das nossas peças funciona em conjunto com a calibração original. Para extrair o máximo de performance, recomendamos acompanhar com um remap feito por um preparador de confiança. Fale com o nosso time que indicamos o caminho certo.",
+      q: "Vocês ajudam a escolher a relação ou a medida certa?",
+      a: "Sim. Relação de coroa e pinhão, medida de virabrequim e configuração da gaiola dependem do seu projeto (rua, arrancada ou pista). Manda o carro, o motor e o objetivo no WhatsApp que o nosso time indica a peça certa antes de você fechar o pedido.",
     },
     {
       q: "A compra tem nota fiscal e garantia?",

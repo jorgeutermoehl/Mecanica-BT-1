@@ -181,7 +181,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               id="product-name"
               value={values.name}
               onChange={(e) => set("name", e.target.value)}
-              placeholder="Ex.: Turbina T3/T4 .63 Racing"
+              placeholder="Ex.: Coroa e Pinhão 8x31 — Gol BX"
               maxLength={120}
               required
             />

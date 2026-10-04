@@ -13,7 +13,7 @@ import { CouponCard, type Coupon } from "@/components/public/promocoes/coupon-ca
 export const metadata: Metadata = {
   title: "Promoções",
   description:
-    "Cupons ativos e ofertas em peças de performance. Economize em turbo, freios, suspensão, escape e mais na FullBoost Race Parts.",
+    "Cupons ativos e ofertas em peças de performance. Economize em transmissão, motor e gaiolas na FullBoost Race Parts.",
 };
 
 function Eyebrow({ children }: { children: React.ReactNode }) {

@@ -57,7 +57,7 @@ function validate(values: FormValues): FormErrors {
     errors.email = "Digite um e-mail válido.";
   }
   if (!values.assunto.trim()) {
-    errors.assunto = "Diga o assunto (ex.: compatibilidade de turbina).";
+    errors.assunto = "Diga o assunto (ex.: relação de coroa e pinhão).";
   }
   if (!values.mensagem.trim()) {
     errors.mensagem = "Escreva sua mensagem.";
@@ -204,7 +204,7 @@ export default function ContatoPage() {
                   <Field
                     id="assunto"
                     label="Assunto"
-                    placeholder="Ex.: turbina para Golf GTI"
+                    placeholder="Ex.: coroa e pinhão para Gol BX"
                     value={values.assunto}
                     error={errors.assunto}
                     onChange={(v) => update("assunto", v)}

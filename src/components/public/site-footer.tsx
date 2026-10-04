@@ -12,11 +12,20 @@ import { Logo } from "@/components/shared/logo";
 import { Container } from "@/components/shared/container";
 import { SITE, whatsappLink } from "@/lib/constants";
 import { PaymentMethods } from "@/components/public/metodos-pagamento";
+import { getStoreCategories } from "@/server/catalog";
 
 /* Ícones de marca (lucide removeu os brand icons) */
 function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
       <rect x="2" y="2" width="20" height="20" rx="5" />
       <circle cx="12" cy="12" r="4" />
       <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" stroke="none" />
@@ -52,15 +61,6 @@ const INSTITUTIONAL = [
   { label: "Termos de uso", href: "/termos" },
 ];
 
-const CATEGORY_LINKS = [
-  { label: "Turbo", href: "/produtos?categoria=turbo" },
-  { label: "Rodas", href: "/produtos?categoria=rodas" },
-  { label: "Freios", href: "/produtos?categoria=freios" },
-  { label: "Suspensão", href: "/produtos?categoria=suspensao" },
-  { label: "Escape", href: "/produtos?categoria=escape" },
-  { label: "Acessórios", href: "/produtos?categoria=acessorios" },
-];
-
 function ColumnTitle({ children }: { children: React.ReactNode }) {
   return (
     <h3 className="mb-4 font-display text-sm font-semibold uppercase tracking-wide">
@@ -69,7 +69,14 @@ function ColumnTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  // Só categorias já anunciadas (as demais desbloqueiam com o 1º produto).
+  const categories = await getStoreCategories();
+  const categoryLinks = categories.slice(0, 6).map((c) => ({
+    label: c.name,
+    href: `/produtos?categoria=${c.slug}`,
+  }));
+
   return (
     // `.dark` mantém o rodapé escuro/premium em ambos os temas.
     <footer className="dark border-t border-border bg-background text-foreground">
@@ -116,21 +123,23 @@ export function SiteFooter() {
           </nav>
 
           {/* Categorias */}
-          <nav aria-label="Categorias">
-            <ColumnTitle>Categorias</ColumnTitle>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              {CATEGORY_LINKS.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="transition-colors hover:text-foreground"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          {categoryLinks.length > 0 && (
+            <nav aria-label="Categorias">
+              <ColumnTitle>Categorias</ColumnTitle>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                {categoryLinks.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="transition-colors hover:text-foreground"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
 
           {/* Atendimento */}
           <div>
@@ -192,7 +201,10 @@ export function SiteFooter() {
                 Até 10x sem juros
               </li>
               <li className="flex items-center gap-2">
-                <ShieldCheck className="size-4 shrink-0 text-success" aria-hidden />
+                <ShieldCheck
+                  className="size-4 shrink-0 text-success"
+                  aria-hidden
+                />
                 Compra 100% segura
               </li>
             </ul>

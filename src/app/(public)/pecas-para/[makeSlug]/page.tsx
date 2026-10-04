@@ -53,7 +53,7 @@ export async function generateMetadata({
   if (!make) return { title: "Marca não encontrada" };
   return {
     title: `Peças de performance para ${make.name}`,
-    description: `Turbo, escape, freios, suspensão e mais peças de performance compatíveis com ${make.name}. Compre com garantia e nota fiscal na FullBoost Race Parts.`,
+    description: `Coroa e pinhão, virabrequins, gaiolas e mais peças de performance compatíveis com ${make.name}. Compre com garantia e nota fiscal na FullBoost Race Parts.`,
   };
 }
 

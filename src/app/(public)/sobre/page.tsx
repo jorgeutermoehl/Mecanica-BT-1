@@ -19,7 +19,7 @@ import { Container } from "@/components/shared/container";
 import { PartIcon } from "@/components/shared/part-icon";
 import { Button } from "@/components/ui/button";
 import { SITE, whatsappLink } from "@/lib/constants";
-import { BRANDS } from "@/lib/constants";
+import { SPECIALTIES } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Sobre nós",
@@ -160,7 +160,7 @@ export default function SobrePage() {
               <div className="absolute inset-0 skew-x-3 p-8">
                 <div className="flex h-full flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <PartIcon icon="turbo" className="size-12 text-primary" />
+                    <PartIcon icon="transmissao" className="size-12 text-primary" />
                     <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
                       Est. 2011
                     </span>
@@ -320,7 +320,7 @@ export default function SobrePage() {
                     garantia. Sem atalho, sem peça duvidosa.
                   </p>
                   <div className="flex flex-wrap justify-center gap-2 pt-2">
-                    {BRANDS.slice(0, 6).map((b) => (
+                    {SPECIALTIES.map((b) => (
                       <span
                         key={b}
                         className="rounded border border-border bg-card px-3 py-1 font-mono text-[11px] uppercase tracking-wide text-muted-foreground"

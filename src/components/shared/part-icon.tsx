@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  * (viewBox 24, stroke 2, currentColor) para representar cada categoria de
  * peça com clareza: roda com raios, turbina em espiral, pistão, disco de
  * freio ventilado, ponteira de escape, mola de suspensão, filtro cônico,
- * vela de ignição, gota de óleo e bateria.
+ * vela de ignição, gota de óleo, bateria, coroa e pinhão e gaiola (rollcage).
  */
 
 type SvgProps = React.SVGProps<SVGSVGElement>;
@@ -147,6 +147,31 @@ function WrenchIcon(props: SvgProps) {
   );
 }
 
+/** Coroa e pinhão: coroa dentada + eixo do pinhão. */
+function GearIcon(props: SvgProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="14" cy="12" r="5" />
+      <circle cx="14" cy="12" r="1.8" />
+      <path d="M14 4.5V3M14 21v-1.5M21.5 12H20M19.3 6.7l-1 1M19.3 17.3l-1-1M8.7 6.7l1 1M8.7 17.3l1-1" />
+      <path d="M2 12h7" />
+      <path d="M4 10v4" />
+    </svg>
+  );
+}
+
+/** Gaiola de proteção (rollcage): arco principal + travessas. */
+function RollcageIcon(props: SvgProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 21V10l3-5h10l3 5v11" />
+      <path d="M7 5l2 16M17 5l-2 16" />
+      <path d="M4 13h16" />
+      <path d="M4 21l16-8" />
+    </svg>
+  );
+}
+
 const MAP: Record<string, (props: SvgProps) => React.JSX.Element> = {
   rodas: WheelIcon,
   turbo: TurboIcon,
@@ -159,6 +184,8 @@ const MAP: Record<string, (props: SvgProps) => React.JSX.Element> = {
   oleos: OilIcon,
   bateria: BatteryIcon,
   acessorios: WrenchIcon,
+  transmissao: GearIcon,
+  gaiolas: RollcageIcon,
 };
 
 export function PartIcon({

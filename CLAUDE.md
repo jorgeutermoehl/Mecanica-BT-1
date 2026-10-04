@@ -8,7 +8,8 @@ Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Prisma 
 ## Banco / demo
 - `npx prisma migrate dev` + `npm run db:seed` criam tudo (arquivo `prisma/dev.db`, gitignored).
 - Painel: `/admin/login` → `admin@fullboost.com.br` / `fullboost123` (seed).
-- Imagens de produto: hotlinks Unsplash (`images.unsplash.com` liberado no `next.config.ts`).
+- Imagens de produto: fotos dos anúncios reais em `public/produtos/` (hotlinks Unsplash continuam liberados no `next.config.ts`).
+- **Foco do catálogo:** transmissão (coroa e pinhão), motor (virabrequim) e gaiolas (rollcage). As demais categorias ficam cadastradas mas **ocultas na loja** até receberem o 1º produto (`getStoreCategories` filtra `count > 0`) — anunciar = desbloquear. Não fazer marketing fixo (hero, rodapé, textos) de linhas sem produto.
 - Logo oficial: `public/logo-fullboost.png` (o componente `Logo` usa com fallback para wordmark).
 
 ## Convenções
