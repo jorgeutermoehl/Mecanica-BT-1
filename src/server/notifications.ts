@@ -19,9 +19,10 @@ export type AdminNotification = {
 export async function getNotifications(): Promise<{ items: AdminNotification[]; count: number }> {
   const [lowStock, pendingOrders, newContacts] = await Promise.all([
     prisma.$queryRawUnsafe<{ id: string; name: string; sku: string; stockQuantity: number; minStock: number; updatedAt: string }[]>(
-      `SELECT id, name, sku, stockQuantity, minStock, updatedAt FROM Product
-       WHERE deletedAt IS NULL AND status != 'INACTIVE' AND stockQuantity <= minStock
-       ORDER BY (stockQuantity - minStock) ASC LIMIT 20`,
+      // Identificadores entre aspas: válidos no SQLite E no Postgres (camelCase).
+      `SELECT "id", "name", "sku", "stockQuantity", "minStock", "updatedAt" FROM "Product"
+       WHERE "deletedAt" IS NULL AND "status" != 'INACTIVE' AND "stockQuantity" <= "minStock"
+       ORDER BY ("stockQuantity" - "minStock") ASC LIMIT 20`,
     ),
     prisma.order.findMany({
       where: { status: { in: ["AWAITING_PAYMENT", "PAID"] } },
@@ -65,7 +66,7 @@ export async function getNotifications(): Promise<{ items: AdminNotification[]; 
       severity: "info" as const,
       title: `Nova mensagem de ${c.name}`,
       description: c.subject ?? "Contato pelo site",
-      href: "/admin/notificacoes",
+      href: "/admin/mensagens",
       at: c.createdAt.toISOString(),
     })),
   ].sort((a, b) => (a.at < b.at ? 1 : -1));

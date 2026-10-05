@@ -1,12 +1,19 @@
 import type { LucideIcon } from "lucide-react";
+import { COMMERCE } from "@/lib/constants";
+import { formatBRL } from "@/lib/format";
 import { CreditCard, MessageCircle, ShieldCheck, Truck } from "lucide-react";
 import { Container } from "@/components/shared/container";
 import { cn } from "@/lib/utils";
 
+// Promessas derivadas da regra comercial configurada (src/lib/constants.ts).
 const ITEMS: { icon: LucideIcon; text: string }[] = [
-  { icon: Truck, text: "Frete grátis acima de R$ 599" },
-  { icon: CreditCard, text: "Parcele em até 10x sem juros" },
-  { icon: ShieldCheck, text: "Garantia em todas as peças" },
+  COMMERCE.freeShippingFrom > 0
+    ? { icon: Truck, text: `Frete grátis acima de ${formatBRL(COMMERCE.freeShippingFrom)}` }
+    : { icon: Truck, text: "Envio para todo o Brasil" },
+  ...(COMMERCE.maxInstallments > 1
+    ? [{ icon: CreditCard, text: `Parcele em até ${COMMERCE.maxInstallments}x sem juros` }]
+    : []),
+  { icon: ShieldCheck, text: "Pagamento por Pix ou cartão" },
   { icon: MessageCircle, text: "Atendimento por WhatsApp" },
 ];
 

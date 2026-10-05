@@ -58,7 +58,11 @@ export function AdminMobileHeader({
             </SheetDescription>
           </SheetHeader>
 
-          <AdminNav className="flex-1 overflow-y-auto px-3" onNavigate={() => setOpen(false)} />
+          <AdminNav
+            className="flex-1 overflow-y-auto px-3"
+            onNavigate={() => setOpen(false)}
+            role={userRole}
+          />
 
           <SheetFooter className="border-t border-sidebar-border">
             <div className="px-1">

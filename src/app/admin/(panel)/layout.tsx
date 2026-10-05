@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { LogOut } from "lucide-react";
-import { getSession } from "@/lib/auth";
+import { getStaffUser } from "@/lib/auth";
 import { getNotifications } from "@/server/notifications";
 import { logoutAction } from "@/app/actions/auth";
 import { Logo } from "@/components/shared/logo";
@@ -18,7 +18,8 @@ export default async function AdminPanelLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
+  // Revalida no banco: usuário desativado ou com senha trocada cai no login.
+  const session = await getStaffUser();
   if (!session) redirect("/admin/login");
 
   const { count: notificationCount } = await getNotifications();
@@ -32,7 +33,11 @@ export default async function AdminPanelLayout({
             <Logo href="/admin" />
           </div>
 
-          <AdminNav className="flex-1 overflow-y-auto p-3" notificationCount={notificationCount} />
+          <AdminNav
+            className="flex-1 overflow-y-auto p-3"
+            notificationCount={notificationCount}
+            role={session.role}
+          />
 
           <div className="shrink-0 border-t border-sidebar-border p-4">
             <p className="truncate text-sm font-medium">{session.name}</p>

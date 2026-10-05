@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     "Termos e condições de uso da loja FullBoost Race Parts: cadastro, pedidos, pagamentos, entrega, trocas, devoluções e garantia das peças de performance.",
 };
 
-const UPDATED_AT = "9 de julho de 2026";
+const UPDATED_AT = "5 de outubro de 2026";
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
@@ -25,7 +25,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 /** Índice de seções (âncoras) do documento. */
 const SECTIONS = [
   { id: "aceitacao", label: "1. Aceitação dos termos" },
-  { id: "cadastro", label: "2. Cadastro e conta" },
+  { id: "cadastro", label: "2. Dados do pedido" },
   { id: "pedidos", label: "3. Pedidos e pagamentos" },
   { id: "entrega", label: "4. Entrega" },
   { id: "trocas", label: "5. Trocas e devoluções" },
@@ -35,7 +35,13 @@ const SECTIONS = [
   { id: "foro", label: "9. Foro e legislação aplicável" },
 ] as const;
 
-function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
+function SectionTitle({
+  id,
+  children,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
   return (
     <h2
       id={id}
@@ -51,7 +57,10 @@ export default function TermosPage() {
     <>
       {/* ===================== CABEÇALHO ===================== */}
       <section className="relative overflow-hidden border-b border-border bg-carbon">
-        <span aria-hidden className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-64" />
+        <span
+          aria-hidden
+          className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-64"
+        />
         <Container className="relative py-14 sm:py-16">
           <div className="max-w-3xl">
             <Eyebrow>Jurídico · Documento oficial</Eyebrow>
@@ -59,9 +68,9 @@ export default function TermosPage() {
               Termos de <span className="text-boost">Uso</span>
             </h1>
             <p className="mt-5 text-pretty text-base text-muted-foreground sm:text-lg">
-              Estas condições regem a navegação e as compras na loja {SITE.name}. Ao acessar o
-              site e finalizar um pedido, você concorda com todas as regras descritas abaixo.
-              Leia com atenção antes de comprar.
+              Estas condições regem a navegação e as compras na loja {SITE.name}
+              . Ao acessar o site e finalizar um pedido, você concorda com todas
+              as regras descritas abaixo. Leia com atenção antes de comprar.
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
               <span className="inline-flex items-center gap-2">
@@ -105,73 +114,86 @@ export default function TermosPage() {
             <div className="mt-12 space-y-12 text-sm leading-relaxed text-muted-foreground sm:text-base">
               {/* 1 */}
               <article className="space-y-4">
-                <SectionTitle id="aceitacao">1. Aceitação dos termos</SectionTitle>
+                <SectionTitle id="aceitacao">
+                  1. Aceitação dos termos
+                </SectionTitle>
                 <p>
-                  Ao acessar, navegar ou realizar compras em {SITE.name}, você declara ter lido,
-                  compreendido e aceitado integralmente estes Termos de Uso, bem como a nossa
-                  Política de Privacidade. Caso não concorde com qualquer condição aqui prevista,
-                  recomendamos que não utilize a loja.
+                  Ao acessar, navegar ou realizar compras em {SITE.name}, você
+                  declara ter lido, compreendido e aceitado integralmente estes
+                  Termos de Uso, bem como a nossa Política de Privacidade. Caso
+                  não concorde com qualquer condição aqui prevista, recomendamos
+                  que não utilize a loja.
                 </p>
                 <p>
-                  Estes termos podem ser atualizados a qualquer momento para refletir mudanças
-                  legais, comerciais ou operacionais. A versão vigente é sempre a publicada nesta
-                  página, com a respectiva data de atualização. O uso continuado do site após
-                  alterações representa concordância com a nova versão.
+                  Estes termos podem ser atualizados a qualquer momento para
+                  refletir mudanças legais, comerciais ou operacionais. A versão
+                  vigente é sempre a publicada nesta página, com a respectiva
+                  data de atualização. O uso continuado do site após alterações
+                  representa concordância com a nova versão.
                 </p>
+                {SITE.legalName && (
+                  <p>
+                    Esta loja é operada por {SITE.legalName}
+                    {SITE.legalDocument && ` (${SITE.legalDocument})`}.
+                  </p>
+                )}
                 <p>
-                  A loja é destinada a maiores de 18 anos. Menores de idade só podem realizar
-                  compras com autorização e supervisão de um responsável legal.
+                  A loja é destinada a maiores de 18 anos. Menores de idade só
+                  podem realizar compras com autorização e supervisão de um
+                  responsável legal.
                 </p>
               </article>
 
               {/* 2 */}
               <article className="space-y-4">
-                <SectionTitle id="cadastro">2. Cadastro e conta</SectionTitle>
+                <SectionTitle id="cadastro">2. Dados do pedido</SectionTitle>
                 <p>
-                  Para finalizar pedidos, você deve criar uma conta informando dados verdadeiros,
-                  completos e atualizados, incluindo nome, CPF ou CNPJ, e-mail e endereço de
-                  entrega. Informações incorretas podem inviabilizar o processamento do pedido e a
-                  emissão da nota fiscal.
+                  Não é preciso criar conta para comprar. No pedido você informa
+                  nome, e-mail, telefone/WhatsApp e endereço de entrega — dados
+                  verdadeiros e atualizados, usados para confirmar a compra,
+                  combinar o pagamento e enviar a peça. Informações incorretas
+                  podem inviabilizar o pedido.
                 </p>
                 <p>
-                  A senha de acesso é pessoal e intransferível. Você é responsável por manter suas
-                  credenciais em sigilo e por todas as atividades realizadas na sua conta.
-                  Comunique-nos imediatamente qualquer uso não autorizado.
-                </p>
-                <p>
-                  Reservamo-nos o direito de suspender ou encerrar contas que apresentem dados
-                  fraudulentos, uso indevido da plataforma, tentativa de golpe ou violação destes
-                  termos, sem prejuízo das medidas legais cabíveis.
+                  Podemos recusar pedidos com dados fraudulentos, tentativa de
+                  golpe ou violação destes termos, sem prejuízo das medidas
+                  legais cabíveis.
                 </p>
               </article>
 
               {/* 3 */}
               <article className="space-y-4">
-                <SectionTitle id="pedidos">3. Pedidos e pagamentos</SectionTitle>
+                <SectionTitle id="pedidos">
+                  3. Pedidos e pagamentos
+                </SectionTitle>
                 <p>
-                  Os preços, descrições, especificações técnicas e disponibilidade das peças são
-                  exibidos na página de cada produto e podem ser alterados sem aviso prévio. Todos
-                  os valores estão em reais (R$) e já contemplam impostos, salvo indicação em
-                  contrário. O frete é calculado à parte, conforme o CEP de destino.
+                  Os preços, descrições, especificações técnicas e
+                  disponibilidade das peças são exibidos na página de cada
+                  produto e podem ser alterados sem aviso prévio. Todos os
+                  valores estão em reais (R$). O frete é informado no pedido e
+                  confirmado no atendimento, conforme o CEP de destino.
                 </p>
                 <p>
-                  O pedido só é considerado confirmado após a aprovação do pagamento pela
-                  operadora ou instituição financeira. Aceitamos cartão de crédito (à vista ou
-                  parcelado), Pix e boleto bancário, conforme as opções disponíveis no checkout.
-                  Pagamentos via Pix costumam ter confirmação em minutos; boletos podem levar até
-                  dois dias úteis para compensar.
+                  Ao finalizar o pedido no site, as peças ficam reservadas por
+                  72 horas. O pagamento é combinado pelo WhatsApp: Pix ou cartão
+                  de crédito (por link de pagamento, à vista ou parcelado). O
+                  pedido só é considerado confirmado após o recebimento do
+                  pagamento; sem pagamento no prazo, a reserva pode ser
+                  liberada.
                 </p>
                 <p>
-                  Podemos recusar ou cancelar pedidos em casos de indisponibilidade de estoque,
-                  erro evidente de precificação, suspeita de fraude ou falha na análise de crédito.
-                  Nessas hipóteses, você será informado e qualquer valor já pago será integralmente
-                  estornado.
+                  Podemos recusar ou cancelar pedidos em casos de
+                  indisponibilidade de estoque, erro evidente de precificação,
+                  suspeita de fraude ou falha na análise de crédito. Nessas
+                  hipóteses, você será informado e qualquer valor já pago será
+                  integralmente estornado.
                 </p>
                 <p>
-                  É de responsabilidade do cliente confirmar a compatibilidade da peça com o
-                  veículo antes da compra (modelo, ano, motorização e código do fabricante). Em
-                  caso de dúvida sobre a aplicação, fale com nosso time técnico antes de finalizar
-                  o pedido.
+                  É de responsabilidade do cliente confirmar a compatibilidade
+                  da peça com o veículo antes da compra (modelo, ano,
+                  motorização e código do fabricante). Em caso de dúvida sobre a
+                  aplicação, fale com nosso time técnico antes de finalizar o
+                  pedido.
                 </p>
               </article>
 
@@ -179,21 +201,25 @@ export default function TermosPage() {
               <article className="space-y-4">
                 <SectionTitle id="entrega">4. Entrega</SectionTitle>
                 <p>
-                  Realizamos entregas para todo o Brasil por meio de transportadoras e serviços
-                  postais parceiros. O prazo estimado é exibido no checkout, com base no CEP de
-                  destino e na modalidade de frete escolhida, e passa a contar a partir da
-                  confirmação do pagamento e do despacho do produto.
+                  Realizamos entregas para todo o Brasil por meio de
+                  transportadoras e serviços postais parceiros. O prazo estimado
+                  é informado no atendimento, com base no CEP de destino e na
+                  modalidade de frete combinada, e passa a contar a partir da
+                  confirmação do pagamento e do despacho do produto, com código
+                  de rastreio.
                 </p>
                 <p>
-                  Os prazos são estimativas e podem sofrer variações por fatores externos, como
-                  condições climáticas, greves, restrições de circulação e questões logísticas da
-                  transportadora. Peças de encomenda ou sob demanda podem ter prazo diferenciado,
+                  Os prazos são estimativas e podem sofrer variações por fatores
+                  externos, como condições climáticas, greves, restrições de
+                  circulação e questões logísticas da transportadora. Peças de
+                  encomenda ou sob demanda podem ter prazo diferenciado,
                   informado antes da finalização.
                 </p>
                 <p>
-                  No recebimento, confira a integridade da embalagem e do produto na presença do
-                  entregador. Havendo avaria aparente ou divergência, recuse a entrega ou registre
-                  a ocorrência e comunique-nos em até 72 horas para agilizarmos a solução.
+                  No recebimento, confira a integridade da embalagem e do
+                  produto na presença do entregador. Havendo avaria aparente ou
+                  divergência, recuse a entrega ou registre a ocorrência e
+                  comunique-nos em até 72 horas para agilizarmos a solução.
                 </p>
               </article>
 
@@ -201,26 +227,31 @@ export default function TermosPage() {
               <article className="space-y-4">
                 <SectionTitle id="trocas">5. Trocas e devoluções</SectionTitle>
                 <p>
-                  Nos termos do Código de Defesa do Consumidor, você pode exercer o direito de
-                  arrependimento e devolver o produto em até 7 dias corridos após o recebimento,
-                  sem necessidade de justificativa. A peça deve estar sem uso ou instalação, em
-                  perfeito estado, com a embalagem original, acessórios e nota fiscal.
+                  Nos termos do Código de Defesa do Consumidor, você pode
+                  exercer o direito de arrependimento e devolver o produto em
+                  até 7 dias corridos após o recebimento, sem necessidade de
+                  justificativa. A peça deve estar sem uso ou instalação, em
+                  perfeito estado, com a embalagem original, acessórios e o
+                  comprovante do pedido.
                 </p>
                 <p>
-                  Peças que apresentem sinais de instalação, montagem ou uso — como riscos,
-                  marcas de aperto, remoção de lacres ou adaptação — não são elegíveis para troca
-                  por arrependimento, uma vez que componentes de performance perdem a condição de
-                  revenda após aplicação no veículo.
+                  Peças que apresentem sinais de instalação, montagem ou uso —
+                  como riscos, marcas de aperto, remoção de lacres ou adaptação
+                  — não são elegíveis para troca por arrependimento, uma vez que
+                  componentes de performance perdem a condição de revenda após
+                  aplicação no veículo.
                 </p>
                 <p>
-                  Em caso de defeito de fabricação, a troca segue as condições descritas na seção
-                  de garantia. Após a análise e aprovação da solicitação, você pode optar pela
-                  troca por item igual, crédito na loja ou reembolso, conforme disponibilidade.
+                  Em caso de defeito de fabricação, a troca segue as condições
+                  descritas na seção de garantia. Após a análise e aprovação da
+                  solicitação, você pode optar pela troca por item igual,
+                  crédito na loja ou reembolso, conforme disponibilidade.
                 </p>
                 <p>
-                  Para iniciar uma troca ou devolução, entre em contato com o nosso atendimento
-                  informando o número do pedido. Nas devoluções por arrependimento ou defeito, o
-                  custo de envio de retorno é por nossa conta.
+                  Para iniciar uma troca ou devolução, entre em contato com o
+                  nosso atendimento informando o número do pedido. Nas
+                  devoluções por arrependimento ou defeito, o custo de envio de
+                  retorno é por nossa conta.
                 </p>
               </article>
 
@@ -228,44 +259,53 @@ export default function TermosPage() {
               <article className="space-y-4">
                 <SectionTitle id="garantia">6. Garantia das peças</SectionTitle>
                 <p>
-                  Todas as peças comercializadas possuem garantia legal de 90 dias contra defeitos
-                  de fabricação, contados a partir da data de recebimento. Quando aplicável, a
-                  garantia contratual do fabricante é somada ao prazo legal e informada na página
-                  do produto.
+                  Todas as peças comercializadas possuem garantia legal de 90
+                  dias contra defeitos de fabricação, contados a partir da data
+                  de recebimento. Quando aplicável, a garantia contratual do
+                  fabricante é somada ao prazo legal e informada na página do
+                  produto.
                 </p>
                 <p>
-                  A garantia cobre exclusivamente defeitos de fabricação e não abrange desgaste
-                  natural, uso em competição fora das especificações, instalação inadequada,
-                  ausência de manutenção, superaquecimento, uso de combustível ou fluidos
-                  incorretos, nem modificações que alterem a característica original da peça.
+                  A garantia cobre exclusivamente defeitos de fabricação e não
+                  abrange desgaste natural, uso em competição fora das
+                  especificações, instalação inadequada, ausência de manutenção,
+                  superaquecimento, uso de combustível ou fluidos incorretos,
+                  nem modificações que alterem a característica original da
+                  peça.
                 </p>
                 <p>
-                  Recomendamos que a instalação de componentes de performance — como turbinas,
-                  intercoolers, coilovers, injetores e sistemas de escape — seja realizada por
-                  profissional qualificado. Instalações feitas fora de oficina especializada podem
-                  implicar perda da garantia.
+                  Recomendamos que a instalação de componentes de performance —
+                  como coroa e pinhão, virabrequins e gaiolas de proteção — seja
+                  realizada por profissional qualificado. Instalações feitas
+                  fora de oficina especializada podem implicar perda da
+                  garantia.
                 </p>
                 <p>
-                  Para acionar a garantia, guarde a nota fiscal e entre em contato com o
-                  atendimento. A peça poderá passar por análise técnica do fabricante para
-                  confirmação do defeito antes da substituição ou reparo.
+                  Para acionar a garantia, guarde o comprovante do pedido e
+                  entre em contato com o atendimento. A peça poderá passar por
+                  análise técnica do fabricante para confirmação do defeito
+                  antes da substituição ou reparo.
                 </p>
               </article>
 
               {/* 7 */}
               <article className="space-y-4">
-                <SectionTitle id="propriedade">7. Propriedade intelectual</SectionTitle>
+                <SectionTitle id="propriedade">
+                  7. Propriedade intelectual
+                </SectionTitle>
                 <p>
-                  Todo o conteúdo do site {SITE.name} — incluindo marca, logotipo, layout, textos,
-                  fotos, ilustrações, descrições técnicas e código-fonte — é protegido por direitos
-                  autorais e de propriedade industrial, sendo de titularidade da loja ou de seus
-                  parceiros licenciantes.
+                  Todo o conteúdo do site {SITE.name} — incluindo marca,
+                  logotipo, layout, textos, fotos, ilustrações, descrições
+                  técnicas e código-fonte — é protegido por direitos autorais e
+                  de propriedade industrial, sendo de titularidade da loja ou de
+                  seus parceiros licenciantes.
                 </p>
                 <p>
-                  É proibida a reprodução, distribuição, cópia ou uso comercial de qualquer
-                  material sem autorização prévia e por escrito. Marcas de fabricantes exibidas no
-                  catálogo pertencem aos seus respectivos titulares e são apresentadas apenas para
-                  fins de identificação e compatibilidade dos produtos.
+                  É proibida a reprodução, distribuição, cópia ou uso comercial
+                  de qualquer material sem autorização prévia e por escrito.
+                  Marcas de fabricantes exibidas no catálogo pertencem aos seus
+                  respectivos titulares e são apresentadas apenas para fins de
+                  identificação e compatibilidade dos produtos.
                 </p>
               </article>
 
@@ -275,47 +315,62 @@ export default function TermosPage() {
                   8. Limitação de responsabilidade
                 </SectionTitle>
                 <p>
-                  Empenhamo-nos para manter as informações do site precisas e atualizadas, mas não
-                  garantimos que estejam livres de erros de digitação, imagens meramente
-                  ilustrativas ou eventuais indisponibilidades técnicas. Em caso de divergência
-                  evidente de preço ou especificação, prevalece a informação correta, com a
-                  possibilidade de cancelamento do pedido e estorno.
+                  Empenhamo-nos para manter as informações do site precisas e
+                  atualizadas, mas não garantimos que estejam livres de erros de
+                  digitação, imagens meramente ilustrativas ou eventuais
+                  indisponibilidades técnicas. Em caso de divergência evidente
+                  de preço ou especificação, prevalece a informação correta, com
+                  a possibilidade de cancelamento do pedido e estorno.
                 </p>
                 <p>
-                  A loja não se responsabiliza por danos decorrentes de instalação incorreta, uso
-                  inadequado, aplicação da peça em veículo incompatível ou utilização em desacordo
-                  com as recomendações do fabricante. Produtos de performance destinados a uso em
-                  pista ou competição devem respeitar a legislação de trânsito aplicável ao uso em
-                  via pública.
-                </p>
-                <p>
-                  Na máxima extensão permitida pela legislação, nossa responsabilidade limita-se ao
-                  valor do produto adquirido, não abrangendo lucros cessantes, danos indiretos ou
-                  prejuízos causados por terceiros, como transportadoras e serviços de instalação.
+                  A loja não se responsabiliza por danos decorrentes de
+                  instalação incorreta, uso inadequado, aplicação da peça em
+                  veículo incompatível ou utilização em desacordo com as
+                  recomendações do fabricante. Produtos de performance
+                  destinados a uso em pista ou competição devem respeitar a
+                  legislação de trânsito aplicável ao uso em via pública.
                 </p>
               </article>
 
               {/* 9 */}
               <article className="space-y-4">
-                <SectionTitle id="foro">9. Foro e legislação aplicável</SectionTitle>
+                <SectionTitle id="foro">
+                  9. Foro e legislação aplicável
+                </SectionTitle>
                 <p>
-                  Estes Termos de Uso são regidos pela legislação brasileira, em especial pelo
-                  Código de Defesa do Consumidor (Lei nº 8.078/1990) e pelo Marco Civil da Internet
-                  (Lei nº 12.965/2014).
+                  Estes Termos de Uso são regidos pela legislação brasileira, em
+                  especial pelo Código de Defesa do Consumidor (Lei nº
+                  8.078/1990) e pelo Marco Civil da Internet (Lei nº
+                  12.965/2014).
                 </p>
                 <p>
-                  Fica eleito o foro da comarca da sede da loja para dirimir eventuais controvérsias
-                  decorrentes destes termos, com renúncia a qualquer outro, por mais privilegiado
-                  que seja, ressalvado o direito do consumidor de acionar o foro de seu domicílio.
+                  Eventuais controvérsias podem ser levadas ao foro do domicílio
+                  do consumidor, conforme o Código de Defesa do Consumidor.
                 </p>
                 <p>
-                  Dúvidas sobre estes termos podem ser encaminhadas para{" "}
+                  Dúvidas sobre estes termos podem ser enviadas pelo{" "}
                   <a
-                    href={`mailto:${SITE.email}`}
+                    href={whatsappLink(
+                      "Olá! Tenho uma dúvida sobre os Termos de Uso.",
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="font-medium text-primary underline-offset-4 hover:underline"
                   >
-                    {SITE.email}
+                    WhatsApp
                   </a>
+                  {SITE.email && (
+                    <>
+                      {" "}
+                      ou para{" "}
+                      <a
+                        href={`mailto:${SITE.email}`}
+                        className="font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        {SITE.email}
+                      </a>
+                    </>
+                  )}
                   .
                 </p>
               </article>
@@ -327,12 +382,16 @@ export default function TermosPage() {
                 Ficou com alguma dúvida?
               </h2>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                Nosso time técnico ajuda você a escolher a peça certa e esclarece qualquer ponto
-                sobre pedidos, garantia e devoluções.
+                Nosso time técnico ajuda você a escolher a peça certa e
+                esclarece qualquer ponto sobre pedidos, garantia e devoluções.
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <Button asChild size="lg" className="gap-2">
-                  <a href={whatsappLink()} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={whatsappLink()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <MessageCircle className="size-4" />
                     Falar no WhatsApp
                   </a>

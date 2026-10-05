@@ -28,13 +28,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCart } from "@/components/cart/cart-provider";
 import { placeOrderAction } from "@/app/actions/checkout";
 import { PAYMENT_METHOD_LABEL, type CheckoutInput } from "@/lib/validations";
+import { COMMERCE, shippingFor } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { formatBRL, installment } from "@/lib/format";
 import type { CartItem } from "@/types/store";
 
-/** Regra de frete espelhada do servidor (src/server/orders.ts). */
-const FREE_SHIPPING_THRESHOLD = 599;
-const FLAT_SHIPPING = 34.9;
 
 /* ---------- Rótulo de seção (padrão da home) ---------- */
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -53,7 +51,14 @@ type Method = CheckoutInput["paymentMethod"];
 // de pagamento da maquininha para cartão). Boleto fica fora até o gateway.
 const PAYMENTS: { value: Method; hint: string; icon: LucideIcon }[] = [
   { value: "PIX", hint: "Chave Pix enviada no WhatsApp", icon: QrCode },
-  { value: "CREDIT_CARD", hint: "Link de pagamento no WhatsApp · até 10x", icon: CreditCard },
+  {
+    value: "CREDIT_CARD",
+    hint:
+      COMMERCE.maxInstallments > 1
+        ? `Link de pagamento no WhatsApp · até ${COMMERCE.maxInstallments}x`
+        : "Link de pagamento no WhatsApp",
+    icon: CreditCard,
+  },
 ];
 
 /* ---------- Card de seção numerada ---------- */
@@ -168,8 +173,9 @@ export default function CheckoutPage() {
     }
   }, [hydrated, items.length, router]);
 
-  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
-  const shipping = freeShipping ? 0 : FLAT_SHIPPING;
+  // Mesma regra do servidor (shippingFor em src/lib/constants.ts).
+  const shipping = shippingFor(subtotal);
+  const freeShipping = shipping === 0;
   const total = subtotal + shipping;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -495,7 +501,7 @@ export default function CheckoutPage() {
                     {freeShipping ? (
                       <span className="font-medium text-success">Grátis</span>
                     ) : (
-                      formatBRL(FLAT_SHIPPING)
+                      formatBRL(COMMERCE.flatShipping)
                     )}
                   </dd>
                 </div>
@@ -511,9 +517,11 @@ export default function CheckoutPage() {
                   <span className="font-display text-2xl font-bold text-foreground">
                     {formatBRL(total)}
                   </span>
-                  <p className="font-mono text-[11px] text-muted-foreground">
-                    ou 10x de {installment(total)} sem juros
-                  </p>
+                  {COMMERCE.maxInstallments > 1 && (
+                    <p className="font-mono text-[11px] text-muted-foreground">
+                      ou {COMMERCE.maxInstallments}x de {installment(total)} sem juros
+                    </p>
+                  )}
                 </div>
               </div>
 

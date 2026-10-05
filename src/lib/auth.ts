@@ -16,7 +16,12 @@ const SESSION_DAYS = 7;
 const STAFF_ROLES = new Set(["admin", "gerente", "vendedor", "estoquista", "financeiro"]);
 
 function getSecret(): Uint8Array {
-  const secret = process.env.AUTH_SECRET ?? "fullboost-dev-secret-change-me-in-production";
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) {
+    // Nunca assinar sessão com segredo público fora do dev.
+    if (process.env.NODE_ENV === "production") throw new Error("AUTH_SECRET não configurado.");
+    return new TextEncoder().encode("fullboost-dev-secret-change-me-in-production");
+  }
   return new TextEncoder().encode(secret);
 }
 
@@ -26,6 +31,8 @@ export type SessionUser = {
   email: string;
   role: string; // slug do papel (admin, gerente...)
 };
+
+type SessionToken = SessionUser & { issuedAt: number };
 
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, 10);
@@ -51,7 +58,9 @@ export async function authenticate(email: string, password: string): Promise<Ses
 }
 
 export async function createSession(user: SessionUser): Promise<void> {
-  const token = await new SignJWT({ name: user.name, email: user.email, role: user.role })
+  // `ms`: emissão com precisão de milissegundos (iat do JWT é em segundos) —
+  // compara com passwordChangedAt sem janela de tolerância.
+  const token = await new SignJWT({ name: user.name, email: user.email, role: user.role, ms: Date.now() })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
     .setIssuedAt()
@@ -73,8 +82,8 @@ export async function destroySession(): Promise<void> {
   store.delete(COOKIE_NAME);
 }
 
-/** Sessão atual (ou null). Não consulta o banco — lê o token assinado. */
-export async function getSession(): Promise<SessionUser | null> {
+/** Token da sessão atual (ou null). Não consulta o banco. */
+async function readSessionToken(): Promise<SessionToken | null> {
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -86,10 +95,42 @@ export async function getSession(): Promise<SessionUser | null> {
       name: (payload.name as string) ?? "",
       email: (payload.email as string) ?? "",
       role: (payload.role as string) ?? "",
+      issuedAt: typeof payload.ms === "number" ? payload.ms : (payload.iat ?? 0) * 1000,
     };
   } catch {
     return null;
   }
+}
+
+/** Sessão atual (ou null). Não consulta o banco — lê o token assinado. */
+export async function getSession(): Promise<SessionUser | null> {
+  const token = await readSessionToken();
+  if (!token) return null;
+  return { id: token.id, name: token.name, email: token.email, role: token.role };
+}
+
+/**
+ * Revalida a sessão contra o banco: usuário ativo, papel staff (ou o papel
+ * exigido) e token emitido DEPOIS da última troca de senha (trocar a senha
+ * derruba as sessões abertas em outros aparelhos). Papel vem do banco.
+ */
+async function loadStaff(requiredRole?: string): Promise<SessionUser | null> {
+  const token = await readSessionToken();
+  if (!token) return null;
+  const user = await prisma.user.findUnique({ where: { id: token.id }, include: { role: true } });
+  if (!user || !user.isActive || user.deletedAt || !user.role || !STAFF_ROLES.has(user.role.slug)) {
+    return null;
+  }
+  if (requiredRole && user.role.slug !== requiredRole) return null;
+  if (user.passwordChangedAt && token.issuedAt < user.passwordChangedAt.getTime()) {
+    return null;
+  }
+  return { id: user.id, name: user.name, email: user.email, role: user.role.slug };
+}
+
+/** Para páginas do painel: staff válido no banco ou null (o layout redireciona). */
+export async function getStaffUser(): Promise<SessionUser | null> {
+  return loadStaff();
 }
 
 /**
@@ -97,13 +138,11 @@ export async function getSession(): Promise<SessionUser | null> {
  * (usuário pode ter sido desativado após emitir o token).
  */
 export async function requireStaff(): Promise<SessionUser> {
-  const session = await getSession();
-  if (!session) throw new Error("NOT_AUTHENTICATED");
-  const user = await prisma.user.findUnique({ where: { id: session.id }, include: { role: true } });
-  if (!user || !user.isActive || user.deletedAt || !user.role || !STAFF_ROLES.has(user.role.slug)) {
-    throw new Error("NOT_AUTHORIZED");
-  }
-  return session;
+  const token = await readSessionToken();
+  if (!token) throw new Error("NOT_AUTHENTICATED");
+  const user = await loadStaff();
+  if (!user) throw new Error("NOT_AUTHORIZED");
+  return user;
 }
 
 /**
@@ -112,11 +151,9 @@ export async function requireStaff(): Promise<SessionUser> {
  * Operação diária continua em requireStaff().
  */
 export async function requireRole(roleSlug: string): Promise<SessionUser> {
-  const session = await getSession();
-  if (!session) throw new Error("NOT_AUTHENTICATED");
-  const user = await prisma.user.findUnique({ where: { id: session.id }, include: { role: true } });
-  if (!user || !user.isActive || user.deletedAt || !user.role || user.role.slug !== roleSlug) {
-    throw new Error("NOT_AUTHORIZED");
-  }
-  return session;
+  const token = await readSessionToken();
+  if (!token) throw new Error("NOT_AUTHENTICATED");
+  const user = await loadStaff(roleSlug);
+  if (!user) throw new Error("NOT_AUTHORIZED");
+  return user;
 }

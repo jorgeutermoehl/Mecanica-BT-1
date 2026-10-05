@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShoppingCart, User } from "lucide-react";
+import { Menu, ShoppingCart } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Container } from "@/components/shared/container";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -50,12 +50,6 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-            <Link href="/login">
-              <User className="size-4" />
-              Entrar
-            </Link>
-          </Button>
           <Button asChild variant="ghost" size="icon">
             <Link
               href="/carrinho"
@@ -104,12 +98,6 @@ export function SiteHeader() {
                     {item.label}
                   </Link>
                 ))}
-                <Link
-                  href="/login"
-                  className="mt-2 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  Entrar / Minha conta
-                </Link>
               </nav>
             </SheetContent>
           </Sheet>

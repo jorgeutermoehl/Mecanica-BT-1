@@ -6,8 +6,10 @@ E-commerce de peças de performance **+ painel de gestão** (produtos, estoque r
 Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Prisma · **SQLite em dev/demo** (alvo de produção: PostgreSQL/Supabase — schema usa String no lugar de enums por compatibilidade SQLite; valores validados por Zod em `src/lib/validations.ts`) · Auth de sessão própria (JWT httpOnly + bcrypt, `src/lib/auth.ts`) · Zod · Playwright. Gerenciador: **npm**.
 
 ## Banco / demo
-- `npx prisma migrate dev` + `npm run db:seed` criam tudo (arquivo `prisma/dev.db`, gitignored).
-- Painel: `/admin/login` → `admin@fullboost.com.br` / `fullboost123` (seed).
+- `npx prisma migrate dev` + `npm run db:seed` criam tudo (arquivo `prisma/dev.db`, gitignored; `DATABASE_URL="file:./dev.db?connection_limit=1"`). O seed **apaga o banco** e só roda em SQLite local (ou com `SEED_ALLOW_WIPE=1`).
+- Painel: `/admin/login` → `admin@fullboost.com.br` / `fullboost123` (seed de demo; a tela NÃO exibe credenciais). Usuários e troca de senha: `/admin/usuarios` (admin) e `/admin/conta`.
+- **Produção = Postgres/Supabase** via `prisma/postgres/schema.prisma`, GERADO de `prisma/schema.prisma` (`npm run db:pg:schema`; nunca editar à mão) com migrations próprias em `prisma/postgres/migrations`. Deploy e 1º admin: [`docs/DEPLOY.md`](docs/DEPLOY.md) (`npm run db:bootstrap`). SQL cru: identificadores sempre entre aspas (`"Product"."stockQuantity"`) para valer nos dois bancos.
+- **Configuração da loja por env** (`src/lib/constants.ts`): contatos/identificação do vendedor opcionais (vazio = some do site, nunca placeholder); regras comerciais em `COMMERCE` (frete grátis, frete fixo, parcelas) — texto do site e cálculo do servidor usam a MESMA fonte. `src/lib/env.ts` derruba o boot de produção com config de exemplo.
 - Imagens de produto: upload pelo painel (cadastro e galeria) → `MediaFile` + `ProductImage`, arquivos em `uploads/` (gitignored). Formato e regras: [`docs/IMAGENS-PRODUTO.md`](docs/IMAGENS-PRODUTO.md). O seed usa fotos dos anúncios em `public/produtos/`.
 - **Sem catálogo de veículos** (removido): loja de peças de tuning; aplicação da peça é texto livre em `Product.fitment`.
 - **Venda pelo WhatsApp (fase atual):** checkout cria o pedido como `AWAITING_PAYMENT` com estoque reservado (72h); o cliente finaliza Pix/cartão (link da maquininha) no WhatsApp e a loja marca **Pago** no painel, o que converte a reserva em `SALE`. Nenhum método aprova sozinho até o gateway entrar.
@@ -30,6 +32,11 @@ Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Prisma 
 - Venda exige estoque (validação dentro da transação); preços SEMPRE recalculados no servidor no checkout.
 - Cancelamento/devolução repõe estoque via movimento `CUSTOMER_RETURN` + estorno no caixa.
 - **Soft-delete** (status `INACTIVE`/`deletedAt`), nunca exclusão física. Estoque ≤ mínimo → alerta no dashboard.
+
+## Testes
+- `npm run test:rules` — regras de negócio direto nos serviços (estoque, cupons, pedidos simultâneos, reserva vencida).
+- `npm run test:e2e` — Playwright: cadastro com fotos → venda → painel; contato; usuários/senha. Exige `npm run build` + banco recém-seedado.
+- CI (`.github/workflows/ci.yml`) roda tudo contra Postgres 16.
 
 ## Comandos
 ```bash

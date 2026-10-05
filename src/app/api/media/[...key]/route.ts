@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getStaffUser } from "@/lib/auth";
 import { getStorageDriver } from "@/server/storage";
 
 /**
@@ -43,7 +43,7 @@ export async function GET(
   if (!media) return new NextResponse("Not found", { status: 404 });
 
   if (media.kind === "ATTACHMENT") {
-    const session = await getSession();
+    const session = await getStaffUser();
     if (!session) return new NextResponse("Not found", { status: 404 });
   }
 

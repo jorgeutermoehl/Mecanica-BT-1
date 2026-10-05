@@ -33,7 +33,7 @@ import {
 import { getStoreProduct, getRelatedProducts } from "@/server/catalog";
 import type { StoreProduct } from "@/types/store";
 import { formatBRL, installment, discountPercent } from "@/lib/format";
-import { whatsappLink } from "@/lib/constants";
+import { whatsappLink, COMMERCE } from "@/lib/constants";
 
 // PDP servida pelo cache com tag "catalog" (revalidateTag no painel).
 
@@ -58,7 +58,15 @@ export async function generateMetadata({
     title: product.name,
     description: `${product.name} da ${product.brand ?? product.category} — ${formatBRL(
       current,
-    )}. ${product.category} de performance com garantia e nota fiscal. Compre na FullBoost Race Parts.`,
+    )}. ${product.category} de performance para rua e pista. Compre na FullBoost Race Parts.`,
+    alternates: { canonical: `/produtos/${product.slug}` },
+    // Preview bonito ao colar o link no WhatsApp/Instagram.
+    openGraph: {
+      type: "website",
+      title: product.name,
+      description: product.fitment ?? product.category,
+      ...(product.image ? { images: [{ url: product.image, alt: product.name }] } : {}),
+    },
   };
 }
 
@@ -124,7 +132,8 @@ export default async function ProductPage({
   const lowStock = product.stock > 0 && product.stock <= 5;
   const brandLabel = product.brand ?? product.category;
   const warrantyLabel =
-    product.warranty ?? "12 meses contra defeitos de fabricação";
+    product.warranty ??
+    "Garantia legal de 90 dias (Código de Defesa do Consumidor)";
 
   const description = buildDescription(product);
   const specLines = parseTechnicalSpecs(product.technicalSpecs);
@@ -138,7 +147,6 @@ export default async function ProductPage({
     ...(specLines ?? []),
     { label: "Aplicação", value: product.fitment ?? "Multiaplicação" },
     { label: "Garantia", value: warrantyLabel },
-    { label: "Procedência", value: "Produto original com nota fiscal" },
   ];
 
   const related = await getRelatedProducts(product);
@@ -149,16 +157,16 @@ export default async function ProductPage({
       a: "Sim. Relação de coroa e pinhão, medida de virabrequim e configuração da gaiola dependem do seu projeto (rua, arrancada ou pista). Manda o carro, o motor e o objetivo no WhatsApp que o nosso time indica a peça certa antes de você fechar o pedido.",
     },
     {
-      q: "A compra tem nota fiscal e garantia?",
-      a: "Sim. Toda peça é original, sai com nota fiscal e conta com 12 meses de garantia contra defeitos de fabricação. Guarde a nota para acionar a garantia quando necessário.",
+      q: "Como funciona a garantia?",
+      a: `Esta peça tem: ${warrantyLabel}. Guarde o comprovante do pedido e, se precisar acionar, fale com o nosso time no WhatsApp com o número do pedido.`,
     },
     {
       q: "Qual é o prazo de entrega e como funciona o frete?",
-      a: "Despachamos em até 24h após a confirmação do pagamento, com frete rastreável para todo o Brasil. O prazo final e o valor variam conforme o CEP e aparecem no checkout antes de você fechar o pedido.",
+      a: "Depois que o pagamento é confirmado no WhatsApp, combinamos o envio com frete rastreável para todo o Brasil e enviamos o código de rastreio. O valor estimado aparece no checkout e é confirmado no atendimento conforme o CEP.",
     },
     {
       q: "Como confirmo se é compatível com o meu carro?",
-      a: "Confira a lista de compatibilidade nesta página e, na dúvida, chame o nosso time no WhatsApp com o modelo, ano e motorização do seu carro. Confirmamos o encaixe antes de você comprar.",
+      a: "Veja a aplicação indicada nesta página e, na dúvida, chame o nosso time no WhatsApp com o modelo, ano e motorização do seu carro. Confirmamos o encaixe antes de você comprar.",
     },
   ];
 
@@ -284,7 +292,8 @@ export default async function ProductPage({
                   {product.sold > 0 && (
                     <span className="inline-flex items-center gap-1 tabular-nums">
                       <BadgeCheck className="size-4 text-success" />
-                      {product.sold} {product.sold === 1 ? "vendido" : "vendidos"}
+                      {product.sold}{" "}
+                      {product.sold === 1 ? "vendido" : "vendidos"}
                     </span>
                   )}
                   {product.originalCode && (
@@ -311,9 +320,12 @@ export default async function ProductPage({
                     no PIX
                   </span>
                 </p>
-                <p className="mt-1 font-mono text-sm text-muted-foreground tabular-nums">
-                  ou 10x de {installment(current)} sem juros no cartão
-                </p>
+                {COMMERCE.maxInstallments > 1 && (
+                  <p className="mt-1 font-mono text-sm text-muted-foreground tabular-nums">
+                    ou {COMMERCE.maxInstallments}x de {installment(current)} sem
+                    juros no cartão
+                  </p>
+                )}
 
                 {/* Estoque real (texto + cor) */}
                 <p className="mt-3 flex items-center gap-2 font-mono text-xs font-medium uppercase tracking-wide">
@@ -363,20 +375,26 @@ export default async function ProductPage({
 
               {/* Linha de confiança */}
               <ul className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4 text-xs text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <Truck aria-hidden className="size-4 shrink-0 text-success" />
-                  Frete grátis acima de R$ 599
-                </li>
+                {COMMERCE.freeShippingFrom > 0 && (
+                  <li className="flex items-center gap-2">
+                    <Truck
+                      aria-hidden
+                      className="size-4 shrink-0 text-success"
+                    />
+                    Frete grátis acima de {formatBRL(COMMERCE.freeShippingFrom)}
+                  </li>
+                )}
                 <li className="flex items-center gap-2">
                   <ShieldCheck
                     aria-hidden
                     className="size-4 shrink-0 text-success"
                   />
-                  Garantia e nota fiscal
+                  Garantia:{" "}
+                  {product.warranty ? "ver ficha técnica" : "legal de 90 dias"}
                 </li>
                 <li className="flex items-center gap-2">
                   <Lock aria-hidden className="size-4 shrink-0 text-success" />
-                  Compra segura
+                  Peças reservadas por 72h no pedido
                 </li>
               </ul>
 
@@ -455,8 +473,8 @@ export default async function ProductPage({
                   </span>
                 </p>
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Peça de tuning: a aplicação depende do projeto. Confirme
-                  com o nosso time no WhatsApp antes de comprar.
+                  Peça de tuning: a aplicação depende do projeto. Confirme com o
+                  nosso time no WhatsApp antes de comprar.
                 </p>
                 <Button asChild variant="outline" size="sm" className="mt-3">
                   <a
@@ -501,7 +519,7 @@ export default async function ProductPage({
                       aria-hidden
                       className="size-4 shrink-0 text-success"
                     />
-                    Peça original com nota fiscal
+                    Aplicação confirmada pelo WhatsApp antes da compra
                   </li>
                   <li className="flex items-center gap-3">
                     <ShieldCheck

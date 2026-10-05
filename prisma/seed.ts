@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { CATEGORIES, PERMISSIONS, ROLES } from "./base-data";
 
 const prisma = new PrismaClient();
 
@@ -13,54 +14,25 @@ const prisma = new PrismaClient();
  * Cronologia coerente: abertura de estoque ANTES da venda.
  */
 
-const ADMIN_EMAIL = "admin@fullboost.com.br";
-const ADMIN_PASSWORD = "fullboost123";
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@fullboost.com.br";
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "fullboost123";
+
+// O seed APAGA o banco inteiro antes de popular. Nunca em produção: lá se usa
+// `npm run db:bootstrap` (prisma/bootstrap.ts), que só cria o que falta.
+const isLocalSqlite = (process.env.DATABASE_URL ?? "").startsWith("file:");
+if ((process.env.NODE_ENV === "production" || !isLocalSqlite) && process.env.SEED_ALLOW_WIPE !== "1") {
+  console.error(
+    "⛔ Seed de demonstração bloqueado: ele apaga TODOS os dados.\n" +
+      "   Em produção use `npm run db:bootstrap`. Para um banco de teste descartável,\n" +
+      "   rode com SEED_ALLOW_WIPE=1.",
+  );
+  process.exit(1);
+}
 
 const daysAgo = (n: number, hourOffset = 0) =>
   new Date(Date.now() - n * 86_400_000 + hourOffset * 3_600_000);
 
-const PERMISSIONS = [
-  { key: "dashboard.view", description: "Ver dashboard" },
-  { key: "products.manage", description: "Gerenciar produtos" },
-  { key: "inventory.manage", description: "Movimentar estoque" },
-  { key: "orders.manage", description: "Gerenciar pedidos" },
-  { key: "customers.manage", description: "Gerenciar clientes" },
-  { key: "suppliers.manage", description: "Gerenciar fornecedores" },
-  { key: "promotions.manage", description: "Gerenciar promoções e cupons" },
-  { key: "finance.manage", description: "Gerenciar financeiro e DRE" },
-  { key: "reports.view", description: "Ver relatórios" },
-  { key: "users.manage", description: "Gerenciar usuários" },
-  { key: "audit.view", description: "Ver auditoria" },
-];
 
-const ROLES = [
-  { name: "Administrador", slug: "admin", description: "Acesso total", perms: PERMISSIONS.map((p) => p.key) },
-  { name: "Gerente", slug: "gerente", description: "Estoque, vendas e financeiro", perms: ["dashboard.view", "products.manage", "inventory.manage", "orders.manage", "customers.manage", "suppliers.manage", "promotions.manage", "finance.manage", "reports.view"] },
-  { name: "Vendedor", slug: "vendedor", description: "Pedidos, clientes e produtos", perms: ["dashboard.view", "orders.manage", "customers.manage"] },
-  { name: "Estoquista", slug: "estoquista", description: "Entradas, saídas e inventário", perms: ["dashboard.view", "inventory.manage"] },
-  { name: "Financeiro", slug: "financeiro", description: "Contas, caixa e DRE", perms: ["dashboard.view", "finance.manage", "reports.view"] },
-  { name: "Cliente", slug: "cliente", description: "Área de compra", perms: [] as string[] },
-];
-
-/**
- * Categorias estruturais. A loja só EXIBE as que têm produto publicado
- * (getStoreCategories) — as linhas que ainda não anunciamos ficam cadastradas
- * e "desbloqueiam" sozinhas no 1º anúncio. Foco atual: transmissão, motor, gaiolas.
- */
-const CATEGORIES = [
-  { name: "Transmissão", slug: "transmissao", icon: "transmissao", featured: true, position: 0, description: "Coroa e pinhão, relações curtas e longas e componentes de câmbio para rua, arrancada e pista." },
-  { name: "Motor", slug: "motor", icon: "motor", featured: false, position: 1, description: "Virabrequins, internos e componentes de motor — da linha a ar ao AP." },
-  { name: "Gaiolas & Segurança", slug: "gaiolas", icon: "gaiolas", featured: false, position: 2, description: "Gaiolas de proteção (rollcage) sob medida para carros de rua ou pista, com ou sem bancos traseiros." },
-  // Linhas ainda não anunciadas — ocultas na loja até o primeiro produto.
-  { name: "Turbo & Boost", slug: "turbo", icon: "turbo", featured: false, position: 10, description: "Turbinas, wastegates, intercoolers e tudo para pressão de verdade." },
-  { name: "Escape", slug: "escape", icon: "escape", featured: false, position: 11, description: "Sistemas cat-back, downpipes e ponteiras em inox." },
-  { name: "Freios", slug: "freios", icon: "freios", featured: false, position: 12, description: "Kits big brake, discos e pastilhas de alta performance." },
-  { name: "Suspensão", slug: "suspensao", icon: "suspensao", featured: false, position: 13, description: "Coilovers, amortecedores e acerto de altura com segurança." },
-  { name: "Rodas", slug: "rodas", icon: "rodas", featured: false, position: 14, description: "Rodas esportivas, forjadas e réplicas nos principais furações e aros." },
-  { name: "Admissão & Filtros", slug: "filtros", icon: "filtros", featured: false, position: 15, description: "Filtros esportivos e kits de admissão para respirar melhor." },
-  { name: "Elétrica & Ignição", slug: "eletrica", icon: "eletrica", featured: false, position: 16, description: "Velas, bobinas e baterias para ignição sem falhas." },
-  { name: "Óleos & Fluidos", slug: "oleos", icon: "oleos", featured: false, position: 17, description: "Lubrificantes sintéticos e fluidos racing." },
-];
 
 /**
  * Produtos já anunciados nas redes da loja (preços/custos de exemplo —
@@ -142,11 +114,16 @@ const PRODUCTS: {
 
 async function wipe() {
   await prisma.auditLog.deleteMany();
+  await prisma.webhookEvent.deleteMany();
+  await prisma.stockReservation.deleteMany();
+  await prisma.productSalesDaily.deleteMany();
+  await prisma.counter.deleteMany();
   await prisma.cookieConsent.deleteMany();
   await prisma.contactMessage.deleteMany();
   await prisma.couponRedemption.deleteMany();
   await prisma.orderStatusHistory.deleteMany();
   await prisma.payment.deleteMany();
+  await prisma.paymentTransaction.deleteMany();
   await prisma.accountReceivable.deleteMany();
   await prisma.accountPayable.deleteMany();
   await prisma.cashFlowEntry.deleteMany();
@@ -166,6 +143,7 @@ async function wipe() {
   await prisma.manufacturer.deleteMany();
   await prisma.brand.deleteMany();
   await prisma.category.deleteMany();
+  await prisma.mediaFile.deleteMany();
   await prisma.user.deleteMany();
   await prisma.permission.deleteMany();
   await prisma.role.deleteMany();

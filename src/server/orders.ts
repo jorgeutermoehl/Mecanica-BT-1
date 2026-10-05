@@ -1,11 +1,14 @@
 import { randomUUID } from "crypto";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { CheckoutInput, ManualSaleInput, OrderStatus, SaleChannel } from "@/lib/validations";
 import { logAudit } from "@/server/audit";
 import { recalcCustomerStats, resolveCustomer, upsertCustomerAddress } from "@/server/customers";
 import { dateKey, recomputeSalesDaily } from "@/server/reports/aggregation";
+import { sendOrderReceivedEmails } from "@/server/email";
+import { shippingFor } from "@/lib/constants";
 
-/** Janela da reserva de estoque para pedidos aguardando pagamento (boleto demo). */
+/** Janela da reserva de estoque para pedidos aguardando pagamento (venda pelo WhatsApp). */
 const RESERVATION_HOURS = 72;
 
 /**
@@ -16,12 +19,34 @@ const RESERVATION_HOURS = 72;
  *  - preços SEMPRE recalculados no servidor (nunca confiar no client).
  */
 
-export const FREE_SHIPPING_THRESHOLD = 599;
-export const FLAT_SHIPPING = 34.9;
 
-function shippingFor(subtotal: number): number {
-  return subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING;
+/**
+ * Próximo número de pedido (PED-0001…) por contador atômico. O UPDATE com
+ * incremento trava a linha até o commit: checkouts simultâneos no Postgres
+ * recebem números distintos (antes: count()+1 colidia). A primeira chamada
+ * semeia o contador a partir do maior número já emitido.
+ */
+async function nextOrderNumber(tx: Prisma.TransactionClient): Promise<string> {
+  const existing = await tx.counter.findUnique({ where: { key: "order" } });
+  if (!existing) {
+    const orders = await tx.order.findMany({ select: { number: true } });
+    const max = orders.reduce((m, o) => Math.max(m, Number(o.number.replace(/\D/g, "")) || 0), 0);
+    // ON CONFLICT DO NOTHING: dois primeiros checkouts simultâneos não colidem
+    // (SQL válido no SQLite e no Postgres).
+    await tx.$executeRaw`INSERT INTO "Counter" ("key", "value") VALUES ('order', ${max}) ON CONFLICT ("key") DO NOTHING`;
+  }
+  const counter = await tx.counter.update({
+    where: { key: "order" },
+    data: { value: { increment: 1 } },
+  });
+  return `PED-${String(counter.value).padStart(4, "0")}`;
 }
+
+/**
+ * Checkouts simultâneos esperam na fila em vez de falhar: o lock de linha do
+ * contador (Postgres) e o escritor único (SQLite) serializam as transações.
+ */
+const CHECKOUT_TX = { maxWait: 10_000, timeout: 20_000 };
 
 /** Finaliza a compra da loja. Retorna o número do pedido criado. */
 export async function placeOrder(input: CheckoutInput) {
@@ -29,7 +54,12 @@ export async function placeOrder(input: CheckoutInput) {
   const externalReference = input.externalReference?.trim() || randomUUID();
   const existing = await prisma.order.findUnique({ where: { externalReference } });
   if (existing) {
-    return { orderNumber: existing.number, total: Number(existing.total), status: existing.status as OrderStatus };
+    return {
+      orderNumber: existing.number,
+      total: Number(existing.total),
+      status: existing.status as OrderStatus,
+      created: false,
+    };
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -127,8 +157,7 @@ export async function placeOrder(input: CheckoutInput) {
     //    Quando o gateway entrar, a aprovação vem do webhook (src/server/payments.ts).
     const isPaid = false;
     const orderStatus: OrderStatus = isPaid ? "PAID" : "AWAITING_PAYMENT";
-    const count = await tx.order.count();
-    const number = `PED-${String(count + 1).padStart(4, "0")}`;
+    const number = await nextOrderNumber(tx);
     const now = new Date();
 
     const order = await tx.order.create({
@@ -277,12 +306,26 @@ export async function placeOrder(input: CheckoutInput) {
       description: `Pedido ${number} criado pela loja (${lines.length} itens, total R$ ${total.toFixed(2)})`,
     });
 
-    return { orderNumber: number, total, status: orderStatus };
-  });
+    return { orderNumber: number, total, status: orderStatus, created: true };
+  }, CHECKOUT_TX);
 
   // Pós-commit (fora da transação crítica): snapshot diário idempotente.
   await recomputeSalesDaily(dateKey(new Date()));
   return result;
+}
+
+/** Dispara os e-mails de "pedido recebido" (cliente + loja). */
+export async function emailOrderReceived(orderNumber: string): Promise<void> {
+  const order = await prisma.order.findUnique({ where: { number: orderNumber }, include: { items: true } });
+  if (!order) return;
+  await sendOrderReceivedEmails({
+    number: order.number,
+    customerName: order.customerName,
+    customerEmail: order.customerEmail,
+    customerPhone: order.customerPhone,
+    total: Number(order.total),
+    items: order.items.map((i) => ({ name: i.productName, quantity: i.quantity, total: Number(i.total) })),
+  });
 }
 
 /**
@@ -322,8 +365,7 @@ export async function registerManualSale(input: ManualSaleInput, userId: string)
       customer = await tx.customer.findUniqueOrThrow({ where: { id: resolved.id } });
     }
 
-    const count = await tx.order.count();
-    const number = `PED-${String(count + 1).padStart(4, "0")}`;
+    const number = await nextOrderNumber(tx);
 
     const order = await tx.order.create({
       data: {
@@ -596,11 +638,14 @@ export async function updateOrderStatus(id: string, next: OrderStatus, userId: s
       const now = new Date();
 
       // Consome as reservas e SÓ ENTÃO gera os movimentos SALE (append-only).
+      // Reserva EXPIRADA também conta: na venda pelo WhatsApp o cliente pode
+      // pagar depois das 72h — o pedido nunca baixou estoque e precisa baixar
+      // agora (o saldo físico é revalidado logo abaixo).
       const reservations = await tx.stockReservation.findMany({
-        where: { orderId: order.id, status: "ACTIVE" },
+        where: { orderId: order.id, status: { in: ["ACTIVE", "EXPIRED"] } },
       });
       await tx.stockReservation.updateMany({
-        where: { orderId: order.id, status: "ACTIVE" },
+        where: { orderId: order.id, status: { in: ["ACTIVE", "EXPIRED"] } },
         data: { status: "CONSUMED" },
       });
       for (const item of order.items) {

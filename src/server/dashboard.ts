@@ -21,9 +21,10 @@ export async function getDashboardData() {
       }),
       prisma.order.count({ where: { status: { in: ["AWAITING_PAYMENT", "PAID", "SEPARATING"] } } }),
       prisma.$queryRawUnsafe<{ id: string; name: string; sku: string; stockQuantity: number; minStock: number }[]>(
-        `SELECT id, name, sku, stockQuantity, minStock FROM Product
-         WHERE deletedAt IS NULL AND status != 'INACTIVE' AND stockQuantity <= minStock
-         ORDER BY (stockQuantity - minStock) ASC LIMIT 8`,
+        // Identificadores entre aspas: válidos no SQLite E no Postgres (camelCase).
+        `SELECT "id", "name", "sku", "stockQuantity", "minStock" FROM "Product"
+         WHERE "deletedAt" IS NULL AND "status" != 'INACTIVE' AND "stockQuantity" <= "minStock"
+         ORDER BY ("stockQuantity" - "minStock") ASC LIMIT 8`,
       ),
       prisma.order.findMany({
         orderBy: { createdAt: "desc" },

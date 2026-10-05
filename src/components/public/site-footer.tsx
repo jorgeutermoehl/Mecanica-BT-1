@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Container } from "@/components/shared/container";
-import { SITE, whatsappLink } from "@/lib/constants";
+import { COMMERCE, SITE, whatsappLink } from "@/lib/constants";
 import { PaymentMethods } from "@/components/public/metodos-pagamento";
 import { getStoreCategories } from "@/server/catalog";
 
@@ -47,11 +47,15 @@ function YoutubeIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+// Só redes configuradas (Facebook/YouTube opcionais via env).
 const SOCIAL = [
   { icon: InstagramIcon, href: SITE.social.instagram, label: "Instagram" },
   { icon: FacebookIcon, href: SITE.social.facebook, label: "Facebook" },
   { icon: YoutubeIcon, href: SITE.social.youtube, label: "YouTube" },
-];
+].filter(
+  (s): s is { icon: typeof InstagramIcon; href: string; label: string } =>
+    Boolean(s.href),
+);
 
 const INSTITUTIONAL = [
   { label: "Produtos", href: "/produtos" },
@@ -164,30 +168,38 @@ export async function SiteFooter() {
                   className="flex items-center gap-2 transition-colors hover:text-foreground"
                 >
                   <InstagramIcon className="size-4 shrink-0" aria-hidden />
-                  @fullboostraceparts
+                  {SITE.social.instagramHandle}
                 </a>
               </li>
-              <li className="flex items-center gap-2">
-                <Phone className="size-4 shrink-0" aria-hidden />
-                {SITE.phone}
-              </li>
-              <li>
-                <a
-                  href={`mailto:${SITE.email}`}
-                  className="flex items-center gap-2 transition-colors hover:text-foreground"
-                >
-                  <Mail className="size-4 shrink-0" aria-hidden />
-                  {SITE.email}
-                </a>
-              </li>
-              <li className="flex items-start gap-2">
-                <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-                {SITE.address}
-              </li>
-              <li className="flex items-start gap-2">
-                <Clock className="mt-0.5 size-4 shrink-0" aria-hidden />
-                {SITE.hours}
-              </li>
+              {SITE.phone && (
+                <li className="flex items-center gap-2">
+                  <Phone className="size-4 shrink-0" aria-hidden />
+                  {SITE.phone}
+                </li>
+              )}
+              {SITE.email && (
+                <li>
+                  <a
+                    href={`mailto:${SITE.email}`}
+                    className="flex items-center gap-2 transition-colors hover:text-foreground"
+                  >
+                    <Mail className="size-4 shrink-0" aria-hidden />
+                    {SITE.email}
+                  </a>
+                </li>
+              )}
+              {SITE.address && (
+                <li className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  {SITE.address}
+                </li>
+              )}
+              {SITE.hours && (
+                <li className="flex items-start gap-2">
+                  <Clock className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  {SITE.hours}
+                </li>
+              )}
             </ul>
           </div>
 
@@ -196,16 +208,18 @@ export async function SiteFooter() {
             <ColumnTitle>Pagamento</ColumnTitle>
             <PaymentMethods />
             <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2">
-                <CreditCard className="size-4 shrink-0" aria-hidden />
-                Até 10x sem juros
-              </li>
+              {COMMERCE.maxInstallments > 1 && (
+                <li className="flex items-center gap-2">
+                  <CreditCard className="size-4 shrink-0" aria-hidden />
+                  Até {COMMERCE.maxInstallments}x sem juros
+                </li>
+              )}
               <li className="flex items-center gap-2">
                 <ShieldCheck
                   className="size-4 shrink-0 text-success"
                   aria-hidden
                 />
-                Compra 100% segura
+                Conexão segura (HTTPS)
               </li>
             </ul>
           </div>
@@ -217,7 +231,12 @@ export async function SiteFooter() {
             © {new Date().getFullYear()} {SITE.name} · Todos os direitos
             reservados
           </p>
-          <p className="font-mono tabular-nums">CNPJ 00.000.000/0001-00</p>
+          {SITE.legalName && (
+            <p className="font-mono tabular-nums">
+              {SITE.legalName}
+              {SITE.legalDocument && ` · ${SITE.legalDocument}`}
+            </p>
+          )}
         </div>
       </Container>
     </footer>

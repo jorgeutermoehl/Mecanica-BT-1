@@ -25,28 +25,68 @@ type CartContextValue = {
 
 const CartContext = React.createContext<CartContextValue | null>(null);
 
+/*
+ * Store externo (localStorage) lido via useSyncExternalStore: sem setState em
+ * effect, sem mismatch de hidratação (servidor sempre vê carrinho vazio) e
+ * sincronizado entre abas pelo evento "storage".
+ */
+const EMPTY: CartItem[] = [];
+const listeners = new Set<() => void>();
+let cache: { raw: string | null; items: CartItem[] } = { raw: null, items: EMPTY };
+
+function readItems(): CartItem[] {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return cache.items; // storage indisponível — segue em memória
+  }
+  if (raw === cache.raw) return cache.items;
+  let items: CartItem[] = EMPTY;
+  try {
+    items = raw ? (JSON.parse(raw) as CartItem[]) : EMPTY;
+  } catch {
+    items = EMPTY; // storage corrompido → começa vazio
+  }
+  cache = { raw, items };
+  return items;
+}
+
+function writeItems(items: CartItem[]) {
+  const raw = JSON.stringify(items);
+  cache = { raw, items };
+  try {
+    localStorage.setItem(STORAGE_KEY, raw);
+  } catch {
+    // storage cheio/indisponível — carrinho segue em memória
+  }
+  listeners.forEach((l) => l());
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY) listener();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+const noopSubscribe = () => () => {};
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = React.useState<CartItem[]>([]);
-  const [hydrated, setHydrated] = React.useState(false);
+  const items = React.useSyncExternalStore(subscribe, readItems, () => EMPTY);
+  // true só no client após hidratar (servidor/hidratação = false).
+  const hydrated = React.useSyncExternalStore(noopSubscribe, () => true, () => false);
 
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw) as CartItem[]);
-    } catch {
-      // storage corrompido → começa vazio
-    }
-    setHydrated(true);
+  const setItems = React.useCallback((update: (prev: CartItem[]) => CartItem[]) => {
+    const prev = readItems();
+    const next = update(prev);
+    if (next !== prev) writeItems(next);
   }, []);
-
-  React.useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // storage cheio/indisponível — carrinho segue em memória
-    }
-  }, [items, hydrated]);
 
   const addProduct = React.useCallback((product: StoreProduct, quantity = 1) => {
     if (product.stock <= 0) {
@@ -81,7 +121,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         },
       ];
     });
-  }, []);
+  }, [setItems]);
 
   const updateQuantity = React.useCallback((productId: string, quantity: number) => {
     setItems((prev) =>
@@ -91,13 +131,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         )
         .filter((i) => i.quantity > 0),
     );
-  }, []);
+  }, [setItems]);
 
   const removeItem = React.useCallback((productId: string) => {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
-  }, []);
+  }, [setItems]);
 
-  const clear = React.useCallback(() => setItems([]), []);
+  const clear = React.useCallback(() => setItems(() => EMPTY), [setItems]);
 
   const value = React.useMemo<CartContextValue>(() => {
     const count = items.reduce((s, i) => s + i.quantity, 0);

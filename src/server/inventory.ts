@@ -9,14 +9,6 @@ import { logAudit } from "@/server/audit";
  *  - entrada recalcula custo médio ponderado do produto.
  */
 
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-}
 
 /** Status derivado do saldo (não sobrescreve INACTIVE). */
 function statusForStock(currentStatus: string, stock: number, hasPromo: boolean): string {

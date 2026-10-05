@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Container } from "@/components/shared/container";
 import { Button } from "@/components/ui/button";
-import { SITE } from "@/lib/constants";
+import { SITE, whatsappLink } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
@@ -22,8 +22,12 @@ export const metadata: Metadata = {
     "Como a FullBoost Race Parts coleta, usa, protege e compartilha seus dados pessoais, em conformidade com a LGPD (Lei nº 13.709/2018).",
 };
 
-const LAST_UPDATE = "9 de julho de 2026";
-const DPO_EMAIL = "privacidade@fullboostraceparts.com.br";
+const LAST_UPDATE = "5 de outubro de 2026";
+/** E-mail do encarregado (LGPD) — cai para o e-mail de contato; sem nenhum, só WhatsApp. */
+const DPO_EMAIL = process.env.NEXT_PUBLIC_PRIVACY_EMAIL?.trim() || SITE.email;
+const DPO_WHATSAPP = whatsappLink(
+  "Olá! Tenho uma solicitação sobre os meus dados pessoais (LGPD).",
+);
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
@@ -90,10 +94,10 @@ export default function PrivacidadePage() {
             </h1>
             <p className="mt-5 text-pretty text-lg text-muted-foreground">
               Na FullBoost Race Parts levamos a proteção dos seus dados tão a
-              sério quanto a procedência das nossas peças. Este documento explica
-              o que coletamos, por que coletamos e como você mantém o controle,
-              em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº
-              13.709/2018).
+              sério quanto a procedência das nossas peças. Este documento
+              explica o que coletamos, por que coletamos e como você mantém o
+              controle, em conformidade com a Lei Geral de Proteção de Dados
+              (LGPD — Lei nº 13.709/2018).
             </p>
             <p className="mt-6 font-mono text-xs uppercase tracking-wide text-muted-foreground">
               Última atualização: {LAST_UPDATE}
@@ -107,10 +111,7 @@ export default function PrivacidadePage() {
         <Container>
           <div className="grid gap-12 lg:grid-cols-[220px_1fr] lg:gap-16">
             {/* Índice lateral */}
-            <nav
-              aria-label="Nesta página"
-              className="hidden lg:block"
-            >
+            <nav aria-label="Nesta página" className="hidden lg:block">
               <div className="sticky top-24">
                 <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                   Nesta página
@@ -144,9 +145,9 @@ export default function PrivacidadePage() {
                     {SITE.name}
                   </strong>{" "}
                   trata os dados pessoais de clientes, visitantes e demais
-                  usuários da loja online e dos canais de atendimento. Ao navegar
-                  no site, criar uma conta ou finalizar uma compra, você declara
-                  estar ciente das práticas aqui descritas.
+                  usuários da loja online e dos canais de atendimento. Ao
+                  navegar no site, enviar uma mensagem ou finalizar um pedido,
+                  você declara estar ciente das práticas aqui descritas.
                 </p>
                 <p>
                   Atuamos como{" "}
@@ -155,9 +156,9 @@ export default function PrivacidadePage() {
                   </strong>{" "}
                   dos seus dados, ou seja, somos responsáveis pelas decisões
                   sobre o tratamento das informações coletadas. Tratamos apenas
-                  os dados necessários para vender peças de performance, entregar
-                  seu pedido e oferecer suporte técnico — sempre com base legal
-                  adequada e pelo tempo estritamente necessário.
+                  os dados necessários para vender peças de performance,
+                  entregar seu pedido e oferecer suporte técnico — sempre com
+                  base legal adequada e pelo tempo estritamente necessário.
                 </p>
               </div>
 
@@ -174,15 +175,15 @@ export default function PrivacidadePage() {
                   {[
                     {
                       t: "Dados cadastrais",
-                      d: "Nome completo, CPF ou CNPJ, e-mail, telefone e data de nascimento — informados na criação da conta e no checkout.",
+                      d: "Nome, e-mail, telefone/WhatsApp e, opcionalmente, CPF ou CNPJ — informados no pedido ou no formulário de contato.",
                     },
                     {
-                      t: "Dados de entrega e cobrança",
-                      d: "CEP, endereço completo e dados fiscais necessários para emitir a nota e despachar o pedido para todo o Brasil.",
+                      t: "Dados de entrega",
+                      d: "CEP e endereço completo, necessários para calcular o frete e despachar o pedido para todo o Brasil.",
                     },
                     {
                       t: "Dados de pagamento",
-                      d: "Processados por gateways certificados (PCI-DSS). Não armazenamos o número completo do cartão em nossos servidores.",
+                      d: "O pagamento é feito por Pix ou link de pagamento da operadora de cartão. Não recebemos nem armazenamos dados de cartão no site.",
                     },
                     {
                       t: "Dados do veículo e do pedido",
@@ -209,9 +210,9 @@ export default function PrivacidadePage() {
                 </ul>
                 <p>
                   Não coletamos intencionalmente dados de crianças e
-                  adolescentes, nem dados pessoais sensíveis (como origem racial,
-                  convicção religiosa ou dados de saúde), pois não são necessários
-                  para a venda de peças automotivas.
+                  adolescentes, nem dados pessoais sensíveis (como origem
+                  racial, convicção religiosa ou dados de saúde), pois não são
+                  necessários para a venda de peças automotivas.
                 </p>
               </div>
 
@@ -228,7 +229,7 @@ export default function PrivacidadePage() {
                   {[
                     {
                       t: "Executar a compra",
-                      d: "Processar pedidos, emitir nota fiscal, cobrar, entregar e gerenciar trocas, devoluções e garantia (execução de contrato).",
+                      d: "Processar pedidos, combinar o pagamento, entregar e gerenciar trocas, devoluções e garantia (execução de contrato).",
                     },
                     {
                       t: "Atendimento e suporte técnico",
@@ -263,8 +264,8 @@ export default function PrivacidadePage() {
                 </ul>
                 <p>
                   Mantemos os dados apenas pelo tempo necessário a cada
-                  finalidade. Concluída a relação de compra, os dados fiscais são
-                  retidos pelos prazos legais e, findos esses prazos, são
+                  finalidade. Concluída a relação de compra, os dados fiscais
+                  são retidos pelos prazos legais e, findos esses prazos, são
                   anonimizados ou eliminados de forma segura.
                 </p>
               </div>
@@ -275,9 +276,9 @@ export default function PrivacidadePage() {
               </SectionHeading>
               <div className="mt-4 space-y-4 text-base leading-relaxed text-muted-foreground">
                 <p>
-                  Cookies são pequenos arquivos gravados no seu navegador que nos
-                  ajudam a fazer a loja funcionar e a melhorar sua experiência de
-                  compra. Utilizamos três tipos:
+                  Cookies são pequenos arquivos gravados no seu navegador que
+                  nos ajudam a fazer a loja funcionar e a melhorar sua
+                  experiência de compra. Utilizamos três tipos:
                 </p>
                 <ul className="space-y-3">
                   {[
@@ -311,8 +312,8 @@ export default function PrivacidadePage() {
                 <p>
                   Você pode gerenciar ou bloquear cookies a qualquer momento nas
                   configurações do seu navegador. Ao desativar cookies não
-                  essenciais, algumas funções — como recomendações personalizadas
-                  — podem deixar de operar corretamente.
+                  essenciais, algumas funções — como recomendações
+                  personalizadas — podem deixar de operar corretamente.
                 </p>
               </div>
 
@@ -327,14 +328,14 @@ export default function PrivacidadePage() {
                     não vendemos
                   </strong>{" "}
                   seus dados pessoais. Compartilhamos informações apenas com
-                  parceiros indispensáveis para operar a loja, e somente na medida
-                  necessária:
+                  parceiros indispensáveis para operar a loja, e somente na
+                  medida necessária:
                 </p>
                 <ul className="space-y-3">
                   {[
                     {
                       t: "Meios de pagamento",
-                      d: "Gateways e adquirentes que processam cartões, Pix e boletos com segurança.",
+                      d: "Banco e operadora de cartão que processam o Pix e os links de pagamento.",
                     },
                     {
                       t: "Transportadoras e Correios",
@@ -377,9 +378,9 @@ export default function PrivacidadePage() {
               </SectionHeading>
               <div className="mt-4 space-y-4 text-base leading-relaxed text-muted-foreground">
                 <p>
-                  A LGPD garante a você, titular dos dados, uma série de direitos.
-                  Basta solicitar pelos canais indicados na seção 8 que
-                  responderemos dentro dos prazos legais:
+                  A LGPD garante a você, titular dos dados, uma série de
+                  direitos. Basta solicitar pelos canais indicados na seção 8
+                  que responderemos dentro dos prazos legais:
                 </p>
                 <ul className="grid gap-3 sm:grid-cols-2">
                   {[
@@ -437,8 +438,8 @@ export default function PrivacidadePage() {
                 <p>
                   Nenhum sistema é totalmente imune a riscos. Caso ocorra um
                   incidente de segurança que possa acarretar risco relevante aos
-                  seus direitos, comunicaremos você e a ANPD conforme exigido pela
-                  legislação.
+                  seus direitos, comunicaremos você e a ANPD conforme exigido
+                  pela legislação.
                 </p>
               </div>
 
@@ -458,34 +459,52 @@ export default function PrivacidadePage() {
                 <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                   Encarregado de Dados · {SITE.name}
                 </p>
+                {SITE.legalName && (
+                  <p className="mt-2 text-sm text-foreground">
+                    Controlador: {SITE.legalName}
+                    {SITE.legalDocument && ` · ${SITE.legalDocument}`}
+                  </p>
+                )}
                 <dl className="mt-4 space-y-3 text-sm">
-                  <div className="flex items-center gap-3">
-                    <Mail className="size-4 shrink-0 text-primary" />
-                    <dt className="sr-only">E-mail</dt>
-                    {/* min-w-0 + anywhere: e-mail longo quebra em vez de alargar o card no mobile. */}
-                    <dd className="min-w-0">
-                      <a
-                        href={`mailto:${DPO_EMAIL}`}
-                        className="font-mono text-foreground underline-offset-4 [overflow-wrap:anywhere] hover:text-primary hover:underline"
-                      >
-                        {DPO_EMAIL}
-                      </a>
-                    </dd>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="size-4 shrink-0 text-primary" />
-                    <dt className="sr-only">Telefone</dt>
-                    <dd className="font-mono text-foreground">{SITE.phone}</dd>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <MapPin className="size-4 shrink-0 text-primary" />
-                    <dt className="sr-only">Endereço</dt>
-                    <dd className="text-foreground">{SITE.address}</dd>
-                  </div>
+                  {DPO_EMAIL && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="size-4 shrink-0 text-primary" />
+                      <dt className="sr-only">E-mail</dt>
+                      {/* min-w-0 + anywhere: e-mail longo quebra em vez de alargar o card no mobile. */}
+                      <dd className="min-w-0">
+                        <a
+                          href={`mailto:${DPO_EMAIL}`}
+                          className="font-mono text-foreground underline-offset-4 [overflow-wrap:anywhere] hover:text-primary hover:underline"
+                        >
+                          {DPO_EMAIL}
+                        </a>
+                      </dd>
+                    </div>
+                  )}
+                  {SITE.phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="size-4 shrink-0 text-primary" />
+                      <dt className="sr-only">Telefone</dt>
+                      <dd className="font-mono text-foreground">
+                        {SITE.phone}
+                      </dd>
+                    </div>
+                  )}
+                  {SITE.address && (
+                    <div className="flex items-center gap-3">
+                      <MapPin className="size-4 shrink-0 text-primary" />
+                      <dt className="sr-only">Endereço</dt>
+                      <dd className="text-foreground">{SITE.address}</dd>
+                    </div>
+                  )}
                 </dl>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild size="sm" className="gap-2">
-                    <a href={`mailto:${DPO_EMAIL}`}>
+                    <a
+                      href={DPO_EMAIL ? `mailto:${DPO_EMAIL}` : DPO_WHATSAPP}
+                      target={DPO_EMAIL ? undefined : "_blank"}
+                      rel={DPO_EMAIL ? undefined : "noopener noreferrer"}
+                    >
                       <Mail className="size-4" />
                       Falar com o Encarregado
                     </a>

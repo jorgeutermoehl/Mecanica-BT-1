@@ -1,8 +1,8 @@
 # FullBoost Race Parts
 
-E-commerce de **peças automotivas de performance** (rodas, turbo, motor, escape, freios, suspensão) com **painel administrativo real**: cadastro de peças publicado direto na loja, controle de estoque com movimentações rastreáveis (append-only), pedidos com baixa automática e custo congelado para lucro/DRE corretos.
+E-commerce de **peças de tuning** (coroa e pinhão, virabrequins, gaiolas/rollcage — outras linhas aparecem quando forem anunciadas) com **painel administrativo real**: cadastro de peças publicado direto na loja, controle de estoque com movimentações rastreáveis (append-only), pedidos com baixa automática e custo congelado para lucro/DRE corretos.
 
-![stack](https://img.shields.io/badge/Next.js%2016-black) ![stack](https://img.shields.io/badge/Prisma%20%2B%20SQLite-2D3748) ![stack](https://img.shields.io/badge/Tailwind%20v4-38BDF8)
+![stack](https://img.shields.io/badge/Next.js%2016-black) ![stack](https://img.shields.io/badge/Prisma%20%2B%20SQLite%20%2F%20Postgres-2D3748) ![stack](https://img.shields.io/badge/Tailwind%20v4-38BDF8)
 
 ## 🚀 Rodando o projeto (zero configuração de nuvem)
 
@@ -12,6 +12,7 @@ npm install
 
 # 2. Criar o banco local (SQLite) com a base mínima de demonstração
 #    (1 exemplo de cada cadastro: produto, entrada, pedido, cliente, cupom...)
+cp .env.example .env
 npx prisma migrate dev
 npm run db:seed
 
@@ -19,7 +20,7 @@ npm run db:seed
 npm run dev            # http://localhost:3000
 ```
 
-> O banco é um arquivo SQLite local (`prisma/dev.db`) — quem clonar o repositório roda os 3 comandos acima e tem a loja completa funcionando, sem contas externas. Para produção, o schema foi desenhado para migrar para PostgreSQL/Supabase (trocar o `provider` e restaurar enums).
+> O banco é um arquivo SQLite local (`prisma/dev.db`) — quem clonar o repositório roda os comandos acima e tem a loja completa funcionando, sem contas externas. **Produção** roda em Postgres/Supabase com o schema gerado em `prisma/postgres/` — passo a passo em [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## 🔑 Painel administrativo (demo)
 
@@ -29,15 +30,15 @@ npm run dev            # http://localhost:3000
 | E-mail | `admin@fullboost.com.br` |
 | Senha | `fullboost123` |
 
-**Fluxo completo suportado:** cadastrar peça no painel → anúncio publicado imediatamente na loja → cliente adiciona ao carrinho e finaliza a compra → pedido criado com **baixa automática de estoque** (movimento `SALE` no ledger) e **custo congelado** no item → acompanhamento/atualização de status no painel (cancelar/devolver **repõe o estoque**).
+**Fluxo completo suportado:** cadastrar peça com fotos no painel → anúncio publicado na loja → cliente finaliza o pedido (peças **reservadas por 72h**) → pagamento combinado no **WhatsApp** (Pix ou link da maquininha) → painel marca **Pago** (baixa de estoque com movimento `SALE` e **custo congelado**) → separação/envio (cancelar/devolver **repõe o estoque**).
 
-> ⚠️ Credenciais e dados são de demonstração (seed). Troque `AUTH_SECRET` no `.env` e as senhas antes de qualquer uso real.
+> ⚠️ Credenciais e dados são de demonstração (seed). Em produção o 1º admin é criado por `npm run db:bootstrap` e o servidor não sobe com `AUTH_SECRET`/WhatsApp de exemplo.
 
 ## 🧭 Mapa do sistema
 
-**Loja** — `/` (home com rodas em destaque) · `/produtos` (catálogo com filtros) · `/produtos/[slug]` · `/categorias` · `/promocoes` (cupons: `BEMVINDO10`, `TURBO15`, `NITRO50`) · `/carrinho` · `/checkout` · `/pedido-confirmado` · `/sobre` · `/contato` · `/login` · `/privacidade` · `/termos`
+**Loja** — `/` · `/produtos` (catálogo com filtros) · `/produtos/[slug]` · `/promocoes` (cupons ativos lidos do banco) · `/carrinho` · `/checkout` · `/pedido-confirmado` · `/sobre` · `/contato` (grava no painel) · `/privacidade` · `/termos` · `/sitemap.xml` · `/robots.txt`
 
-**Painel** — `/admin` (dashboard com KPIs e alertas de estoque mínimo) · `/admin/produtos` (CRUD publicado na loja) · `/admin/estoque` (entradas, saídas, ajustes e histórico de movimentações) · `/admin/pedidos` (status, cancelamento com reposição de estoque)
+**Painel** — `/admin` (dashboard com KPIs e alertas de estoque mínimo) · `/admin/produtos` (cadastro com fotos, publicado na loja) · `/admin/estoque` (entradas, saídas, ajustes e histórico) · `/admin/pedidos` (status, cancelamento com reposição de estoque) · `/admin/mensagens` (contatos do site) · `/admin/usuarios` (admin) · `/admin/conta` (trocar senha)
 
 ## 🧱 Stack e arquitetura
 

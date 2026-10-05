@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions -- asserções no formato `cond ? ok() : fail()` */
 /**
  * Testes de erros de usuário (uso: npx tsx scripts/edge-tests.ts)
  * Bombardeia os serviços com entradas inválidas e confere que cada guarda
@@ -5,7 +6,8 @@
  * Ao final, o banco deve ser re-seedado (o script mexe no estoque).
  */
 import { prisma } from "../src/lib/prisma";
-import { placeOrder, registerManualSale } from "../src/server/orders";
+import { placeOrder, registerManualSale, updateOrderStatus } from "../src/server/orders";
+import { expireStalePayments } from "../src/server/payments";
 import { createProduct } from "../src/server/products";
 import {
   adjustStock,
@@ -50,7 +52,7 @@ const CHECKOUT_BASE = {
 
 async function main() {
   const admin = await prisma.user.findFirstOrThrow({ where: { role: { slug: "admin" } } });
-  const product = await prisma.product.findUniqueOrThrow({ where: { sku: "ROD-FBW-1770" } });
+  const product = await prisma.product.findUniqueOrThrow({ where: { sku: "TRA-CP-831-GBX" } });
   console.log(`Base: ${product.sku} com ${product.stockQuantity} un em estoque\n`);
 
   console.log("== CHECKOUT (loja) ==");
@@ -96,7 +98,7 @@ async function main() {
     "SKU duplicado",
     () =>
       createProduct(
-        { name: "Roda duplicada", sku: "ROD-FBW-1770", categoryId: product.categoryId, brandName: "", originalCode: "", description: "", technicalSpecs: "", fitment: "", warranty: "", location: "", imageUrl: "", costPrice: 1, salePrice: 2, promoPrice: undefined, initialStock: 0, minStock: 0 },
+        { name: "Roda duplicada", sku: "TRA-CP-831-GBX", categoryId: product.categoryId, brandName: "", originalCode: "", description: "", technicalSpecs: "", fitment: "", warranty: "", location: "", imageUrl: "", costPrice: 1, salePrice: 2, promoPrice: undefined, initialStock: 0, minStock: 0 },
         admin.id,
       ),
     "Já existe um produto com esse SKU",
@@ -168,6 +170,53 @@ async function main() {
   });
   const reversed = await reverseMovement(newOut.id, admin.id);
   reversed.balanceAfter === 9 ? ok(`estorno da saída corrigida (saldo volta a ${reversed.balanceAfter})`) : fail("estorno", `saldo ${reversed.balanceAfter}`);
+
+  console.log("== PEDIDOS SIMULTÂNEOS (número único) ==");
+  {
+    const results = await Promise.allSettled(
+      Array.from({ length: 5 }, () =>
+        placeOrder({ ...CHECKOUT_BASE, items: [{ productId: product.id, quantity: 1 }] }),
+      ),
+    );
+    const numbers = results.flatMap((r) => (r.status === "fulfilled" ? [r.value.orderNumber] : []));
+    const failures = results.filter((r) => r.status === "rejected");
+    failures.length === 0 && new Set(numbers).size === 5
+      ? ok(`5 checkouts ao mesmo tempo → números distintos (${numbers.join(", ")})`)
+      : fail(
+          "checkouts simultâneos",
+          `${failures.length} falharam (${failures
+            .map((f) => (f.status === "rejected" ? String(f.reason).split("\n").slice(-2).join(" ").slice(0, 160) : ""))
+            .join(" | ")}) · números: ${numbers.join(", ")}`,
+        );
+    // Libera as reservas para os próximos testes.
+    for (const n of numbers) {
+      const o = await prisma.order.findUniqueOrThrow({ where: { number: n } });
+      await updateOrderStatus(o.id, "CANCELLED", admin.id, "teste");
+    }
+  }
+
+  console.log("== PAGAMENTO DEPOIS DAS 72h (reserva expirada) ==");
+  {
+    const before = (await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).stockQuantity;
+    const r = await placeOrder({ ...CHECKOUT_BASE, items: [{ productId: product.id, quantity: 2 }] });
+    const order = await prisma.order.findUniqueOrThrow({ where: { number: r.orderNumber } });
+    // Simula o 4º dia: reserva vencida + cron de expiração rodando.
+    await prisma.stockReservation.updateMany({
+      where: { orderId: order.id },
+      data: { expiresAt: new Date(Date.now() - 3_600_000) },
+    });
+    await expireStalePayments();
+    const expired = await prisma.stockReservation.findFirstOrThrow({ where: { orderId: order.id } });
+    expired.status === "EXPIRED"
+      ? ok("cron marcou a reserva como EXPIRED")
+      : fail("cron de expiração", `status ${expired.status}`);
+    await updateOrderStatus(order.id, "PAID", admin.id, "pago no WhatsApp após 72h");
+    const after = (await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).stockQuantity;
+    const sale = await prisma.inventoryMovement.count({ where: { orderId: order.id, type: "SALE" } });
+    after === before - 2 && sale === 1
+      ? ok(`pago após expirar baixa o estoque (${before} → ${after}) com movimento SALE`)
+      : fail("pago após expirar", `estoque ${before} → ${after}, SALEs: ${sale}`);
+  }
 
   console.log("== LOGIN ==");
   (await authenticate("admin@fullboost.com.br", "senha-errada")) === null

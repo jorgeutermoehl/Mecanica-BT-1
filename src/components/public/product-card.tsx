@@ -7,6 +7,7 @@ import { ShoppingCart } from "lucide-react";
 import { PartIcon } from "@/components/shared/part-icon";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/cart/cart-provider";
+import { COMMERCE } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { formatBRL, installment, discountPercent } from "@/lib/format";
 import type { StoreProduct } from "@/types/store";
@@ -108,9 +109,11 @@ export function ProductCard({ product }: { product: StoreProduct }) {
               no PIX
             </span>
           </p>
-          <p className="font-mono text-[11px] text-muted-foreground tabular-nums">
-            ou 10x de {installment(current)} sem juros no cartão
-          </p>
+          {COMMERCE.maxInstallments > 1 && (
+            <p className="font-mono text-[11px] text-muted-foreground tabular-nums">
+              ou {COMMERCE.maxInstallments}x de {installment(current)} sem juros no cartão
+            </p>
+          )}
         </div>
 
         {/* Estoque (texto + cor) e prova social */}

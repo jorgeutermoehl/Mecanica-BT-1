@@ -86,6 +86,56 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
 // Schemas
 // ===========================================================================
 
+/** Formulário de contato da loja (público). */
+export const contactSchema = z.object({
+  nome: z.string().trim().min(2, "Informe seu nome.").max(120),
+  telefone: z.string().trim().min(8, "Informe um telefone ou WhatsApp para retorno.").max(20),
+  email: z.string().trim().email("Digite um e-mail válido.").max(160),
+  assunto: z.string().trim().min(3, "Diga o assunto.").max(120),
+  mensagem: z.string().trim().min(10, "Detalhe um pouco mais (mínimo de 10 caracteres).").max(4000),
+  /** Honeypot anti-robô: campo invisível que humanos deixam vazio. */
+  site: z.string().max(0).optional().or(z.literal("")),
+});
+
+/** Senha de staff: mínimo 10 caracteres, com letra e número. */
+export const passwordSchema = z
+  .string()
+  .min(10, "A senha precisa ter pelo menos 10 caracteres")
+  .max(128)
+  .regex(/[A-Za-z]/, "A senha precisa ter pelo menos uma letra")
+  .regex(/\d/, "A senha precisa ter pelo menos um número");
+
+export const STAFF_ROLE_SLUGS = ["admin", "gerente", "vendedor", "estoquista", "financeiro"] as const;
+
+export const userCreateSchema = z.object({
+  name: z.string().trim().min(3, "Informe o nome").max(80),
+  email: z.string().trim().toLowerCase().email("E-mail inválido"),
+  role: z.enum(STAFF_ROLE_SLUGS),
+  password: passwordSchema,
+});
+
+export const userUpdateSchema = z.object({
+  role: z.enum(STAFF_ROLE_SLUGS),
+  isActive: z.boolean(),
+  /** Opcional: redefine a senha do usuário. */
+  newPassword: passwordSchema.optional().or(z.literal("")),
+});
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Informe a senha atual"),
+    newPassword: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: "A confirmação não confere com a nova senha",
+    path: ["confirmPassword"],
+  })
+  .refine((d) => d.newPassword !== d.currentPassword, {
+    message: "A nova senha precisa ser diferente da atual",
+    path: ["newPassword"],
+  });
+
 export const loginSchema = z.object({
   email: z.string().email("E-mail inválido"),
   password: z.string().min(6, "Senha deve ter ao menos 6 caracteres"),
@@ -225,7 +275,8 @@ export const checkoutSchema = z.object({
     city: z.string().min(2, "Informe a cidade").max(80),
     state: z.string().length(2, "UF inválida"),
   }),
-  paymentMethod: z.enum(["PIX", "CREDIT_CARD", "BOLETO"]),
+  // Loja pública (fase WhatsApp): só Pix e cartão por link — boleto volta com o gateway.
+  paymentMethod: z.enum(["PIX", "CREDIT_CARD"]),
   couponCode: z.string().max(30).optional().or(z.literal("")),
   /** Sessão de consentimento (localStorage fb-session-id) — liga pedido à origem da visita. */
   sessionId: z.string().max(64).optional().or(z.literal("")),
@@ -242,6 +293,9 @@ export const checkoutSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+export type UserCreateInput = z.infer<typeof userCreateSchema>;
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type ProductInput = z.infer<typeof productSchema>;
 export type StockEntryInput = z.infer<typeof stockEntrySchema>;
 export type StockOutInput = z.infer<typeof stockOutSchema>;

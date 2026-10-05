@@ -1,3 +1,5 @@
+import { COMMERCE } from "@/lib/constants";
+
 /** Formata um valor numérico como moeda brasileira (R$). */
 export function formatBRL(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
@@ -6,8 +8,8 @@ export function formatBRL(value: number): string {
   }).format(value);
 }
 
-/** Retorna o valor de cada parcela sem juros (padrão 10x). */
-export function installment(total: number, times = 10): string {
+/** Valor de cada parcela sem juros (máximo configurado em COMMERCE). */
+export function installment(total: number, times: number = COMMERCE.maxInstallments): string {
   return formatBRL(total / times);
 }
 

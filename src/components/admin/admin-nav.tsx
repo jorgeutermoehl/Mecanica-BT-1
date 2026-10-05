@@ -10,8 +10,11 @@ import {
   ExternalLink,
   FileBarChart,
   LayoutDashboard,
+  Mail,
   Package,
   ShoppingCart,
+  UserCog,
+  UserRound,
   Users,
   Warehouse,
   type LucideIcon,
@@ -26,6 +29,8 @@ type NavItem = {
   exact?: boolean;
   /** Exibe o badge de notificações (contagem via prop). */
   showBadge?: boolean;
+  /** Visível só para administradores. */
+  adminOnly?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -38,7 +43,10 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/relatorios", label: "Relatórios", icon: FileBarChart },
   { href: "/admin/dre", label: "DRE", icon: Calculator },
   { href: "/admin/financeiro/transacoes", label: "Transações", icon: CreditCard },
+  { href: "/admin/mensagens", label: "Mensagens", icon: Mail },
   { href: "/admin/notificacoes", label: "Notificações", icon: Bell, showBadge: true },
+  { href: "/admin/usuarios", label: "Usuários", icon: UserCog, adminOnly: true },
+  { href: "/admin/conta", label: "Minha conta", icon: UserRound },
 ];
 
 /** Rótulos pt-BR dos papéis staff (slug → exibição). */
@@ -58,9 +66,12 @@ export function AdminNav({
   className,
   onNavigate,
   notificationCount = 0,
+  role,
 }: {
   className?: string;
   onNavigate?: () => void;
+  /** Papel do usuário logado — esconde itens adminOnly. */
+  role?: string;
   /** Contagem exibida no badge de Notificações (vem do layout server). */
   notificationCount?: number;
 }) {
@@ -68,7 +79,7 @@ export function AdminNav({
 
   return (
     <nav className={cn("flex flex-col gap-1", className)} aria-label="Navegação do painel">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter((item) => !item.adminOnly || role === "admin").map((item) => {
         const active = item.exact
           ? pathname === item.href
           : pathname === item.href || pathname.startsWith(`${item.href}/`);

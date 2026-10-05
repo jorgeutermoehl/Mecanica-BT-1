@@ -148,3 +148,44 @@ export async function clearPromoPrice(productId: string, userId: string) {
     });
   });
 }
+
+/**
+ * Cupons exibidos na página pública de Promoções: SÓ os válidos agora, com a
+ * mesma regra do checkout (ativo, dentro da vigência e com uso disponível) —
+ * a vitrine nunca anuncia código que o carrinho recusaria.
+ */
+export async function listPublicCoupons() {
+  const now = new Date();
+  const coupons = await prisma.coupon.findMany({
+    where: {
+      isActive: true,
+      OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+      AND: [{ OR: [{ endsAt: null }, { endsAt: { gte: now } }] }],
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return coupons
+    .filter((c) => c.usageLimit === null || c.usageCount < c.usageLimit)
+    .map((c) => {
+      const value = Number(c.value);
+      const min = c.minOrderValue !== null ? Number(c.minOrderValue) : null;
+      const highlight = c.type === "PERCENT" ? `${value}% OFF` : `${brl(value)} OFF`;
+      return {
+        code: c.code,
+        highlight,
+        title: c.type === "PERCENT" ? `${value}% de desconto` : `${brl(value)} de desconto`,
+        description:
+          c.type === "PERCENT"
+            ? `Desconto de ${value}% no valor das peças.`
+            : `${brl(value)} de desconto direto no pedido.`,
+        condition: [
+          min ? `Pedidos acima de ${brl(min)}` : "Sem valor mínimo",
+          c.endsAt ? `válido até ${c.endsAt.toLocaleDateString("pt-BR")}` : null,
+          "não acumulativo",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      };
+    });
+}

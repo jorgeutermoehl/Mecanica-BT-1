@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- script Node CommonJS (node scripts/audit-ledger.js) */
 /**
  * Auditoria de consistência do banco (uso: node scripts/audit-ledger.js)
  * 1. Ledger: cadeia balanceBefore→balanceAfter por produto + saldo final = stockQuantity

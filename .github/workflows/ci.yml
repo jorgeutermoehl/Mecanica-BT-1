@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Valida o alvo de PRODUÇÃO (Postgres): schema gerado em dia, migrations,
+# typecheck, lint, regras de negócio, build e fluxo ponta a ponta.
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fb
+          POSTGRES_PASSWORD: fb
+          POSTGRES_DB: fullboost
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fb" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://fb:fb@localhost:5432/fullboost
+      DIRECT_URL: postgresql://fb:fb@localhost:5432/fullboost
+      AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+      NEXT_PUBLIC_SITE_URL: http://localhost:3100
+      NEXT_PUBLIC_WHATSAPP: "5547999999999"
+      SEED_ALLOW_WIPE: "1"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Schema Postgres em dia com o principal
+        run: node scripts/postgres-schema.mjs --check
+      - name: Migrations SQLite em dia com o schema
+        env:
+          DATABASE_URL: file:./ci.db
+        run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url "file:./shadow.db" --exit-code
+      - name: Migrations Postgres em dia com o schema
+        run: |
+          PGPASSWORD=fb psql -h localhost -U fb -d fullboost -c "CREATE DATABASE shadow"
+          npx prisma migrate diff --from-migrations prisma/postgres/migrations --to-schema-datamodel prisma/postgres/schema.prisma --shadow-database-url "postgresql://fb:fb@localhost:5432/shadow" --exit-code
+      - run: npx prisma generate --schema prisma/postgres/schema.prisma
+      - run: npx prisma migrate deploy --schema prisma/postgres/schema.prisma
+      - run: npx tsx prisma/seed.ts
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Regras de negócio (estoque, cupons, pedidos simultâneos, reservas)
+        run: npm run test:rules
+      - run: npm run build
+      - name: Banco limpo para o E2E
+        run: npx tsx prisma/seed.ts
+      - run: npx playwright install --with-deps chromium
+      - name: E2E (cadastro com fotos → venda → painel)
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report

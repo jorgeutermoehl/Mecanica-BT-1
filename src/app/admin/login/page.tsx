@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getStaffUser } from "@/lib/auth";
 import { Logo } from "@/components/shared/logo";
 import { LoginForm } from "@/components/admin/login-form";
 import {
@@ -17,7 +17,9 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLoginPage() {
-  const session = await getSession();
+  // Revalida no banco: token antigo (senha trocada/usuário desativado) NÃO
+  // redireciona para o painel — senão o layout devolve para cá em loop.
+  const session = await getStaffUser();
   if (session) redirect("/admin");
 
   return (
@@ -48,16 +50,6 @@ export default async function AdminLoginPage() {
           </CardContent>
         </Card>
 
-        {/* Dica discreta das credenciais do ambiente de demonstração */}
-        <div className="mt-6 rounded-lg border border-border bg-card/60 px-4 py-3 text-center">
-          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
-            Ambiente de demonstração
-          </p>
-          <p className="mt-1.5 font-mono text-xs text-muted-foreground">
-            admin@fullboost.com.br <span className="text-primary">·</span>{" "}
-            fullboost123
-          </p>
-        </div>
       </div>
     </div>
   );

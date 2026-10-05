@@ -23,13 +23,11 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/components/cart/cart-provider";
+import { COMMERCE, shippingFor } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { formatBRL, installment } from "@/lib/format";
 import type { CartItem } from "@/types/store";
 
-/** Regra de frete espelhada do servidor (src/server/orders.ts). */
-const FREE_SHIPPING_THRESHOLD = 599;
-const FLAT_SHIPPING = 34.9;
 const MAX_QTY = 99;
 
 /* ---------- Rótulo de seção (padrão da home) ---------- */
@@ -88,8 +86,14 @@ function ItemThumb({ item }: { item: CartItem }) {
         />
       ) : (
         <>
-          <span aria-hidden className="boost-glow absolute inset-0 opacity-60" />
-          <PartIcon icon={item.icon} className="size-8 text-muted-foreground/40" />
+          <span
+            aria-hidden
+            className="boost-glow absolute inset-0 opacity-60"
+          />
+          <PartIcon
+            icon={item.icon}
+            className="size-8 text-muted-foreground/40"
+          />
         </>
       )}
     </Link>
@@ -155,7 +159,10 @@ function CartLine({
               >
                 <Minus className="size-3.5" />
               </button>
-              <span aria-live="polite" className="w-10 text-center font-mono text-sm tabular-nums">
+              <span
+                aria-live="polite"
+                className="w-10 text-center font-mono text-sm tabular-nums"
+              >
                 {item.quantity}
               </span>
               <button
@@ -176,7 +183,9 @@ function CartLine({
           </div>
 
           <div className="text-right">
-            <p className="font-display text-lg font-bold text-foreground">{formatBRL(lineTotal)}</p>
+            <p className="font-display text-lg font-bold text-foreground">
+              {formatBRL(lineTotal)}
+            </p>
             <p className="font-mono text-[11px] text-muted-foreground">
               {item.quantity} × {formatBRL(item.price)}
             </p>
@@ -217,7 +226,8 @@ function CartSkeleton() {
  * ---------------------------------------------------------------- */
 
 export default function CartPage() {
-  const { items, count, subtotal, hydrated, updateQuantity, removeItem } = useCart();
+  const { items, count, subtotal, hydrated, updateQuantity, removeItem } =
+    useCart();
 
   if (!hydrated) return <CartSkeleton />;
 
@@ -234,8 +244,8 @@ export default function CartPage() {
               Seu carrinho está vazio
             </h1>
             <p className="mt-2 text-pretty text-muted-foreground">
-              Ainda não há peças no seu setup. Explore o catálogo e adicione o que falta para
-              acelerar de verdade.
+              Ainda não há peças no seu setup. Explore o catálogo e adicione o
+              que falta para acelerar de verdade.
             </p>
             <Button asChild size="lg" className="mt-7 gap-2">
               <Link href="/produtos">
@@ -256,10 +266,14 @@ export default function CartPage() {
   }
 
   /* ---------- Carrinho com itens ---------- */
-  const freeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
-  const shipping = freeShipping ? 0 : FLAT_SHIPPING;
-  const missingForFree = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
-  const progress = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
+  // Mesma regra do servidor (shippingFor em src/lib/constants.ts).
+  const hasFreeShipping = COMMERCE.freeShippingFrom > 0;
+  const shipping = shippingFor(subtotal);
+  const freeShipping = shipping === 0;
+  const missingForFree = Math.max(0, COMMERCE.freeShippingFrom - subtotal);
+  const progress = hasFreeShipping
+    ? Math.min(100, (subtotal / COMMERCE.freeShippingFrom) * 100)
+    : 0;
   const total = subtotal + shipping;
 
   return (
@@ -318,37 +332,45 @@ export default function CartPage() {
                     freeShipping ? (
                       <span className="font-medium text-success">Grátis</span>
                     ) : (
-                      formatBRL(FLAT_SHIPPING)
+                      formatBRL(COMMERCE.flatShipping)
                     )
                   }
                 />
               </dl>
 
-              {/* Progresso de frete grátis */}
-              <div className="mt-4">
-                {freeShipping ? (
-                  <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-3 text-success">
-                    <Truck className="size-4 shrink-0" />
-                    <p className="text-xs font-medium">Você ganhou frete grátis!</p>
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-border bg-muted/40 p-3">
-                    <p className="text-xs text-muted-foreground">
-                      Faltam{" "}
-                      <span className="font-mono font-medium text-foreground">
-                        {formatBRL(missingForFree)}
-                      </span>{" "}
-                      para <span className="font-medium text-foreground">frete grátis</span>.
-                    </p>
-                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border">
-                      <div
-                        className="h-full rounded-full bg-boost transition-all"
-                        style={{ width: `${progress}%` }}
-                      />
+              {/* Progresso de frete grátis (só se a loja oferece) */}
+              {hasFreeShipping && (
+                <div className="mt-4">
+                  {freeShipping ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-3 text-success">
+                      <Truck className="size-4 shrink-0" />
+                      <p className="text-xs font-medium">
+                        Você ganhou frete grátis!
+                      </p>
                     </div>
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div className="rounded-lg border border-border bg-muted/40 p-3">
+                      <p className="text-xs text-muted-foreground">
+                        Faltam{" "}
+                        <span className="font-mono font-medium text-foreground">
+                          {formatBRL(missingForFree)}
+                        </span>{" "}
+                        para{" "}
+                        <span className="font-medium text-foreground">
+                          frete grátis
+                        </span>
+                        .
+                      </p>
+                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border">
+                        <div
+                          className="h-full rounded-full bg-boost transition-all"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <Separator className="my-5" />
 
@@ -361,9 +383,12 @@ export default function CartPage() {
                   <span className="font-display text-2xl font-bold text-foreground">
                     {formatBRL(total)}
                   </span>
-                  <p className="font-mono text-[11px] text-muted-foreground">
-                    ou 10x de {installment(total)} sem juros
-                  </p>
+                  {COMMERCE.maxInstallments > 1 && (
+                    <p className="font-mono text-[11px] text-muted-foreground">
+                      ou {COMMERCE.maxInstallments}x de {installment(total)} sem
+                      juros
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -377,10 +402,16 @@ export default function CartPage() {
                 </Label>
                 <div className="relative mt-1.5">
                   <Tag className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="cupom" disabled placeholder="Ex.: BOOST10" className="pl-8" />
+                  <Input
+                    id="cupom"
+                    disabled
+                    placeholder="Ex.: BOOST10"
+                    className="pl-8"
+                  />
                 </div>
                 <p className="mt-1.5 font-mono text-[11px] text-muted-foreground">
-                  Aplique o cupom no checkout — ele é validado ao finalizar o pedido.
+                  Aplique o cupom no checkout — ele é validado ao finalizar o
+                  pedido.
                 </p>
               </div>
 

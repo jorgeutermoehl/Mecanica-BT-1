@@ -49,6 +49,8 @@ model User {
   phone        String?
   /// Hash bcrypt da senha (login local do painel).
   passwordHash String?
+  /// Última troca de senha — sessões emitidas antes disso deixam de valer.
+  passwordChangedAt DateTime?
   isActive     Boolean @default(true)
   roleId       String?
   role         Role?   @relation(fields: [roleId], references: [id])
@@ -816,4 +818,15 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([userId])
   @@index([createdAt])
+}
+
+// ===========================================================================
+// SEQUÊNCIAS
+// ===========================================================================
+
+/// Contador atômico (ex.: "order" → PED-0001). Incremento via UPDATE na
+/// transação: no Postgres o lock de linha serializa checkouts simultâneos.
+model Counter {
+  key   String @id
+  value Int    @default(0)
 }

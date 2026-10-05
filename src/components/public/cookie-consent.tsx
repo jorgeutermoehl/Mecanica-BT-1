@@ -23,17 +23,26 @@ function getSessionId(): string {
 }
 
 export function CookieConsent() {
-  const [visible, setVisible] = React.useState(false);
+  // Precisa de consentimento? Lido do localStorage só no client (servidor: não).
+  const needsConsent = React.useSyncExternalStore(
+    () => () => {},
+    () => {
+      try {
+        return !localStorage.getItem(STORAGE_KEY);
+      } catch {
+        return false;
+      }
+    },
+    () => false,
+  );
+  const [dismissed, setDismissed] = React.useState(false);
+  const visible = needsConsent && !dismissed;
   const [showPrefs, setShowPrefs] = React.useState(false);
   const [analytics, setAnalytics] = React.useState(true);
   const [marketing, setMarketing] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEY)) setVisible(true);
-  }, []);
-
   async function decide(opts: { analytics: boolean; marketing: boolean }) {
-    setVisible(false);
+    setDismissed(true);
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...opts, at: Date.now() }));
 
     const params = new URLSearchParams(window.location.search);

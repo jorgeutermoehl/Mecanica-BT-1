@@ -6,9 +6,11 @@ import { ProductCard } from "@/components/public/product-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getStoreProducts } from "@/server/catalog";
-import { CouponCard, type Coupon } from "@/components/public/promocoes/coupon-card";
+import { CouponCard } from "@/components/public/promocoes/coupon-card";
+import { listPublicCoupons } from "@/server/promotions";
 
-// Promoções servidas pelo cache com tag "catalog" (revalidateTag no painel).
+// Cupons lidos do banco a cada request (mesma regra de validade do checkout).
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Promoções",
@@ -25,33 +27,11 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Cupons ativos cadastrados no sistema (mesmas regras do checkout). */
-const COUPONS: Coupon[] = [
-  {
-    code: "BEMVINDO10",
-    highlight: "10% OFF",
-    title: "Boas-vindas",
-    description: "Desconto de 10% para começar o seu projeto com a gente.",
-    condition: "Pedidos acima de R$ 100 · não acumulativo",
-  },
-  {
-    code: "TURBO15",
-    highlight: "15% OFF",
-    title: "Setup completo",
-    description: "Montou o kit inteiro? Leve mais e pague menos no carrinho.",
-    condition: "Pedidos acima de R$ 500 · não acumulativo",
-  },
-  {
-    code: "NITRO50",
-    highlight: "R$ 50 OFF",
-    title: "Injeção direta",
-    description: "R$ 50 de desconto direto no total do seu pedido.",
-    condition: "Pedidos acima de R$ 300 · não acumulativo",
-  },
-];
-
 export default async function PromocoesPage() {
-  const products = await getStoreProducts();
+  const [products, coupons] = await Promise.all([
+    getStoreProducts(),
+    listPublicCoupons(),
+  ]);
   const onSale = products.filter((p) => p.promoPrice !== null);
 
   return (
@@ -79,33 +59,35 @@ export default async function PromocoesPage() {
       </section>
 
       {/* ===================== CUPONS ATIVOS ===================== */}
-      <section className="py-10 sm:py-14 lg:py-16">
-        <Container>
-          <div className="mb-8">
-            <Eyebrow>Use no carrinho</Eyebrow>
-            <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">
-              Cupons ativos
-            </h2>
-            <p className="mt-2 max-w-xl text-muted-foreground">
-              Copie o código e cole na finalização do pedido para aplicar o
-              desconto.
+      {coupons.length > 0 && (
+        <section className="py-10 sm:py-14 lg:py-16">
+          <Container>
+            <div className="mb-8">
+              <Eyebrow>Use no carrinho</Eyebrow>
+              <h2 className="mt-3 text-2xl font-bold uppercase tracking-tight sm:text-3xl">
+                Cupons ativos
+              </h2>
+              <p className="mt-2 max-w-xl text-muted-foreground">
+                Copie o código e cole na finalização do pedido para aplicar o
+                desconto.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {coupons.map((coupon) => (
+                <CouponCard key={coupon.code} coupon={coupon} />
+              ))}
+            </div>
+
+            <p className="mt-6 flex items-start gap-2 text-xs text-muted-foreground">
+              <Info className="mt-px size-3.5 shrink-0" />
+              Cupons não são acumulativos entre si e valem enquanto estiverem
+              ativos. O desconto é aplicado no carrinho, antes de finalizar a
+              compra.
             </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-            {COUPONS.map((coupon) => (
-              <CouponCard key={coupon.code} coupon={coupon} />
-            ))}
-          </div>
-
-          <p className="mt-6 flex items-start gap-2 text-xs text-muted-foreground">
-            <Info className="mt-px size-3.5 shrink-0" />
-            Cupons não são acumulativos entre si e valem enquanto estiverem
-            ativos. O desconto é aplicado no carrinho, antes de finalizar a
-            compra.
-          </p>
-        </Container>
-      </section>
+          </Container>
+        </section>
+      )}
 
       {/* ===================== OFERTAS ===================== */}
       <section className="py-8 pb-12 sm:pb-16 lg:pb-20">

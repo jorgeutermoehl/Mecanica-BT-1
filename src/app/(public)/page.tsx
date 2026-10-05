@@ -83,7 +83,7 @@ export default async function HomePage() {
             </h1>
             <p className="mt-4 max-w-lg text-pretty text-base text-muted-foreground sm:text-lg">
               Coroa e pinhão, virabrequins e gaiolas (rollcage) para rua e pista
-              — com estoque real, nota fiscal e envio para todo o Brasil.
+              — com estoque real e envio para todo o Brasil.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="gap-2">

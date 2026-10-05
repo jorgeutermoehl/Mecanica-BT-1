@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SITE, whatsappLink } from "@/lib/constants";
+import { sendContactMessageAction } from "@/app/actions/contact";
 
 /* Rótulo de seção padrão (mono vermelho com traço), igual às seções da home. */
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -68,42 +69,52 @@ function validate(values: FormValues): FormErrors {
   return errors;
 }
 
-/* Canais diretos exibidos na coluna da direita. */
-const CHANNELS: {
+/* Canais diretos exibidos na coluna da direita — só os configurados (env). */
+type Channel = {
   icon: typeof Mail;
   label: string;
   value: string;
   href?: string;
   mono?: boolean;
-}[] = [
-  {
-    icon: Mail,
-    label: "E-mail",
-    value: SITE.email,
-    href: `mailto:${SITE.email}`,
-    mono: true,
-  },
-  {
-    icon: Phone,
-    label: "Telefone",
-    value: SITE.phone,
-    href: `tel:${SITE.phone.replace(/\D/g, "")}`,
-    mono: true,
-  },
-  { icon: Clock, label: "Horário de atendimento", value: SITE.hours },
-  { icon: MapPin, label: "Endereço", value: SITE.address },
-];
+};
+const CHANNELS: Channel[] = (
+  [
+    SITE.email && {
+      icon: Mail,
+      label: "E-mail",
+      value: SITE.email,
+      href: `mailto:${SITE.email}`,
+      mono: true,
+    },
+    SITE.phone && {
+      icon: Phone,
+      label: "Telefone",
+      value: SITE.phone,
+      href: `tel:${SITE.phone.replace(/\D/g, "")}`,
+      mono: true,
+    },
+    SITE.hours && {
+      icon: Clock,
+      label: "Horário de atendimento",
+      value: SITE.hours,
+    },
+    SITE.address && { icon: MapPin, label: "Endereço", value: SITE.address },
+  ] as (Channel | null | false | "")[]
+).filter((c): c is Channel => Boolean(c));
 
 const WHATSAPP_MESSAGE =
   "Olá! Vim pela página de contato da FullBoost e gostaria de falar com um especialista sobre uma peça de performance.";
 
-const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-  `${SITE.name} ${SITE.address}`,
-)}`;
+const mapsLink = SITE.address
+  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${SITE.name} ${SITE.address}`)}`
+  : null;
 
 export default function ContatoPage() {
   const [values, setValues] = useState<FormValues>(EMPTY);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+  // Honeypot anti-robô (campo escondido de humanos).
+  const [site, setSite] = useState("");
 
   function update(field: FieldName, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -111,8 +122,9 @@ export default function ContatoPage() {
     setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) return;
     const nextErrors = validate(values);
     setErrors(nextErrors);
 
@@ -123,8 +135,15 @@ export default function ContatoPage() {
       return;
     }
 
+    setSubmitting(true);
+    const result = await sendContactMessageAction({ ...values, site });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error("Não foi possível enviar", { description: result.error });
+      return;
+    }
     toast.success("Mensagem enviada", {
-      description: "Nossa equipe técnica responde em até um dia útil.",
+      description: "Nossa equipe responde em até um dia útil.",
     });
     setValues(EMPTY);
     setErrors({});
@@ -144,8 +163,9 @@ export default function ContatoPage() {
             Fale com um <span className="text-boost">especialista</span>
           </h1>
           <p className="mt-5 max-w-xl text-pretty text-lg text-muted-foreground">
-            Dúvidas de compatibilidade, potência, instalação ou orçamento? Envie sua
-            mensagem ou chame no WhatsApp — nosso time monta o setup certo pro seu carro.
+            Dúvidas de compatibilidade, potência, instalação ou orçamento? Envie
+            sua mensagem ou chame no WhatsApp — nosso time monta o setup certo
+            pro seu carro.
           </p>
         </Container>
       </section>
@@ -161,11 +181,30 @@ export default function ContatoPage() {
                 Conte o que você procura
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Preencha os campos abaixo. Quanto mais detalhes do carro e do objetivo,
-                mais precisa é a nossa indicação.
+                Preencha os campos abaixo. Quanto mais detalhes do carro e do
+                objetivo, mais precisa é a nossa indicação.
               </p>
 
-              <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
+              <form
+                onSubmit={handleSubmit}
+                noValidate
+                className="mt-8 space-y-5"
+              >
+                {/* Honeypot: invisível para pessoas, robôs preenchem e são descartados. */}
+                <div
+                  aria-hidden
+                  className="absolute -left-[9999px] h-0 w-0 overflow-hidden"
+                >
+                  <label htmlFor="site">Não preencha</label>
+                  <input
+                    id="site"
+                    name="site"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={site}
+                    onChange={(e) => setSite(e.target.value)}
+                  />
+                </div>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Field
                     id="nome"
@@ -220,7 +259,9 @@ export default function ContatoPage() {
                     value={values.mensagem}
                     onChange={(e) => update("mensagem", e.target.value)}
                     aria-invalid={errors.mensagem ? true : undefined}
-                    aria-describedby={errors.mensagem ? "mensagem-error" : undefined}
+                    aria-describedby={
+                      errors.mensagem ? "mensagem-error" : undefined
+                    }
                   />
                   {errors.mensagem && (
                     <p
@@ -237,9 +278,14 @@ export default function ContatoPage() {
                   <p className="text-xs text-muted-foreground">
                     Ao enviar, você concorda em ser contatado pela nossa equipe.
                   </p>
-                  <Button type="submit" size="lg" className="gap-2 sm:shrink-0">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="gap-2 sm:shrink-0"
+                    disabled={submitting}
+                  >
                     <Send className="size-4" />
-                    Enviar mensagem
+                    {submitting ? "Enviando..." : "Enviar mensagem"}
                   </Button>
                 </div>
               </form>
@@ -273,7 +319,8 @@ export default function ContatoPage() {
                         Atendimento no WhatsApp
                       </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Tire dúvidas de compatibilidade e feche o pedido pelo chat.
+                        Tire dúvidas de compatibilidade e feche o pedido pelo
+                        chat.
                       </p>
                     </div>
                   </div>
@@ -332,49 +379,60 @@ export default function ContatoPage() {
                 })}
               </div>
 
-              {/* Placeholder de mapa */}
-              <div className="overflow-hidden rounded-2xl border border-border bg-card">
-                <div className="relative flex aspect-[16/10] items-center justify-center bg-carbon">
-                  <span
-                    aria-hidden
-                    className="boost-glow pointer-events-none absolute inset-0"
-                  />
-                  <span
-                    aria-hidden
-                    className="absolute inset-0 opacity-40"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)",
-                      backgroundSize: "32px 32px",
-                    }}
-                  />
-                  <div className="relative flex flex-col items-center gap-3 text-center">
-                    <span className="flex size-14 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/30">
-                      <MapPin className="size-6" />
-                    </span>
-                    <div>
-                      <p className="font-display text-base font-bold uppercase tracking-tight text-foreground">
-                        {SITE.name}
-                      </p>
-                      <p className="mt-1 font-mono text-xs text-muted-foreground">
-                        {SITE.address}
-                      </p>
+              {/* Bloco de mapa — só com endereço configurado (loja física) */}
+              {mapsLink && (
+                <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                  <div className="relative flex aspect-[16/10] items-center justify-center bg-carbon">
+                    <span
+                      aria-hidden
+                      className="boost-glow pointer-events-none absolute inset-0"
+                    />
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 opacity-40"
+                      style={{
+                        backgroundImage:
+                          "linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)",
+                        backgroundSize: "32px 32px",
+                      }}
+                    />
+                    <div className="relative flex flex-col items-center gap-3 text-center">
+                      <span className="flex size-14 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/30">
+                        <MapPin className="size-6" />
+                      </span>
+                      <div>
+                        <p className="font-display text-base font-bold uppercase tracking-tight text-foreground">
+                          {SITE.name}
+                        </p>
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">
+                          {SITE.address}
+                        </p>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-border p-4">
+                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Headset className="size-4 text-primary" />
+                      Loja física e retirada no balcão
+                    </span>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                    >
+                      <a
+                        href={mapsLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Navigation className="size-4" />
+                        Como chegar
+                      </a>
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-3 border-t border-border p-4">
-                  <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Headset className="size-4 text-primary" />
-                    Loja física e retirada no balcão
-                  </span>
-                  <Button asChild variant="outline" size="sm" className="gap-1.5">
-                    <a href={mapsLink} target="_blank" rel="noopener noreferrer">
-                      <Navigation className="size-4" />
-                      Como chegar
-                    </a>
-                  </Button>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </Container>
@@ -384,7 +442,10 @@ export default function ContatoPage() {
       <section className="pb-12 sm:pb-16 lg:pb-20">
         <Container>
           <div className="racing-clip relative overflow-hidden rounded-2xl bg-boost px-5 py-8 text-white sm:px-8 sm:py-12">
-            <span aria-hidden className="absolute inset-0 bg-carbon opacity-10" />
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-carbon opacity-10"
+            />
             <div className="relative flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.3em] text-white/80">
@@ -394,7 +455,12 @@ export default function ContatoPage() {
                   Nosso time monta o setup ideal pro seu carro
                 </h2>
               </div>
-              <Button asChild size="lg" variant="secondary" className="shrink-0 gap-2">
+              <Button
+                asChild
+                size="lg"
+                variant="secondary"
+                className="shrink-0 gap-2"
+              >
                 <a
                   href={whatsappLink(WHATSAPP_MESSAGE)}
                   target="_blank"
@@ -449,7 +515,11 @@ function Field({
         aria-describedby={error ? `${id}-error` : undefined}
       />
       {error && (
-        <p id={`${id}-error`} className="font-mono text-xs text-destructive" role="alert">
+        <p
+          id={`${id}-error`}
+          className="font-mono text-xs text-destructive"
+          role="alert"
+        >
           {error}
         </p>
       )}
