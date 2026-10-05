@@ -85,6 +85,14 @@ export const SPECIALTIES = [
 export const WHATSAPP_DEFAULT_MESSAGE =
   "Olá! Vim pelo site da FullBoost e gostaria de falar com um especialista.";
 
+/**
+ * Ambiente de homologação (NEXT_PUBLIC_APP_ENV=staging): faixa "ambiente de
+ * teste" no site, fora do Google e mensagens/e-mails marcados com [TESTE] —
+ * o cliente valida o uso sem risco de confundir com venda real.
+ */
+export const IS_STAGING = process.env.NEXT_PUBLIC_APP_ENV === "staging";
+
 export function whatsappLink(message: string = WHATSAPP_DEFAULT_MESSAGE) {
-  return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(message)}`;
+  const text = IS_STAGING ? `[TESTE] ${message}` : message;
+  return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(text)}`;
 }

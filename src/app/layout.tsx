@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Chakra_Petch } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { StagingBanner } from "@/components/shared/staging-banner";
 import { Toaster } from "@/components/ui/sonner";
-import { SITE } from "@/lib/constants";
+import { IS_STAGING, SITE } from "@/lib/constants";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,6 +30,8 @@ export const metadata: Metadata = {
     template: `%s | ${SITE.name}`,
   },
   description: SITE.description,
+  // Homologação nunca entra no Google.
+  ...(IS_STAGING ? { robots: { index: false, follow: false } } : {}),
   keywords: [
     "race parts",
     "peças de performance",
@@ -68,6 +71,7 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
+          <StagingBanner />
           {children}
           <Toaster richColors position="top-center" />
         </ThemeProvider>

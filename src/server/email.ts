@@ -1,4 +1,4 @@
-import { SITE, whatsappLink } from "@/lib/constants";
+import { IS_STAGING, SITE, whatsappLink } from "@/lib/constants";
 
 /**
  * E-mail transacional via Resend (HTTP API, sem SDK).
@@ -24,7 +24,7 @@ export async function sendEmail(mail: Mail): Promise<boolean> {
       body: JSON.stringify({
         from: cfg.from,
         to: [mail.to],
-        subject: mail.subject,
+        subject: IS_STAGING ? `[TESTE] ${mail.subject}` : mail.subject,
         html: mail.html,
         ...(mail.replyTo ? { reply_to: mail.replyTo } : {}),
       }),

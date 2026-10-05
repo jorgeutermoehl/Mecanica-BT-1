@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
-import { SITE } from "@/lib/constants";
+import { IS_STAGING, SITE } from "@/lib/constants";
 
 export default function robots(): MetadataRoute.Robots {
+  // Homologação: bloqueia tudo.
+  if (IS_STAGING) return { rules: [{ userAgent: "*", disallow: "/" }] };
   return {
     rules: [
       {
