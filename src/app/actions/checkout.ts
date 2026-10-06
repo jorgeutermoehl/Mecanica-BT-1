@@ -4,6 +4,9 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { CATALOG_TAG } from "@/server/catalog";
 import { emailOrderReceived, placeOrder } from "@/server/orders";
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
+
+const CHECKOUT_DISABLED_ERROR = "A compra pelo site está desativada — fale com a gente pelo WhatsApp.";
 
 export type CheckoutResult =
   | { ok: true; orderNumber: string; total: number; status: string }
@@ -11,6 +14,8 @@ export type CheckoutResult =
 
 /** Finaliza a compra (preços/estoque revalidados no servidor). */
 export async function placeOrderAction(input: CheckoutInput): Promise<CheckoutResult> {
+  // Modo WhatsApp: a UI não existe, mas a action é um endpoint público — recusa no servidor.
+  if (!CHECKOUT_ENABLED) return { ok: false, error: CHECKOUT_DISABLED_ERROR };
   const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };

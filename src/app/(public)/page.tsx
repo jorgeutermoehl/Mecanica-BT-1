@@ -6,11 +6,41 @@ import { PartIcon } from "@/components/shared/part-icon";
 import { ProductCard } from "@/components/public/product-card";
 import { TrustStrip } from "@/components/public/trust-strip";
 import { Button } from "@/components/ui/button";
-import { SPECIALTIES, whatsappLink } from "@/lib/constants";
+import { CHECKOUT_ENABLED, whatsappLink } from "@/lib/constants";
 import { getHomeData } from "@/server/catalog";
 
 // Vitrine servida pelo cache com tag "catalog" — mudanças no painel
 // disparam revalidateTag e aparecem na hora, sem custo por request.
+
+const HOW_TO_BUY = CHECKOUT_ENABLED
+  ? [
+      {
+        title: "Escolha a peça",
+        text: "Fotos reais, ficha técnica e aplicação de cada anúncio.",
+      },
+      {
+        title: "Faça o pedido",
+        text: "As peças ficam reservadas por 72h enquanto você paga.",
+      },
+      {
+        title: "Receba em casa",
+        text: "Enviamos para todo o Brasil com código de rastreio.",
+      },
+    ]
+  : [
+      {
+        title: "Escolha a peça",
+        text: "Fotos reais, ficha técnica e aplicação de cada anúncio.",
+      },
+      {
+        title: "Chame no WhatsApp",
+        text: "O botão já manda a peça e o preço. Confirmamos aplicação e frete.",
+      },
+      {
+        title: "Pague e receba",
+        text: "Pix ou cartão. Enviamos para todo o Brasil com rastreio.",
+      },
+    ];
 
 const PRODUCT_GRID =
   "grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4";
@@ -61,15 +91,7 @@ function SectionHeader({
 }
 
 export default async function HomePage() {
-  const {
-    categories,
-    focus,
-    bestSellers,
-    onSale,
-    featuredCategory,
-    featuredProducts,
-    newArrivals,
-  } = await getHomeData();
+  const { focus, categoryTiles, bestSellers, onSale } = await getHomeData();
 
   return (
     <>
@@ -144,7 +166,56 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ===================== MAIS VENDIDOS ===================== */}
+      {/* ===================== CATEGORIAS (tiles com foto) ===================== */}
+      {categoryTiles.length > 0 && (
+        <section className="pb-12 sm:pb-16">
+          <Container>
+            <SectionHeader eyebrow="Navegue por peça" title="Categorias" />
+            <nav
+              aria-label="Categorias de produtos"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {categoryTiles.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/produtos?categoria=${c.slug}`}
+                  className="group relative flex h-32 items-end overflow-hidden rounded-lg border border-border bg-carbon p-4 transition-colors hover:border-primary/60 sm:h-40"
+                >
+                  {c.image && (
+                    <Image
+                      src={c.image}
+                      alt=""
+                      fill
+                      sizes="(max-width: 640px) 100vw, 33vw"
+                      className="object-cover opacity-50 transition-all duration-300 group-hover:scale-[1.03] group-hover:opacity-60"
+                    />
+                  )}
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/50 to-transparent"
+                  />
+                  <span className="relative flex w-full items-end justify-between gap-3">
+                    <span className="flex items-center gap-2.5">
+                      <PartIcon
+                        icon={c.icon}
+                        className="size-6 shrink-0 text-primary"
+                      />
+                      <span className="font-display text-lg font-bold uppercase leading-tight tracking-tight">
+                        {c.name}
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                      {c.count} {c.count === 1 ? "anúncio" : "anúncios"}
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </nav>
+          </Container>
+        </section>
+      )}
+
+      {/* ===================== MAIS VENDIDOS (só com venda pelo site) ===================== */}
       {bestSellers.length > 0 && (
         <section className="py-12 sm:py-16">
           <Container>
@@ -163,92 +234,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ===================== CATEGORIAS ===================== */}
-      {categories.length > 0 && (
-        <section className="py-12 sm:py-16">
-          <Container>
-            <SectionHeader
-              eyebrow="Navegue por peça"
-              title="Categorias"
-              href="/produtos"
-              linkLabel="Ver todas"
-            />
-            <nav
-              aria-label="Categorias de produtos"
-              className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3 lg:grid-cols-4"
-            >
-              {categories.map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/produtos?categoria=${c.slug}`}
-                  className="group flex items-center gap-3 border-b border-border/70 pb-3 text-sm font-medium transition-colors hover:text-primary"
-                >
-                  <PartIcon
-                    icon={c.icon}
-                    className="size-5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary"
-                  />
-                  <span className="flex-1 truncate">{c.name}</span>
-                  <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                    {c.count}
-                  </span>
-                </Link>
-              ))}
-            </nav>
-          </Container>
-        </section>
-      )}
-
-      {/* ============ CATEGORIA EM DESTAQUE (featured + com anúncio) ============ */}
-      {featuredCategory && featuredProducts.length > 0 && (
-        <section className="py-12 sm:py-16">
-          <Container>
-            <div className="relative overflow-hidden rounded-lg border border-border">
-              {featuredProducts[0].image && (
-                <Image
-                  src={featuredProducts[0].image}
-                  alt={featuredProducts[0].name}
-                  fill
-                  sizes="(max-width: 1280px) 100vw, 1280px"
-                  className="object-cover"
-                />
-              )}
-              <span
-                aria-hidden
-                className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/25"
-              />
-              <div className="relative flex flex-col items-start gap-4 px-4 py-12 sm:px-8 sm:py-16 lg:px-12">
-                <Eyebrow>Destaque</Eyebrow>
-                <h2 className="max-w-xl font-display text-3xl font-bold uppercase leading-none tracking-tight sm:text-4xl">
-                  {featuredCategory.name}
-                </h2>
-                {featuredCategory.description && (
-                  <p className="max-w-md text-pretty text-muted-foreground">
-                    {featuredCategory.description}
-                  </p>
-                )}
-                <Button
-                  asChild
-                  size="lg"
-                  variant="secondary"
-                  className="mt-2 gap-2"
-                >
-                  <Link href={`/produtos?categoria=${featuredCategory.slug}`}>
-                    Ver {featuredCategory.name.toLowerCase()}
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-
-            <div className={`mt-6 ${PRODUCT_GRID}`}>
-              {featuredProducts.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
-          </Container>
-        </section>
-      )}
-
       {/* ===================== EM PROMOÇÃO ===================== */}
       {onSale.length > 0 && (
         <section className="py-12 sm:py-16">
@@ -256,8 +241,8 @@ export default async function HomePage() {
             <SectionHeader
               eyebrow="Ofertas ativas"
               title="Em promoção"
-              href="/promocoes"
-              linkLabel="Ver ofertas"
+              href="/produtos"
+              linkLabel="Ver catálogo"
             />
             <div className={PRODUCT_GRID}>
               {onSale.map((p) => (
@@ -268,41 +253,28 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ===================== NOVIDADES ===================== */}
-      {newArrivals.length > 0 && (
-        <section className="py-12 sm:py-16">
-          <Container>
-            <SectionHeader
-              eyebrow="Acabou de chegar"
-              title="Novidades"
-              href="/produtos"
-              linkLabel="Ver catálogo"
-            />
-            <div className={PRODUCT_GRID}>
-              {newArrivals.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
-          </Container>
-        </section>
-      )}
-
-      {/* ===================== ESPECIALIDADES ===================== */}
-      <section className="py-12 sm:py-16">
+      {/* ===================== COMO COMPRAR ===================== */}
+      <section className="border-t border-border py-12 sm:py-16">
         <Container>
-          <p className="mb-6 text-center font-mono text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            Especialidades da casa
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-            {SPECIALTIES.map((b) => (
-              <span
-                key={b}
-                className="font-display text-lg font-semibold uppercase tracking-wide text-muted-foreground/70 transition-colors hover:text-foreground"
+          <SectionHeader eyebrow="Simples assim" title="Como comprar" />
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {HOW_TO_BUY.map((step, i) => (
+              <li
+                key={step.title}
+                className="flex gap-4 rounded-lg border border-border bg-card p-5"
               >
-                {b}
-              </span>
+                <span className="font-display text-3xl font-bold leading-none text-boost tabular-nums">
+                  {i + 1}
+                </span>
+                <span>
+                  <span className="block font-semibold">{step.title}</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">
+                    {step.text}
+                  </span>
+                </span>
+              </li>
             ))}
-          </div>
+          </ol>
         </Container>
       </section>
 

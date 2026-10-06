@@ -21,6 +21,14 @@ export async function saveConsentAction(input: unknown): Promise<{ ok: boolean }
   const userAgent = h.get("user-agent");
 
   const d = parsed.data;
+  // Endpoint público: uma decisão por sessão/dia (evita inflar a tabela por repetição ou abuso).
+  if (d.sessionId) {
+    const recent = await prisma.cookieConsent.findFirst({
+      where: { sessionId: d.sessionId, createdAt: { gte: new Date(Date.now() - 86_400_000) } },
+      select: { id: true },
+    });
+    if (recent) return { ok: true };
+  }
   const origin = [
     d.referrer && `ref=${d.referrer}`,
     d.utmSource && `utm_source=${d.utmSource}`,

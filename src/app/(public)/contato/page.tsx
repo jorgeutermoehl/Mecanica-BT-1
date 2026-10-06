@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { SITE, whatsappLink } from "@/lib/constants";
+import { CHECKOUT_ENABLED, SITE, whatsappLink } from "@/lib/constants";
 import { sendContactMessageAction } from "@/app/actions/contact";
 
 /* Rótulo de seção padrão (mono vermelho com traço), igual às seções da home. */
@@ -163,9 +163,9 @@ export default function ContatoPage() {
             Fale com um <span className="text-boost">especialista</span>
           </h1>
           <p className="mt-5 max-w-xl text-pretty text-lg text-muted-foreground">
-            Dúvidas de compatibilidade, potência, instalação ou orçamento? Envie
-            sua mensagem ou chame no WhatsApp — nosso time monta o setup certo
-            pro seu carro.
+            {CHECKOUT_ENABLED
+              ? "Dúvidas de compatibilidade, potência, instalação ou orçamento? Envie sua mensagem ou chame no WhatsApp — nosso time monta o setup certo pro seu carro."
+              : "Dúvidas de aplicação, orçamento ou pedido? Chame no WhatsApp — a gente responde, confirma a peça certa e fecha o pedido com você."}
           </p>
         </Container>
       </section>
@@ -173,123 +173,132 @@ export default function ContatoPage() {
       {/* ===================== FORMULÁRIO + CANAIS ===================== */}
       <section className="py-10 sm:py-14 lg:py-16">
         <Container>
-          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-            {/* ---------- Coluna esquerda: formulário ---------- */}
-            <div className="min-w-0 rounded-2xl border border-border bg-card p-6 sm:p-8">
-              <Eyebrow>Envie uma mensagem</Eyebrow>
-              <h2 className="mt-3 font-display text-2xl font-bold uppercase tracking-tight">
-                Conte o que você procura
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Preencha os campos abaixo. Quanto mais detalhes do carro e do
-                objetivo, mais precisa é a nossa indicação.
-              </p>
+          <div
+            className={
+              CHECKOUT_ENABLED
+                ? "grid gap-8 lg:grid-cols-2 lg:gap-12"
+                : "mx-auto grid max-w-3xl gap-8"
+            }
+          >
+            {/* ---------- Coluna esquerda: formulário (só no modo checkout) ---------- */}
+            {CHECKOUT_ENABLED && (
+              <div className="min-w-0 rounded-2xl border border-border bg-card p-6 sm:p-8">
+                <Eyebrow>Envie uma mensagem</Eyebrow>
+                <h2 className="mt-3 font-display text-2xl font-bold uppercase tracking-tight">
+                  Conte o que você procura
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Preencha os campos abaixo. Quanto mais detalhes do carro e do
+                  objetivo, mais precisa é a nossa indicação.
+                </p>
 
-              <form
-                onSubmit={handleSubmit}
-                noValidate
-                className="mt-8 space-y-5"
-              >
-                {/* Honeypot: invisível para pessoas, robôs preenchem e são descartados. */}
-                <div
-                  aria-hidden
-                  className="absolute -left-[9999px] h-0 w-0 overflow-hidden"
+                <form
+                  onSubmit={handleSubmit}
+                  noValidate
+                  className="mt-8 space-y-5"
                 >
-                  <label htmlFor="site">Não preencha</label>
-                  <input
-                    id="site"
-                    name="site"
-                    tabIndex={-1}
-                    autoComplete="off"
-                    value={site}
-                    onChange={(e) => setSite(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <Field
-                    id="nome"
-                    label="Nome"
-                    placeholder="Como podemos te chamar?"
-                    autoComplete="name"
-                    value={values.nome}
-                    error={errors.nome}
-                    onChange={(v) => update("nome", v)}
-                  />
-                  <Field
-                    id="telefone"
-                    label="Telefone / WhatsApp"
-                    type="tel"
-                    inputMode="tel"
-                    placeholder="(47) 99999-0000"
-                    autoComplete="tel"
-                    value={values.telefone}
-                    error={errors.telefone}
-                    onChange={(v) => update("telefone", v)}
-                  />
-                </div>
-
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <Field
-                    id="email"
-                    label="E-mail"
-                    type="email"
-                    inputMode="email"
-                    placeholder="voce@email.com"
-                    autoComplete="email"
-                    value={values.email}
-                    error={errors.email}
-                    onChange={(v) => update("email", v)}
-                  />
-                  <Field
-                    id="assunto"
-                    label="Assunto"
-                    placeholder="Ex.: coroa e pinhão para Gol BX"
-                    value={values.assunto}
-                    error={errors.assunto}
-                    onChange={(v) => update("assunto", v)}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="mensagem">Mensagem</Label>
-                  <Textarea
-                    id="mensagem"
-                    rows={5}
-                    placeholder="Descreva o carro (modelo, ano, motor), a potência desejada e as peças que já tem instaladas."
-                    value={values.mensagem}
-                    onChange={(e) => update("mensagem", e.target.value)}
-                    aria-invalid={errors.mensagem ? true : undefined}
-                    aria-describedby={
-                      errors.mensagem ? "mensagem-error" : undefined
-                    }
-                  />
-                  {errors.mensagem && (
-                    <p
-                      id="mensagem-error"
-                      className="font-mono text-xs text-destructive"
-                      role="alert"
-                    >
-                      {errors.mensagem}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    Ao enviar, você concorda em ser contatado pela nossa equipe.
-                  </p>
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="gap-2 sm:shrink-0"
-                    disabled={submitting}
+                  {/* Honeypot: invisível para pessoas, robôs preenchem e são descartados. */}
+                  <div
+                    aria-hidden
+                    className="absolute -left-[9999px] h-0 w-0 overflow-hidden"
                   >
-                    <Send className="size-4" />
-                    {submitting ? "Enviando..." : "Enviar mensagem"}
-                  </Button>
-                </div>
-              </form>
-            </div>
+                    <label htmlFor="site">Não preencha</label>
+                    <input
+                      id="site"
+                      name="site"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={site}
+                      onChange={(e) => setSite(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field
+                      id="nome"
+                      label="Nome"
+                      placeholder="Como podemos te chamar?"
+                      autoComplete="name"
+                      value={values.nome}
+                      error={errors.nome}
+                      onChange={(v) => update("nome", v)}
+                    />
+                    <Field
+                      id="telefone"
+                      label="Telefone / WhatsApp"
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="(47) 99999-0000"
+                      autoComplete="tel"
+                      value={values.telefone}
+                      error={errors.telefone}
+                      onChange={(v) => update("telefone", v)}
+                    />
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field
+                      id="email"
+                      label="E-mail"
+                      type="email"
+                      inputMode="email"
+                      placeholder="voce@email.com"
+                      autoComplete="email"
+                      value={values.email}
+                      error={errors.email}
+                      onChange={(v) => update("email", v)}
+                    />
+                    <Field
+                      id="assunto"
+                      label="Assunto"
+                      placeholder="Ex.: coroa e pinhão para Gol BX"
+                      value={values.assunto}
+                      error={errors.assunto}
+                      onChange={(v) => update("assunto", v)}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mensagem">Mensagem</Label>
+                    <Textarea
+                      id="mensagem"
+                      rows={5}
+                      placeholder="Descreva o carro (modelo, ano, motor), a potência desejada e as peças que já tem instaladas."
+                      value={values.mensagem}
+                      onChange={(e) => update("mensagem", e.target.value)}
+                      aria-invalid={errors.mensagem ? true : undefined}
+                      aria-describedby={
+                        errors.mensagem ? "mensagem-error" : undefined
+                      }
+                    />
+                    {errors.mensagem && (
+                      <p
+                        id="mensagem-error"
+                        className="font-mono text-xs text-destructive"
+                        role="alert"
+                      >
+                        {errors.mensagem}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Ao enviar, você concorda em ser contatado pela nossa
+                      equipe.
+                    </p>
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="gap-2 sm:shrink-0"
+                      disabled={submitting}
+                    >
+                      <Send className="size-4" />
+                      {submitting ? "Enviando..." : "Enviar mensagem"}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
 
             {/* ---------- Coluna direita: canais + mapa ---------- */}
             <div className="flex min-w-0 flex-col gap-6">

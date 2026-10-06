@@ -7,6 +7,7 @@ import { CONTACT_STATUSES, setContactStatus } from "@/server/contacts";
 import { prisma } from "@/lib/prisma";
 import { contactSchema } from "@/lib/validations";
 import { notifyStoreNewContact } from "@/server/email";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 
 export type ContactResult = { ok: boolean; error?: string };
 
@@ -14,6 +15,10 @@ export type ContactResult = { ok: boolean; error?: string };
 const MAX_PER_HOUR = 3;
 
 export async function sendContactMessageAction(input: unknown): Promise<ContactResult> {
+  // Modo WhatsApp: formulário não existe na loja; a action continua pública → recusa aqui.
+  if (!CHECKOUT_ENABLED) {
+    return { ok: false, error: "O formulário está desativado — fale com a gente pelo WhatsApp." };
+  }
   const parsed = contactSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };

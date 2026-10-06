@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { applyProviderStatus, createTransaction, fetchRemoteStatus } from "@/server/payments";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 
 /**
  * Webhook do Mercado Pago (ESPEC-V2, Onda 3 item 3) — idempotente e endurecido:
@@ -23,6 +24,8 @@ export const dynamic = "force-dynamic";
 
 const PROVIDER = "MERCADO_PAGO" as const;
 const TIMESTAMP_TOLERANCE_MS = 5 * 60_000;
+/** Payload do MP tem poucos KB; acima disso é lixo — não vai para o banco. */
+const MAX_BODY_BYTES = 64 * 1024;
 
 /** Comparação em tempo constante (digest fixo evita vazar tamanho). */
 function safeEqual(a: string, b: string): boolean {
@@ -118,7 +121,12 @@ async function markEvent(
 }
 
 export async function POST(req: NextRequest) {
+  // Sem venda pelo site não há gateway: rota inexistente (nada gravado).
+  if (!CHECKOUT_ENABLED) return new NextResponse("Not found", { status: 404 });
   const rawBody = await req.text();
+  if (Buffer.byteLength(rawBody, "utf8") > MAX_BODY_BYTES) {
+    return new NextResponse("Payload too large", { status: 413 });
+  }
   let body: { id?: unknown; type?: string; topic?: string; data?: { id?: unknown } } = {};
   try {
     body = JSON.parse(rawBody);

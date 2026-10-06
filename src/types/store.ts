@@ -43,11 +43,6 @@ export const CONDITION_LABEL: Record<string, string> = {
   REMAN: "Revisado",
 };
 
-/** Produto pode ir para o carrinho? (preço definido e estoque). */
-export function isPurchasable(p: Pick<StoreProduct, "priceOnRequest" | "stock">): boolean {
-  return !p.priceOnRequest && p.stock > 0;
-}
-
 export type StoreCategory = {
   id: string;
   name: string;

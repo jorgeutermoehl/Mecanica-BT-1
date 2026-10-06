@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShoppingCart } from "lucide-react";
+import { Menu, MessageCircle, ShoppingCart } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Container } from "@/components/shared/container";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -15,7 +15,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { PUBLIC_NAV } from "@/lib/constants";
+import { CHECKOUT_ENABLED, PUBLIC_NAV, whatsappLink } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
@@ -50,27 +50,38 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          <Button asChild variant="ghost" size="icon">
-            <Link
-              href="/carrinho"
-              aria-label={
-                hydrated && count > 0
-                  ? `Carrinho, ${count} ${count === 1 ? "item" : "itens"}`
-                  : "Carrinho"
-              }
-              className="relative"
-            >
-              <ShoppingCart className="size-5" />
-              {hydrated && count > 0 && (
-                <span
-                  aria-hidden
-                  className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-bold leading-none text-primary-foreground"
-                >
-                  {count > 9 ? "9+" : count}
-                </span>
-              )}
-            </Link>
-          </Button>
+          {CHECKOUT_ENABLED ? (
+            <Button asChild variant="ghost" size="icon">
+              <Link
+                href="/carrinho"
+                aria-label={
+                  hydrated && count > 0
+                    ? `Carrinho, ${count} ${count === 1 ? "item" : "itens"}`
+                    : "Carrinho"
+                }
+                className="relative"
+              >
+                <ShoppingCart className="size-5" />
+                {hydrated && count > 0 && (
+                  <span
+                    aria-hidden
+                    className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-bold leading-none text-primary-foreground"
+                  >
+                    {count > 9 ? "9+" : count}
+                  </span>
+                )}
+              </Link>
+            </Button>
+          ) : (
+            // Venda pelo WhatsApp: o atalho do topo é a conversa, não o carrinho.
+            <Button asChild size="sm" className="gap-1.5">
+              <a href={whatsappLink()} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="size-4" />
+                <span className="hidden sm:inline">WhatsApp</span>
+                <span className="sr-only sm:hidden">Falar no WhatsApp</span>
+              </a>
+            </Button>
+          )}
 
           {/* Menu mobile */}
           <Sheet>

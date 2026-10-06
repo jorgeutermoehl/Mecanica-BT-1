@@ -51,7 +51,7 @@ import {
   type StoreCategory,
   type StoreProduct,
 } from "@/types/store";
-import { whatsappLink } from "@/lib/constants";
+import { whatsappLink, CHECKOUT_ENABLED } from "@/lib/constants";
 
 /* ---------- Configurações de filtro / ordenação ---------- */
 
@@ -62,13 +62,15 @@ type SortId =
   | "mais-vendidos"
   | "novidades";
 
-const SORTS: { id: SortId; label: string }[] = [
+const ALL_SORTS: { id: SortId; label: string }[] = [
   { id: "relevancia", label: "Relevância" },
   { id: "menor-preco", label: "Menor preço" },
   { id: "maior-preco", label: "Maior preço" },
   { id: "mais-vendidos", label: "Mais vendidos" },
   { id: "novidades", label: "Novidades" },
 ];
+// "Mais vendidos" depende de pedidos registrados — só faz sentido com venda pelo site.
+const SORTS = ALL_SORTS.filter((s) => CHECKOUT_ENABLED || s.id !== "mais-vendidos");
 
 const PRICE_RANGES: { id: string; label: string; min: number; max: number }[] =
   [

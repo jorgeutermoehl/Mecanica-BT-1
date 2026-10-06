@@ -19,6 +19,7 @@ import {
   Warehouse,
   type LucideIcon,
 } from "lucide-react";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -31,20 +32,22 @@ type NavItem = {
   showBadge?: boolean;
   /** Visível só para administradores. */
   adminOnly?: boolean;
+  /** Gestão de vendas — só no modo checkout (venda pelo site). */
+  sales?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, sales: true },
   { href: "/admin/produtos", label: "Produtos", icon: Package },
-  { href: "/admin/estoque", label: "Estoque", icon: Warehouse },
-  { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
-  { href: "/admin/clientes", label: "Clientes", icon: Users },
-  { href: "/admin/promocoes", label: "Promoções", icon: BadgePercent },
-  { href: "/admin/relatorios", label: "Relatórios", icon: FileBarChart },
-  { href: "/admin/dre", label: "DRE", icon: Calculator },
-  { href: "/admin/financeiro/transacoes", label: "Transações", icon: CreditCard },
-  { href: "/admin/mensagens", label: "Mensagens", icon: Mail },
-  { href: "/admin/notificacoes", label: "Notificações", icon: Bell, showBadge: true },
+  { href: "/admin/estoque", label: "Estoque", icon: Warehouse, sales: true },
+  { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart, sales: true },
+  { href: "/admin/clientes", label: "Clientes", icon: Users, sales: true },
+  { href: "/admin/promocoes", label: "Promoções", icon: BadgePercent, sales: true },
+  { href: "/admin/relatorios", label: "Relatórios", icon: FileBarChart, sales: true },
+  { href: "/admin/dre", label: "DRE", icon: Calculator, sales: true },
+  { href: "/admin/financeiro/transacoes", label: "Transações", icon: CreditCard, sales: true },
+  { href: "/admin/mensagens", label: "Mensagens", icon: Mail, sales: true },
+  { href: "/admin/notificacoes", label: "Notificações", icon: Bell, showBadge: true, sales: true },
   { href: "/admin/usuarios", label: "Usuários", icon: UserCog, adminOnly: true },
   { href: "/admin/conta", label: "Minha conta", icon: UserRound },
 ];
@@ -79,7 +82,9 @@ export function AdminNav({
 
   return (
     <nav className={cn("flex flex-col gap-1", className)} aria-label="Navegação do painel">
-      {NAV_ITEMS.filter((item) => !item.adminOnly || role === "admin").map((item) => {
+      {NAV_ITEMS.filter(
+        (item) => (!item.adminOnly || role === "admin") && (!item.sales || CHECKOUT_ENABLED),
+      ).map((item) => {
         const active = item.exact
           ? pathname === item.href
           : pathname === item.href || pathname.startsWith(`${item.href}/`);

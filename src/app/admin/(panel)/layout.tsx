@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { getStaffUser } from "@/lib/auth";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 import { getNotifications } from "@/server/notifications";
 import { logoutAction } from "@/app/actions/auth";
 import { Logo } from "@/components/shared/logo";
@@ -22,7 +23,8 @@ export default async function AdminPanelLayout({
   const session = await getStaffUser();
   if (!session) redirect("/admin/login");
 
-  const { count: notificationCount } = await getNotifications();
+  // Notificações (pedidos/estoque/contatos) só existem no modo checkout.
+  const notificationCount = CHECKOUT_ENABLED ? (await getNotifications()).count : 0;
 
   return (
     <div className="min-h-svh bg-background lg:grid lg:grid-cols-[15rem_1fr]">
@@ -30,7 +32,7 @@ export default async function AdminPanelLayout({
       <aside className="hidden lg:block">
         <div className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
           <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-4">
-            <Logo href="/admin" />
+            <Logo href={CHECKOUT_ENABLED ? "/admin" : "/admin/produtos"} />
           </div>
 
           <AdminNav

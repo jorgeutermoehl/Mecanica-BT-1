@@ -5,7 +5,7 @@ Homologação é uma **cópia do site com banco separado e marcada como teste**:
 - fora do Google (`noindex` + `robots.txt` bloqueando tudo);
 - mensagens de WhatsApp e e-mails saem com **[TESTE]**.
 
-O cliente pode cadastrar peças, fazer pedidos e mudar status à vontade: nada disso afeta a loja real.
+O cliente pode cadastrar peças, editar fotos e quantidades e testar o botão de WhatsApp à vontade: nada disso afeta a loja real.
 
 ## Arquitetura recomendada (custo zero nos planos gratuitos)
 - **Vercel:** cada push na branch vira um *Preview Deployment* com URL própria. A homologação é o Preview; a produção é a branch principal.
@@ -18,6 +18,7 @@ O cliente pode cadastrar peças, fazer pedidos e mudar status à vontade: nada d
 | Variável | Valor |
 |---|---|
 | `NEXT_PUBLIC_APP_ENV` | `staging` |
+| `NEXT_PUBLIC_SALES_MODE` | vazio (venda pelo WhatsApp) — igual ao de produção |
 | `DATABASE_URL` / `DIRECT_URL` | do Supabase **de homologação** |
 | `AUTH_SECRET` | `openssl rand -base64 48` (diferente do de produção) |
 | `NEXT_PUBLIC_SITE_URL` | a URL do preview (ex.: `https://mecanica-bt-1-git-<branch>-<time>.vercel.app`) |
@@ -33,7 +34,7 @@ O cliente pode cadastrar peças, fazer pedidos e mudar status à vontade: nada d
    npx prisma migrate deploy --schema prisma/postgres/schema.prisma
    SEED_ALLOW_WIPE=1 SEED_ADMIN_PASSWORD='<senha-forte-de-homolog>' npx tsx prisma/seed.ts
    ```
-   - O seed cria os 3 produtos com as fotos dos anúncios, 1 pedido, 1 cupom (`BEMVINDO10`) e os usuários `admin@fullboost.com.br` e `vendedor@fullboost.com.br`, com a senha definida em `SEED_ADMIN_PASSWORD`.
+   - O seed cria os anúncios com as fotos (coroas, virabrequins e gaiolas) e os usuários `admin@fullboost.com.br` e `vendedor@fullboost.com.br`, com a senha definida em `SEED_ADMIN_PASSWORD`.
    - **Nunca use `fullboost123` num endereço público:** essa senha está no repositório.
 4. Faça um push (ou *Redeploy* do preview) e mande ao cliente o link e o acesso do painel.
 
@@ -41,4 +42,4 @@ O cliente pode cadastrar peças, fazer pedidos e mudar status à vontade: nada d
 Para limpar o que o cliente testou e voltar aos dados de demonstração, rode de novo o comando do passo 3. Ele **apaga** o banco de homologação e recria tudo. Nunca aponte esse comando para o banco de produção.
 
 ## Roteiro de validação do cliente
-O roteiro passo a passo (o que testar e o que conferir em cada etapa) foi entregue separadamente, como documento compartilhável com comentários. O cliente marca cada item e deixa os ajustes como comentário.
+O manual de navegação completo está em [`MANUAL-NAVEGACAO.md`](MANUAL-NAVEGACAO.md) (seção "Checklist de validação"). O roteiro também foi entregue como documento compartilhável com comentários — o cliente marca cada item e deixa os ajustes como comentário.

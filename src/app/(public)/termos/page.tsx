@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ArrowRight, MessageCircle, FileText } from "lucide-react";
 import { Container } from "@/components/shared/container";
 import { Button } from "@/components/ui/button";
-import { SITE, whatsappLink } from "@/lib/constants";
+import { CHECKOUT_ENABLED, SITE, whatsappLink } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Termos de Uso",
@@ -174,12 +174,9 @@ export default function TermosPage() {
                   confirmado no atendimento, conforme o CEP de destino.
                 </p>
                 <p>
-                  Ao finalizar o pedido no site, as peças ficam reservadas por
-                  72 horas. O pagamento é combinado pelo WhatsApp: Pix ou cartão
-                  de crédito (por link de pagamento, à vista ou parcelado). O
-                  pedido só é considerado confirmado após o recebimento do
-                  pagamento; sem pagamento no prazo, a reserva pode ser
-                  liberada.
+                  {CHECKOUT_ENABLED
+                    ? "Ao finalizar o pedido no site, as peças ficam reservadas por 72 horas. O pagamento é combinado pelo WhatsApp: Pix ou cartão de crédito (por link de pagamento, à vista ou parcelado). O pedido só é considerado confirmado após o recebimento do pagamento; sem pagamento no prazo, a reserva pode ser liberada."
+                    : "O site é uma vitrine: o pedido é feito pelo WhatsApp, onde confirmamos a peça, a disponibilidade e o frete. O pagamento é por Pix ou cartão de crédito (link de pagamento, à vista ou parcelado), e o pedido só é considerado confirmado após o recebimento do pagamento."}
                 </p>
                 <p>
                   Podemos recusar ou cancelar pedidos em casos de

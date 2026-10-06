@@ -114,6 +114,12 @@ async function main() {
   );
   {
     const base = { name: "Coroa teste", sku: "TST-1", categoryId: product.categoryId, costPrice: 1, initialStock: 0, minStock: 0 };
+    productSchema.safeParse({ ...base, salePrice: 10, imageUrl: "/api/media/product-image/x/detail.webp" }).success
+      ? ok("edição aceita foto enviada pelo painel (caminho /api/media/…)")
+      : fail("foto enviada na edição", "zod recusou o caminho relativo");
+    productSchema.safeParse({ ...base, salePrice: 10, imageUrl: "javascript:alert(1)" }).success
+      ? fail("URL de imagem maliciosa", "zod aceitou")
+      : ok("URL de imagem fora de http(s)/caminho local barrada");
     productSchema.safeParse({ ...base, salePrice: 0 }).success
       ? fail("preço zero sem 'sob consulta'", "zod aceitou")
       : ok("preço zero barrado quando não é 'sob consulta'");

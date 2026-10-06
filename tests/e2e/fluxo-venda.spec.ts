@@ -1,5 +1,6 @@
 import path from "node:path";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { CHECKOUT, login } from "./helpers";
 
 /**
  * Fluxo padrão da loja, de ponta a ponta:
@@ -8,22 +9,14 @@ import { expect, test, type Page } from "@playwright/test";
  *  painel: Pago → Em separação → Enviado. Roda contra o seed de demonstração.
  */
 
-const ADMIN = { email: "admin@fullboost.com.br", password: "fullboost123" };
 const FOTOS = ["coroa-pinhao-detalhe.webp", "coroa-pinhao-lote.webp"].map((f) =>
   path.join(process.cwd(), "public/produtos", f),
 );
 const SKU = `TRA-E2E-${Date.now().toString(36).toUpperCase()}`;
 const NOME = `Coroa e Pinhão 8x31 E2E ${SKU}`;
 
-async function login(page: Page) {
-  await page.goto("/admin/login");
-  await page.fill("#login-email", ADMIN.email);
-  await page.fill("#login-password", ADMIN.password);
-  await page.getByRole("button", { name: /entrar/i }).click();
-  await page.waitForURL((u) => u.pathname === "/admin");
-}
-
 test("cadastro com fotos → venda pelo site → baixa no estoque", async ({ page, context }) => {
+  test.skip(!CHECKOUT, "venda pelo site só no modo checkout");
   const consoleErrors: string[] = [];
   page.on("pageerror", (e) => consoleErrors.push(String(e)));
 
@@ -109,6 +102,7 @@ test("cadastro com fotos → venda pelo site → baixa no estoque", async ({ pag
 });
 
 test("formulário de contato grava a mensagem e ela aparece no painel", async ({ page, context }) => {
+  test.skip(!CHECKOUT, "formulário de contato só no modo checkout (no WhatsApp é só o botão)");
   const shop = await context.newPage();
   const assunto = `Gaiola E2E ${Date.now()}`;
   await shop.goto("/contato");

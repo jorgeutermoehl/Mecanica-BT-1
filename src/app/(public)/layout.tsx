@@ -1,6 +1,6 @@
 import { SiteHeader } from "@/components/public/site-header";
 import { SiteFooter } from "@/components/public/site-footer";
-import { WhatsappButton } from "@/components/public/whatsapp-button";
+import { StickyBarSpacer, WhatsappButton } from "@/components/public/whatsapp-button";
 import { CookieConsent } from "@/components/public/cookie-consent";
 import { CartProvider } from "@/components/cart/cart-provider";
 
@@ -16,6 +16,7 @@ export default function PublicLayout({
           <SiteHeader />
           <main className="flex-1">{children}</main>
           <SiteFooter />
+          <StickyBarSpacer />
           <WhatsappButton />
           <CookieConsent />
         </div>

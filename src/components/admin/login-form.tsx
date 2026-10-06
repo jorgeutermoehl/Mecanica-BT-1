@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { loginAction } from "@/app/actions/auth";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +25,7 @@ export function LoginForm() {
 
     if (result.ok) {
       toast.success("Login realizado. Bem-vindo ao painel!");
-      router.push("/admin");
+      router.push(CHECKOUT_ENABLED ? "/admin" : "/admin/produtos");
       router.refresh();
       return; // mantém o botão desabilitado durante a navegação
     }

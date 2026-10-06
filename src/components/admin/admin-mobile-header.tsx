@@ -3,6 +3,7 @@
 import * as React from "react";
 import { LogOut, Menu } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +32,7 @@ export function AdminMobileHeader({
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground lg:hidden">
-      <Logo href="/admin" />
+      <Logo href={CHECKOUT_ENABLED ? "/admin" : "/admin/produtos"} />
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
@@ -51,7 +52,7 @@ export function AdminMobileHeader({
         >
           <SheetHeader className="border-b border-sidebar-border">
             <SheetTitle className="text-sidebar-foreground">
-              <Logo href="/admin" />
+              <Logo href={CHECKOUT_ENABLED ? "/admin" : "/admin/produtos"} />
             </SheetTitle>
             <SheetDescription className="sr-only">
               Navegação do painel administrativo FullBoost

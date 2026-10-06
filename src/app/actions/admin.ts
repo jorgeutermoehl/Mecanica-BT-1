@@ -2,7 +2,10 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { CATALOG_TAG } from "@/server/catalog";
+import { z } from "zod";
 import { requireStaff } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 import {
   productSchema,
   stockAdjustSchema,
@@ -20,6 +23,10 @@ import { adjustStock, correctMovement, registerEntry, registerOut, reverseMoveme
 import { registerManualSale, updateOrderStatus } from "@/server/orders";
 import { createCoupon, setCouponActive, setPromoPrice, clearPromoPrice } from "@/server/promotions";
 import { createCustomer, findPossibleDuplicates } from "@/server/customers";
+const editStockSchema = z.object({
+  stockQuantity: z.coerce.number().int().min(0, "Quantidade não pode ser negativa").optional(),
+});
+
 export type AdminActionResult = { ok: boolean; error?: string };
 
 function fail(e: unknown): AdminActionResult {
@@ -62,6 +69,18 @@ export async function updateProductAction(id: string, input: unknown): Promise<A
     const parsed = productSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
     await updateProduct(id, parsed.data, user.id);
+    // Modo WhatsApp (sem tela de Estoque): a quantidade é editada no próprio
+    // cadastro e vira um movimento de AJUSTE — o histórico continua append-only.
+    const stock = editStockSchema.safeParse(input);
+    if (!CHECKOUT_ENABLED && stock.success && stock.data.stockQuantity !== undefined) {
+      const current = await prisma.product.findUnique({ where: { id }, select: { stockQuantity: true } });
+      if (current && current.stockQuantity !== stock.data.stockQuantity) {
+        await adjustStock(
+          { productId: id, newQuantity: stock.data.stockQuantity, reason: "Quantidade alterada no cadastro do produto" },
+          user.id,
+        );
+      }
+    }
     revalidateStore();
     return { ok: true };
   } catch (e) {

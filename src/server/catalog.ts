@@ -1,6 +1,5 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { matchesProductQuery } from "@/lib/search";
 import type { StoreCategory, StoreProduct } from "@/types/store";
 
 /**
@@ -97,12 +96,6 @@ export async function getStoreProduct(slug: string): Promise<StoreProduct | null
   return all.find((p) => p.slug === slug) ?? null;
 }
 
-/** Busca única do catálogo — implementação interna trocável (tsvector no Postgres). */
-export async function searchProducts(query: string): Promise<StoreProduct[]> {
-  const all = await getStoreProducts();
-  return all.filter((p) => matchesProductQuery(p, query));
-}
-
 export async function getRelatedProducts(product: StoreProduct, limit = 4): Promise<StoreProduct[]> {
   const all = await getStoreProducts();
   return all.filter((p) => p.categorySlug === product.categorySlug && p.id !== product.id).slice(0, limit);
@@ -145,27 +138,25 @@ export const getStoreCategories = unstable_cache(
 /** Dados agregados da home (uma ida ao banco para a lista, depois fatia). */
 export async function getHomeData() {
   const [products, categories] = await Promise.all([getStoreProducts(), getStoreCategories()]);
-  const inStock = products.filter((p) => p.stock > 0);
-  const bySold = [...inStock].sort((a, b) => b.sold - a.sold);
-  // Destaque da home: primeira categoria marcada como `featured` que já tem anúncio.
-  const featuredCategory = categories.find((c) => c.featured) ?? null;
-  const featuredProducts = featuredCategory
-    ? products.filter((p) => p.categorySlug === featuredCategory.slug).slice(0, 4)
-    : [];
-
-  // "Foco do momento": anúncios marcados como destaque no painel. As demais
-  // vitrines evitam repetir o que já está nele (catálogo pequeno = muita repetição).
-  const focus = products.filter((p) => p.featured).slice(0, 8);
+  // "Foco do momento": anúncios marcados como destaque no painel; sem nenhum
+  // marcado, os mais recentes — a home nunca fica sem vitrine.
+  const featured = products.filter((p) => p.featured);
+  const focus = (featured.length > 0 ? featured : products).slice(0, 8);
   const inFocus = new Set(focus.map((p) => p.id));
+  const bySold = products.filter((p) => p.stock > 0 && p.sold > 0).sort((a, b) => b.sold - a.sold);
+
+  // Categorias com a foto do 1º anúncio de cada uma (tiles visuais).
+  const categoryTiles = categories.map((c) => ({
+    ...c,
+    image: products.find((p) => p.categorySlug === c.slug && p.image)?.image ?? null,
+  }));
 
   return {
-    categories,
     focus,
-    bestSellers: bySold.filter((p) => p.sold > 0 && !inFocus.has(p.id)).slice(0, 4),
-    onSale: products.filter((p) => p.promoPrice !== null).slice(0, 8),
-    featuredCategory,
-    featuredProducts,
-    newArrivals: products.filter((p) => p.isNew && !inFocus.has(p.id)).slice(0, 4),
+    categoryTiles,
+    // As outras vitrines não repetem o que já está no foco.
+    bestSellers: bySold.filter((p) => !inFocus.has(p.id)).slice(0, 4),
+    onSale: products.filter((p) => p.promoPrice !== null && !p.priceOnRequest && !inFocus.has(p.id)).slice(0, 8),
     totalProducts: products.length,
   };
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getStaffUser } from "@/lib/auth";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 import { Logo } from "@/components/shared/logo";
 import { LoginForm } from "@/components/admin/login-form";
 import {
@@ -41,8 +42,9 @@ export default async function AdminLoginPage() {
               Painel FullBoost
             </CardTitle>
             <CardDescription>
-              Entre com suas credenciais de operador para gerenciar catálogo,
-              estoque e pedidos.
+              {CHECKOUT_ENABLED
+                ? "Entre com suas credenciais para gerenciar catálogo, estoque e pedidos."
+                : "Entre com suas credenciais para gerenciar os anúncios da loja."}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-2">

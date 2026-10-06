@@ -4,7 +4,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Gauge,
-  Wrench,
   Car,
   ShieldCheck,
   BadgeCheck,
@@ -15,7 +14,7 @@ import { Container } from "@/components/shared/container";
 import { PartIcon } from "@/components/shared/part-icon";
 import { ProductCard } from "@/components/public/product-card";
 import { ProductActions } from "@/components/public/produto/product-actions";
-import { Button } from "@/components/ui/button";
+import { ProductStickyBar } from "@/components/public/produto/product-sticky-bar";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -33,7 +32,7 @@ import {
 import { getStoreProduct, getRelatedProducts } from "@/server/catalog";
 import { formatBRL, installment, discountPercent } from "@/lib/format";
 import { CONDITION_LABEL, type StoreProduct } from "@/types/store";
-import { whatsappLink, COMMERCE } from "@/lib/constants";
+import { CHECKOUT_ENABLED, COMMERCE } from "@/lib/constants";
 
 // PDP servida pelo cache com tag "catalog" (revalidateTag no painel).
 
@@ -167,15 +166,15 @@ export default async function ProductPage({
     },
     {
       q: "Qual é o prazo de entrega e como funciona o frete?",
-      a: "Depois que o pagamento é confirmado no WhatsApp, combinamos o envio com frete rastreável para todo o Brasil e enviamos o código de rastreio. O valor estimado aparece no checkout e é confirmado no atendimento conforme o CEP.",
+      a: CHECKOUT_ENABLED
+        ? "Depois que o pagamento é confirmado no WhatsApp, combinamos o envio com frete rastreável para todo o Brasil e enviamos o código de rastreio. O valor estimado aparece no checkout e é confirmado no atendimento conforme o CEP."
+        : "O pedido é fechado pelo WhatsApp: confirmamos a peça, calculamos o frete para o seu CEP e combinamos o pagamento (Pix ou cartão). Enviamos para todo o Brasil com código de rastreio.",
     },
     {
       q: "Como confirmo se é compatível com o meu carro?",
       a: "Veja a aplicação indicada nesta página e, na dúvida, chame o nosso time no WhatsApp com o modelo, ano e motorização do seu carro. Confirmamos o encaixe antes de você comprar.",
     },
   ];
-
-  const waMessage = `Olá! Quero confirmar a compatibilidade da peça ${product.name} (SKU ${product.sku}) com o meu carro.`;
 
   return (
     <>
@@ -335,10 +334,12 @@ export default async function ProductPage({
                   </>
                 ) : (
                   <p className="mt-1 font-display text-4xl font-bold tracking-tight text-foreground tabular-nums">
-                    {formatBRL(current)}{" "}
-                    <span className="font-sans text-sm font-semibold text-success">
-                      no PIX
-                    </span>
+                    {formatBRL(current)}
+                    {CHECKOUT_ENABLED && (
+                      <span className="ml-1.5 font-sans text-sm font-semibold text-success">
+                        no PIX
+                      </span>
+                    )}
                   </p>
                 )}
                 {!onRequest && COMMERCE.maxInstallments > 1 && (
@@ -415,7 +416,9 @@ export default async function ProductPage({
                 </li>
                 <li className="flex items-center gap-2">
                   <Lock aria-hidden className="size-4 shrink-0 text-success" />
-                  Peças reservadas por 72h no pedido
+                  {CHECKOUT_ENABLED
+                    ? "Peças reservadas por 72h no pedido"
+                    : "Pix ou cartão, combinado no WhatsApp"}
                 </li>
               </ul>
 
@@ -478,35 +481,6 @@ export default async function ProductPage({
                   </p>
                 )}
               </div>
-
-              {/* Compatibilidade */}
-              <div>
-                <h2 className="font-display text-xl font-bold uppercase tracking-tight">
-                  Compatibilidade
-                </h2>
-                <p className="mt-4 flex items-center gap-2 text-sm">
-                  <Wrench className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="shrink-0 text-muted-foreground">
-                    Aplicação indicada:
-                  </span>
-                  <span className="font-mono font-medium">
-                    {product.fitment ?? "Multiaplicação"}
-                  </span>
-                </p>
-                <p className="mt-4 text-sm text-muted-foreground">
-                  Peça de tuning: a aplicação depende do projeto. Confirme com o
-                  nosso time no WhatsApp antes de comprar.
-                </p>
-                <Button asChild variant="outline" size="sm" className="mt-3">
-                  <a
-                    href={whatsappLink(waMessage)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Confirmar compatibilidade
-                  </a>
-                </Button>
-              </div>
             </div>
 
             {/* Coluna lateral — FAQ + selos */}
@@ -562,6 +536,9 @@ export default async function ProductPage({
           </div>
         </Container>
       </section>
+
+      {/* Barra fixa de compra no celular (o botão principal some ao rolar) */}
+      <ProductStickyBar product={product} />
 
       {/* ===================== RELACIONADOS ===================== */}
       {related.length > 0 && (

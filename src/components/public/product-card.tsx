@@ -7,28 +7,39 @@ import { MessageCircle, ShoppingCart } from "lucide-react";
 import { PartIcon } from "@/components/shared/part-icon";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/cart/cart-provider";
-import { COMMERCE, whatsappLink } from "@/lib/constants";
+import {
+  CHECKOUT_ENABLED,
+  COMMERCE,
+  productWhatsappMessage,
+  whatsappLink,
+} from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { formatBRL, installment, discountPercent } from "@/lib/format";
 import { CONDITION_LABEL, type StoreProduct } from "@/types/store";
 
+/**
+ * Card da vitrine. O card inteiro leva à página da peça; o único botão é a
+ * ação principal: no modo WhatsApp "Pedir no WhatsApp" (mensagem com nome,
+ * SKU, preço e link), no modo checkout "Adicionar" ao carrinho.
+ */
 export function ProductCard({ product }: { product: StoreProduct }) {
   const { addProduct } = useCart();
   const [imgError, setImgError] = React.useState(false);
 
-  const hasPromo = product.promoPrice !== null;
+  const onRequest = product.priceOnRequest;
+  const hasPromo = product.promoPrice !== null && !onRequest;
   const current = product.promoPrice ?? product.price;
   const outOfStock = product.stock <= 0;
-  const lowStock = product.stock > 0 && product.stock <= 5;
+  const lowStock = product.stock > 0 && product.stock <= 3;
   const showImage = product.image && !imgError;
-  const onRequest = product.priceOnRequest;
   const conditionLabel = CONDITION_LABEL[product.condition] ?? null;
+  const href = `/produtos/${product.slug}`;
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/50">
+    <div className="group relative flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/50">
       {/* Foto */}
       <Link
-        href={`/produtos/${product.slug}`}
+        href={href}
         className="relative block aspect-square overflow-hidden border-b border-border bg-carbon"
         aria-label={product.name}
       >
@@ -46,22 +57,15 @@ export function ProductCard({ product }: { product: StoreProduct }) {
           />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center">
-            <PartIcon
-              icon={product.icon}
-              className={cn(
-                "size-20 text-muted-foreground/40",
-                outOfStock && "opacity-60",
-              )}
-            />
+            <PartIcon icon={product.icon} className="size-16 text-muted-foreground/40" />
           </span>
         )}
 
-        {/* Selos: condição da peça (Novo/Usado/Revisado) + desconto + foco */}
         <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
           {conditionLabel && (
             <span
               className={cn(
-                "rounded-sm px-2 py-1 font-mono text-[11px] font-bold uppercase leading-none",
+                "rounded-sm px-1.5 py-1 font-mono text-[10px] font-bold uppercase leading-none sm:px-2 sm:text-[11px]",
                 product.condition === "NEW"
                   ? "bg-success text-success-foreground"
                   : "bg-foreground text-background",
@@ -70,148 +74,107 @@ export function ProductCard({ product }: { product: StoreProduct }) {
               {conditionLabel}
             </span>
           )}
-          {hasPromo && !onRequest && (
-            <span className="rounded-sm bg-primary px-2 py-1 font-mono text-[11px] font-bold leading-none text-primary-foreground tabular-nums">
+          {hasPromo && (
+            <span className="rounded-sm bg-primary px-1.5 py-1 font-mono text-[10px] font-bold leading-none text-primary-foreground tabular-nums sm:px-2 sm:text-[11px]">
               -{discountPercent(product.price, product.promoPrice!)}%
             </span>
           )}
         </div>
         {product.featured && (
-          <span className="absolute right-2 top-2 rounded-sm bg-boost px-2 py-1 font-mono text-[11px] font-bold uppercase leading-none text-white">
+          <span className="absolute right-2 top-2 rounded-sm bg-boost px-1.5 py-1 font-mono text-[10px] font-bold uppercase leading-none text-white sm:px-2 sm:text-[11px]">
             Destaque
           </span>
         )}
       </Link>
 
       {/* Conteúdo */}
-      <div className="flex flex-1 flex-col p-4">
-        {/* Marca + SKU */}
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="truncate font-mono text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {product.brand ?? product.category}
-          </span>
-          <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-            {product.sku}
-          </span>
-        </div>
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
+        <span className="truncate font-mono text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[11px]">
+          {product.category}
+        </span>
 
-        <Link href={`/produtos/${product.slug}`} className="mt-1">
+        <Link href={href} className="mt-1">
           <h3 className="line-clamp-2 text-sm font-semibold leading-snug transition-colors group-hover:text-primary">
             {product.name}
           </h3>
         </Link>
 
         {product.fitment && (
-          <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+          <p className="mt-1 line-clamp-1 hidden text-xs text-muted-foreground sm:block">
             {product.fitment}
           </p>
         )}
 
         <div className="flex-1" />
 
-        {/* Preço — padrão BR: PIX em destaque + parcelamento em mono */}
-        {onRequest ? (
-          <div className="mt-3">
-            <p className="font-display text-xl font-bold tracking-tight text-foreground">
-              Sob consulta
-            </p>
-            <p className="font-mono text-[11px] text-muted-foreground">
-              Modelos e preço pelo WhatsApp
-            </p>
-          </div>
-        ) : (
-          <div className="mt-3">
-            {hasPromo && (
-              <p className="font-mono text-xs text-muted-foreground line-through tabular-nums">
-                {formatBRL(product.price)}
+        {/* Preço */}
+        <div className="mt-3">
+          {onRequest ? (
+            <p className="font-display text-lg font-bold tracking-tight sm:text-xl">Sob consulta</p>
+          ) : (
+            <>
+              {hasPromo && (
+                <p className="font-mono text-xs text-muted-foreground line-through tabular-nums">
+                  {formatBRL(product.price)}
+                </p>
+              )}
+              <p className="font-display text-lg font-bold tracking-tight tabular-nums sm:text-xl">
+                {formatBRL(current)}
               </p>
-            )}
-            <p className="font-display text-xl font-bold tracking-tight text-foreground tabular-nums">
-              {formatBRL(current)}{" "}
-              <span className="font-sans text-xs font-semibold text-success">
-                no PIX
-              </span>
-            </p>
-            {COMMERCE.maxInstallments > 1 && (
-              <p className="font-mono text-[11px] text-muted-foreground tabular-nums">
-                ou {COMMERCE.maxInstallments}x de {installment(current)} sem
-                juros no cartão
-              </p>
-            )}
-          </div>
-        )}
+              {COMMERCE.maxInstallments > 1 && (
+                <p className="hidden font-mono text-[11px] text-muted-foreground tabular-nums sm:block">
+                  ou {COMMERCE.maxInstallments}x de {installment(current)} sem juros
+                </p>
+              )}
+            </>
+          )}
+        </div>
 
-        {/* Estoque (texto + cor) e prova social */}
-        <p className="mt-2 flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-wide">
+        {/* Disponibilidade (texto + cor) */}
+        <p className="mt-1.5 flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-wide sm:text-[11px]">
           <span
             aria-hidden
             className={cn(
               "size-1.5 rounded-full",
-              outOfStock
-                ? "bg-muted-foreground"
-                : lowStock
-                  ? "bg-warning"
-                  : "bg-success",
+              outOfStock ? "bg-muted-foreground" : lowStock ? "bg-warning" : "bg-success",
             )}
           />
           <span
             className={
-              outOfStock
-                ? "text-muted-foreground"
-                : lowStock
-                  ? "text-warning"
-                  : "text-success"
+              outOfStock ? "text-muted-foreground" : lowStock ? "text-warning" : "text-success"
             }
           >
-            {outOfStock
-              ? "Esgotado"
-              : lowStock
-                ? `Últimas ${product.stock} un.`
-                : "Em estoque"}
+            {outOfStock ? "Esgotado" : lowStock ? `Últimas ${product.stock} un.` : "Disponível"}
           </span>
-          {product.sold > 0 && (
-            <span className="ml-auto font-normal normal-case tracking-normal text-muted-foreground tabular-nums">
-              {product.sold} {product.sold === 1 ? "vendido" : "vendidos"}
-            </span>
-          )}
         </p>
 
-        {/* Ações — uma primária, uma secundária */}
-        <div className="mt-3 grid gap-2">
-          {onRequest ? (
-            <Button asChild className="h-10 w-full gap-2">
-              <a
-                href={whatsappLink(
-                  `Olá! Quero consultar modelos e preço de: ${product.name} (SKU ${product.sku}).`,
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <MessageCircle className="size-4" />
-                Consultar
-                <span className="hidden lg:inline"> no WhatsApp</span>
-              </a>
-            </Button>
-          ) : (
+        {/* Ação principal */}
+        <div className="mt-3">
+          {CHECKOUT_ENABLED && !onRequest ? (
             <Button
               onClick={() => addProduct(product)}
               disabled={outOfStock}
               className="h-10 w-full gap-2"
             >
               <ShoppingCart className="size-4" />
-              {outOfStock ? (
-                "Indisponível"
-              ) : (
-                <span>
-                  Adicionar
-                  <span className="hidden lg:inline"> ao carrinho</span>
+              {outOfStock ? "Indisponível" : "Adicionar"}
+            </Button>
+          ) : (
+            <Button asChild className="h-10 w-full gap-1.5 px-2">
+              <a
+                href={whatsappLink(productWhatsappMessage(product))}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${onRequest ? "Consultar" : "Pedir"} ${product.name} no WhatsApp`}
+              >
+                <MessageCircle className="size-4 shrink-0" />
+                <span className="truncate">
+                  {onRequest ? "Consultar" : "Pedir"}
+                  <span className="hidden sm:inline"> no WhatsApp</span>
                 </span>
-              )}
+              </a>
             </Button>
           )}
-          <Button asChild variant="outline" className="h-10 w-full">
-            <Link href={`/produtos/${product.slug}`}>Ver detalhes</Link>
-          </Button>
         </div>
       </div>
     </div>

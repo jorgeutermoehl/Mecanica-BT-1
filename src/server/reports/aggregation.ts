@@ -93,35 +93,3 @@ export async function recomputeSalesDaily(day: string) {
 
   return { day, rows: buckets.size };
 }
-
-/** Reconstrói o snapshot de todos os dias com venda (backfill/reparo). */
-export async function rebuildSalesDaily() {
-  const orders = await prisma.order.findMany({
-    where: { status: { in: [...COUNTED_STATUSES] } },
-    select: { createdAt: true },
-  });
-  const days = [...new Set(orders.map((o) => dateKey(o.createdAt)))].sort();
-  for (const day of days) await recomputeSalesDaily(day);
-  return { days: days.length };
-}
-
-/**
- * Teste de consistência: SUM(snapshot) deve bater com SUM(order_items) do
- * período — divergência indica bug de agregação (mesma base do DRE).
- */
-export async function verifySalesDaily() {
-  const [snapshot, source] = await Promise.all([
-    prisma.productSalesDaily.aggregate({ _sum: { netRevenue: true, qtySold: true } }),
-    prisma.orderItem.aggregate({
-      where: { productId: { not: null }, order: { status: { in: [...COUNTED_STATUSES] } } },
-      _sum: { total: true, quantity: true },
-    }),
-  ]);
-  const snapNet = Number(snapshot._sum.netRevenue ?? 0);
-  const srcNet = Number(source._sum.total ?? 0);
-  return {
-    ok: Math.abs(snapNet - srcNet) < 0.01 && (snapshot._sum.qtySold ?? 0) === (source._sum.quantity ?? 0),
-    snapshot: { netRevenue: snapNet, qtySold: snapshot._sum.qtySold ?? 0 },
-    source: { netRevenue: srcNet, qtySold: source._sum.quantity ?? 0 },
-  };
-}

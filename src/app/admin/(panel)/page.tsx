@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -66,6 +68,8 @@ function KpiCard({
 }
 
 export default async function AdminDashboardPage() {
+  // Modo WhatsApp: o painel começa no cadastro de produtos.
+  if (!CHECKOUT_ENABLED) redirect("/admin/produtos");
   const data = await getDashboardData();
   const maxSold = Math.max(1, ...data.topSellers.map((t) => t.quantity));
 

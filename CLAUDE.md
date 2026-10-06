@@ -1,6 +1,10 @@
 # FullBoost Race Parts — guia do projeto
 
-E-commerce de peças de performance **+ painel de gestão** (produtos, estoque rastreável, vendas; financeiro/DRE no roadmap). Especificação em [`docs/ESPECIFICACAO.md`](docs/ESPECIFICACAO.md).
+Loja de peças de performance **+ painel**. Especificação em [`docs/ESPECIFICACAO.md`](docs/ESPECIFICACAO.md); manual de uso em [`docs/MANUAL-NAVEGACAO.md`](docs/MANUAL-NAVEGACAO.md).
+
+**Modo de venda** (`CHECKOUT_ENABLED` em `src/lib/constants.ts`, env `NEXT_PUBLIC_SALES_MODE`):
+- **WhatsApp (padrão, fase atual):** sem carrinho/checkout; cada peça tem "Pedir no WhatsApp" (`productWhatsappMessage`). Painel = Produtos (com fotos e **quantidade disponível** editada no próprio cadastro → movimento `ADJUSTMENT`), Usuários e Minha conta. Rotas de venda/gestão vivem nos route groups `src/app/(public)/(checkout)` e `src/app/admin/(panel)/(gestao)`, cujos layouts devolvem `notFound()`; actions e rotas de API de venda (checkout, contato, webhook, cron) também recusam no servidor.
+- **`checkout`:** reativa carrinho, pedidos, estoque, financeiro, relatórios, cupons, mensagens. Todo texto/UI que depende do modo lê `CHECKOUT_ENABLED` — nunca duplicar a flag.
 
 ## Stack
 Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Prisma · **SQLite em dev/demo** (alvo de produção: PostgreSQL/Supabase — schema usa String no lugar de enums por compatibilidade SQLite; valores validados por Zod em `src/lib/validations.ts`) · Auth de sessão própria (JWT httpOnly + bcrypt, `src/lib/auth.ts`) · Zod · Playwright. Gerenciador: **npm**.
@@ -37,8 +41,9 @@ Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Prisma 
 
 ## Testes
 - `npm run test:rules` — regras de negócio direto nos serviços (estoque, cupons, pedidos simultâneos, reserva vencida).
-- `npm run test:e2e` — Playwright: cadastro com fotos → venda → painel; contato; usuários/senha. Exige `npm run build` + banco recém-seedado.
-- CI (`.github/workflows/ci.yml`) roda tudo contra Postgres 16.
+- `npm run test:e2e` — Playwright (`tests/e2e/helpers.ts` lê o modo): `whatsapp.spec` (sem carrinho, link do WhatsApp, 404 das rotas de venda, cadastro com fotos, estoque 0 → Esgotado) e, só com `NEXT_PUBLIC_SALES_MODE=checkout`, `fluxo-venda`/contato. Exige `npm run build` + banco recém-seedado.
+- CI (`.github/workflows/ci.yml`) roda tudo contra Postgres 16 **nos dois modos** (matriz `sales_mode`).
+- `npx knip` lista código morto — rodar antes de remover algo (e conferir uso interno: "unused export" ≠ função sem uso).
 
 ## Comandos
 ```bash

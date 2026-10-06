@@ -102,13 +102,6 @@ async function readSessionToken(): Promise<SessionToken | null> {
   }
 }
 
-/** Sessão atual (ou null). Não consulta o banco — lê o token assinado. */
-export async function getSession(): Promise<SessionUser | null> {
-  const token = await readSessionToken();
-  if (!token) return null;
-  return { id: token.id, name: token.name, email: token.email, role: token.role };
-}
-
 /**
  * Revalida a sessão contra o banco: usuário ativo, papel staff (ou o papel
  * exigido) e token emitido DEPOIS da última troca de senha (trocar a senha

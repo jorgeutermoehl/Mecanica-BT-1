@@ -241,23 +241,6 @@ export async function createCustomer(input: CustomerFormInput, userId: string) {
   });
 }
 
-/** Pedidos de um cliente (para o painel). */
-export async function getCustomerOrders(customerId: string) {
-  const orders = await prisma.order.findMany({
-    where: { customerId },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, number: true, status: true, channel: true, total: true, createdAt: true },
-  });
-  return orders.map((o) => ({
-    id: o.id,
-    number: o.number,
-    status: o.status,
-    channel: o.channel as SaleChannel,
-    total: Number(o.total),
-    createdAt: o.createdAt.toISOString(),
-  }));
-}
-
 /** Ficha 360º do cliente (ESPEC-V2, Onda 1 item 5) — tudo JSON-safe. */
 export async function getCustomer360(customerId: string) {
   const customer = await prisma.customer.findFirst({
@@ -427,86 +410,4 @@ export async function findPossibleDuplicates(customerId: string) {
     ordersCount: d.ordersCount,
     totalSpent: Number(d.totalSpent),
   }));
-}
-
-/**
- * Anonimização LGPD (ESPEC-V2, Onda 3 item 16 / art. 18): sobrescreve os
- * identificadores pessoais com placeholders em TODAS as réplicas — cadastro,
- * endereços, snapshots do pedido e payloads de gateway — mas MANTÉM os
- * pedidos e valores (obrigação fiscal, art. 7 II). Irreversível por desenho;
- * grava CUSTOMER_ANONYMIZE na mesma transação.
- */
-export async function anonymizeCustomer(customerId: string, userId: string) {
-  return prisma.$transaction(async (tx) => {
-    const customer = await tx.customer.findUnique({ where: { id: customerId } });
-    if (!customer) throw new Error("Cliente não encontrado.");
-
-    // 1. Cadastro: nome vira placeholder; identificadores (inclusive os
-    //    normalizados, usados no identity resolution) são apagados.
-    await tx.customer.update({
-      where: { id: customerId },
-      data: {
-        name: "Cliente anonimizado",
-        email: null,
-        phone: null,
-        whatsapp: null,
-        document: null,
-        instagramHandle: null,
-        documentNormalized: null,
-        phoneNormalized: null,
-        // UTMs/referrer são dado pessoal vinculado — caem junto.
-        firstUtmSource: null,
-        firstUtmMedium: null,
-        firstUtmCampaign: null,
-        referrer: null,
-      },
-    });
-
-    // 2. Endereços: placeholders (registro permanece para integridade).
-    await tx.address.updateMany({
-      where: { customerId },
-      data: { street: "—", zipCode: "00000-000", complement: null },
-    });
-
-    // 3. Pedidos MANTIDOS (valores/itens/impostos intocados), mas os snapshots
-    //    pessoais replicados neles também são expurgados.
-    const orders = await tx.order.findMany({ where: { customerId }, select: { id: true } });
-    const orderIds = orders.map((o) => o.id);
-    if (orderIds.length > 0) {
-      await tx.order.updateMany({
-        where: { id: { in: orderIds } },
-        data: {
-          customerName: "Cliente anonimizado",
-          customerDocument: null,
-          customerEmail: null,
-          customerPhone: null,
-          shipStreet: "—",
-          shipZipCode: "00000-000",
-          shipComplement: null,
-        },
-      });
-
-      // 4. Payloads de gateway (/// pii): substitui pelo mínimo auditável.
-      const transactions = await tx.paymentTransaction.findMany({
-        where: { orderId: { in: orderIds }, rawPayload: { not: null } },
-        select: { id: true, status: true, amount: true },
-      });
-      for (const t of transactions) {
-        await tx.paymentTransaction.update({
-          where: { id: t.id },
-          data: { rawPayload: JSON.stringify({ status: t.status, amount: Number(t.amount) }) },
-        });
-      }
-    }
-
-    await logAudit(tx, {
-      userId,
-      action: "CUSTOMER_ANONYMIZE",
-      entity: "Customer",
-      entityId: customerId,
-      description: `Cliente anonimizado (LGPD art. 18): ${orderIds.length} ${orderIds.length === 1 ? "pedido preservado" : "pedidos preservados"} sem dados pessoais`,
-    });
-
-    return { id: customerId, ordersKept: orderIds.length };
-  });
 }

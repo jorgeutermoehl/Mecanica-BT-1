@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Minus, Plus, ShoppingCart, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/cart/cart-provider";
-import { whatsappLink } from "@/lib/constants";
+import { CHECKOUT_ENABLED, productWhatsappMessage, whatsappLink } from "@/lib/constants";
 import type { StoreProduct } from "@/types/store";
 
 export function ProductActions({ product }: { product: StoreProduct }) {
@@ -30,27 +30,34 @@ export function ProductActions({ product }: { product: StoreProduct }) {
     router.push("/carrinho");
   }
 
-  const waMessage = `Olá! Tenho interesse na peça ${product.name} (SKU ${product.sku}). Pode me ajudar com uma dúvida?`;
+  const waMessage = `Olá! Tenho uma dúvida sobre a peça ${product.name} (SKU ${product.sku}): serve no meu carro?`;
 
-  // Preço sob consulta: sem carrinho — a venda acontece na conversa.
-  if (product.priceOnRequest) {
+  // Venda pelo WhatsApp (modo padrão) ou preço sob consulta: sem carrinho —
+  // a venda acontece na conversa, com a mensagem já preenchida.
+  if (!CHECKOUT_ENABLED || product.priceOnRequest) {
     return (
       <div className="mt-6 flex flex-col gap-3">
-        <Button asChild size="lg" className="h-11 gap-2">
+        <Button asChild size="lg" className="h-12 gap-2 text-base">
           <a
-            href={whatsappLink(
-              `Olá! Quero consultar modelos, aplicação e preço de: ${product.name} (SKU ${product.sku}).`,
-            )}
+            href={whatsappLink(productWhatsappMessage(product))}
             target="_blank"
             rel="noopener noreferrer"
           >
-            <MessageCircle className="size-4" />
-            Consultar modelos e preço no WhatsApp
+            <MessageCircle className="size-5" />
+            {product.priceOnRequest
+              ? "Consultar modelos e preço no WhatsApp"
+              : "Pedir pelo WhatsApp"}
+          </a>
+        </Button>
+        <Button asChild size="lg" variant="outline" className="h-11 gap-2">
+          <a href={whatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
+            Tirar dúvida sobre aplicação
           </a>
         </Button>
         <p className="text-xs text-muted-foreground">
-          Informe o carro e o motor que a gente indica o modelo certo e envia
-          fotos da peça disponível.
+          {product.priceOnRequest
+            ? "Informe o carro e o motor que a gente indica o modelo certo e envia fotos da peça disponível."
+            : "A mensagem já vai com a peça e o preço. Confirmamos a aplicação, o frete para o seu CEP e o pagamento (Pix ou cartão)."}
         </p>
       </div>
     );

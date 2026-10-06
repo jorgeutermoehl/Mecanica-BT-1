@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { login } from "./helpers";
 
 /** Gestão de usuários do painel + troca de senha (derruba sessões antigas). */
 
@@ -10,11 +11,7 @@ test("admin cria vendedor; vendedor troca a senha e não vê Usuários", async (
 
   // Admin cria o usuário
   const admin = await browser.newPage();
-  await admin.goto("/admin/login");
-  await admin.fill("#login-email", "admin@fullboost.com.br");
-  await admin.fill("#login-password", "fullboost123");
-  await admin.getByRole("button", { name: /entrar/i }).click();
-  await admin.waitForURL((u) => u.pathname === "/admin");
+  await login(admin);
   await admin.goto("/admin/usuarios");
   await admin.getByRole("button", { name: "Novo usuário" }).click();
   await admin.fill("#new-user-name", "Vendedor E2E");
@@ -28,13 +25,7 @@ test("admin cria vendedor; vendedor troca a senha e não vê Usuários", async (
   const ctxB = await browser.newContext();
   const a = await ctxA.newPage();
   const b = await ctxB.newPage();
-  for (const p of [a, b]) {
-    await p.goto("/admin/login");
-    await p.fill("#login-email", email);
-    await p.fill("#login-password", senha1);
-    await p.getByRole("button", { name: /entrar/i }).click();
-    await p.waitForURL((u) => u.pathname === "/admin");
-  }
+  for (const p of [a, b]) await login(p, email, senha1);
   await expect(a.getByRole("link", { name: "Usuários" })).toHaveCount(0);
   expect((await a.goto("/admin/usuarios"))?.status()).toBe(404);
 
@@ -48,7 +39,7 @@ test("admin cria vendedor; vendedor troca a senha e não vê Usuários", async (
 
   // A continua logado; B (sessão antiga) cai para o login
   await a.goto("/admin");
-  await expect(a).toHaveURL(/\/admin$/);
+  await expect(a).toHaveURL(/\/admin(\/produtos)?$/);
   await b.goto("/admin");
   await expect(b).toHaveURL(/\/admin\/login/);
 

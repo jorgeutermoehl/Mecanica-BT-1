@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { getStoreProducts } from "@/server/catalog";
 import { CouponCard } from "@/components/public/promocoes/coupon-card";
 import { listPublicCoupons } from "@/server/promotions";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 
 // Cupons lidos do banco a cada request (mesma regra de validade do checkout).
 export const dynamic = "force-dynamic";
@@ -59,7 +60,7 @@ export default async function PromocoesPage() {
       </section>
 
       {/* ===================== CUPONS ATIVOS ===================== */}
-      {coupons.length > 0 && (
+      {CHECKOUT_ENABLED && coupons.length > 0 && (
         <section className="py-10 sm:py-14 lg:py-16">
           <Container>
             <div className="mb-8">

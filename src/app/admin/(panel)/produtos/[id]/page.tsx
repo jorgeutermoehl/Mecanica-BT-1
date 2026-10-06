@@ -40,8 +40,16 @@ export default async function EditProductPage({
           Editar produto
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          <span className="font-mono">{product.sku}</span> · {product.name} — o
-          estoque muda por movimentações, não por aqui.
+          <span className="font-mono">{product.sku}</span> · {product.name}
+          {" · "}
+          <a
+            href={`/produtos/${product.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline-offset-2 hover:underline"
+          >
+            ver na loja
+          </a>
         </p>
       </div>
 

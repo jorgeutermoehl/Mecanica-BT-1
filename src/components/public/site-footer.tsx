@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Container } from "@/components/shared/container";
-import { COMMERCE, SITE, whatsappLink } from "@/lib/constants";
+import { CHECKOUT_ENABLED, COMMERCE, SITE, whatsappLink } from "@/lib/constants";
 import { PaymentMethods } from "@/components/public/metodos-pagamento";
 import { getStoreCategories } from "@/server/catalog";
 
@@ -59,7 +59,9 @@ const SOCIAL = [
 
 const INSTITUTIONAL = [
   { label: "Produtos", href: "/produtos" },
-  { label: "Promoções", href: "/promocoes" },
+  CHECKOUT_ENABLED
+    ? { label: "Promoções", href: "/promocoes" }
+    : { label: "Sobre", href: "/sobre" },
   { label: "Contato", href: "/contato" },
   { label: "Privacidade", href: "/privacidade" },
   { label: "Termos de uso", href: "/termos" },
@@ -219,7 +221,9 @@ export async function SiteFooter() {
                   className="size-4 shrink-0 text-success"
                   aria-hidden
                 />
-                Conexão segura (HTTPS)
+                {CHECKOUT_ENABLED
+                  ? "Conexão segura (HTTPS)"
+                  : "Pagamento combinado no WhatsApp"}
               </li>
             </ul>
           </div>

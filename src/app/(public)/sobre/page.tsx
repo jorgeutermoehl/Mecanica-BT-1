@@ -13,7 +13,12 @@ import {
 import { Container } from "@/components/shared/container";
 import { PartIcon } from "@/components/shared/part-icon";
 import { Button } from "@/components/ui/button";
-import { SITE, SPECIALTIES, whatsappLink } from "@/lib/constants";
+import {
+  CHECKOUT_ENABLED,
+  SITE,
+  SPECIALTIES,
+  whatsappLink,
+} from "@/lib/constants";
 
 // Página institucional SEM números, datas ou selos não comprováveis:
 // tudo aqui descreve o que a loja de fato faz hoje (CDC art. 37).
@@ -61,22 +66,37 @@ const STEPS = [
     title: "Escolha a peça",
     text: "Veja fotos reais, ficha técnica e a aplicação indicada de cada peça.",
   },
-  {
-    icon: ClipboardList,
-    title: "Faça o pedido",
-    text: "As peças ficam reservadas para você por 72 horas.",
-  },
-  {
-    icon: MessageCircle,
-    title: "Finalize no WhatsApp",
-    text: "Confirmamos a aplicação, o frete e o pagamento (Pix ou cartão) direto com você.",
-  },
+  ...(CHECKOUT_ENABLED
+    ? [
+        {
+          icon: ClipboardList,
+          title: "Faça o pedido",
+          text: "As peças ficam reservadas para você por 72 horas.",
+        },
+        {
+          icon: MessageCircle,
+          title: "Finalize no WhatsApp",
+          text: "Confirmamos a aplicação, o frete e o pagamento (Pix ou cartão) direto com você.",
+        },
+      ]
+    : [
+        {
+          icon: MessageCircle,
+          title: "Chame no WhatsApp",
+          text: "O botão da peça já manda o anúncio e o preço. Confirmamos aplicação e frete.",
+        },
+        {
+          icon: ClipboardList,
+          title: "Pague",
+          text: "Pix ou cartão (link de pagamento), combinado direto com você.",
+        },
+      ]),
   {
     icon: Truck,
     title: "Receba em casa",
     text: "Enviamos para todo o Brasil com código de rastreio.",
   },
-] as const;
+];
 
 const COMMITMENTS = [
   "Fotos reais das peças que estão no estoque",
@@ -90,7 +110,10 @@ export default function SobrePage() {
     <>
       {/* ===================== HERO ===================== */}
       <section className="relative overflow-hidden border-b border-border bg-carbon">
-        <span aria-hidden className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-[420px]" />
+        <span
+          aria-hidden
+          className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-[420px]"
+        />
         <Container className="relative grid items-center gap-12 py-12 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:py-24">
           <div>
             <Eyebrow>Quem somos</Eyebrow>
@@ -111,7 +134,11 @@ export default function SobrePage() {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="gap-2">
-                <a href={ABOUT_WHATSAPP} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={ABOUT_WHATSAPP}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <MessageCircle className="size-4" />
                   Falar no WhatsApp
                 </a>
@@ -144,12 +171,17 @@ export default function SobrePage() {
           </h2>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {LINES.map((line) => (
-              <div key={line.title} className="rounded-xl border border-border bg-card p-6">
+              <div
+                key={line.title}
+                className="rounded-xl border border-border bg-card p-6"
+              >
                 <PartIcon icon={line.icon} className="size-8 text-primary" />
                 <h3 className="mt-4 font-display text-lg font-bold uppercase tracking-tight">
                   {line.title}
                 </h3>
-                <p className="mt-2 text-sm text-muted-foreground">{line.text}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {line.text}
+                </p>
               </div>
             ))}
           </div>
@@ -175,13 +207,20 @@ export default function SobrePage() {
           </h2>
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, i) => (
-              <li key={step.title} className="rounded-xl border border-border bg-background p-5">
+              <li
+                key={step.title}
+                className="rounded-xl border border-border bg-background p-5"
+              >
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
                   <step.icon className="size-5 text-primary" />
                 </div>
                 <h3 className="mt-3 font-semibold">{step.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{step.text}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {step.text}
+                </p>
               </li>
             ))}
           </ol>
@@ -203,7 +242,10 @@ export default function SobrePage() {
           </div>
           <ul className="space-y-3">
             {COMMITMENTS.map((c) => (
-              <li key={c} className="flex items-start gap-3 rounded-lg border border-border bg-card p-4 text-sm">
+              <li
+                key={c}
+                className="flex items-start gap-3 rounded-lg border border-border bg-card p-4 text-sm"
+              >
                 <Check className="mt-0.5 size-4 shrink-0 text-success" />
                 {c}
               </li>
@@ -216,14 +258,18 @@ export default function SobrePage() {
       <section className="pb-12 sm:pb-16 lg:pb-20">
         <Container>
           <div className="relative overflow-hidden rounded-2xl border border-border bg-carbon px-5 py-10 text-center sm:px-8 sm:py-14">
-            <span aria-hidden className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-40" />
+            <span
+              aria-hidden
+              className="boost-glow pointer-events-none absolute inset-x-0 top-0 h-40"
+            />
             <div className="relative flex flex-col items-center gap-5">
               <PackageCheck className="size-8 text-primary" />
               <h2 className="max-w-2xl font-display text-3xl font-bold uppercase tracking-tight sm:text-4xl">
                 Tem um projeto em andamento?
               </h2>
               <p className="max-w-xl text-muted-foreground">
-                Manda o carro, o motor e o objetivo que a gente indica a peça certa.
+                Manda o carro, o motor e o objetivo que a gente indica a peça
+                certa.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
                 <Button asChild size="lg" className="gap-2">
@@ -233,7 +279,11 @@ export default function SobrePage() {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="gap-2">
-                  <a href={ABOUT_WHATSAPP} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={ABOUT_WHATSAPP}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <MessageCircle className="size-4" />
                     Chamar no WhatsApp
                   </a>

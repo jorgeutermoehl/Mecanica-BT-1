@@ -217,7 +217,7 @@ function toTransactionJson(t: PaymentTransaction) {
  *     - pedido já pago por outro fluxo: a entrada já existe — apenas liga o
  *       paymentTransactionId; se não existir, cria aqui.
  */
-export async function settleApprovedTransaction(
+async function settleApprovedTransaction(
   tx: Prisma.TransactionClient,
   transaction: PaymentTransaction,
 ) {

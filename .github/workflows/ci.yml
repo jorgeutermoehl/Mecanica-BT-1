@@ -8,7 +8,13 @@ on:
 # typecheck, lint, regras de negócio, build e fluxo ponta a ponta.
 jobs:
   ci:
+    name: ci (${{ matrix.sales_mode }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # whatsapp = vitrine + pedido no WhatsApp (padrão); checkout = venda pelo site
+        sales_mode: [whatsapp, checkout]
     timeout-minutes: 25
     services:
       postgres:
@@ -28,6 +34,7 @@ jobs:
       NEXT_PUBLIC_WHATSAPP: "5547999999999"
       SEED_ALLOW_WIPE: "1"
       CI: "true"
+      NEXT_PUBLIC_SALES_MODE: ${{ matrix.sales_mode }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -61,5 +68,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.sales_mode }}
           path: playwright-report

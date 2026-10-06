@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { expireStalePayments } from "@/server/payments";
 import { logAudit } from "@/server/audit";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 
 /**
  * Cron único de expiração (ESPEC-V2, Onda 3 item 6): transações CREATED/PENDING
@@ -24,6 +25,7 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 async function handle(req: NextRequest) {
+  if (!CHECKOUT_ENABLED) return new NextResponse("Not found", { status: 404 });
   const secret = process.env.CRON_SECRET;
   const authorization = req.headers.get("authorization") ?? "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice("Bearer ".length) : "";

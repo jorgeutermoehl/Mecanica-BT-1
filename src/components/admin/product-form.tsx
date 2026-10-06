@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ImagePlus, Rocket, X } from "lucide-react";
 import { createProductAction, updateProductAction } from "@/app/actions/admin";
 import { uploadProductImageAction } from "@/app/actions/media";
+import { CHECKOUT_ENABLED } from "@/lib/constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -79,6 +80,7 @@ type FormValues = {
   promoPrice: string;
   initialStock: string;
   minStock: string;
+  stockQuantity: string;
   condition: string;
   featured: boolean;
   priceOnRequest: boolean;
@@ -102,6 +104,7 @@ function initialValues(product?: ProductFormProduct): FormValues {
     promoPrice: product?.promoPrice !== undefined ? String(product.promoPrice) : "",
     initialStock: "0",
     minStock: product !== undefined ? String(product.minStock) : "0",
+    stockQuantity: product !== undefined ? String(product.stock) : "0",
     condition: product?.condition ?? "NEW",
     featured: product?.featured ?? false,
     priceOnRequest: product?.priceOnRequest ?? false,
@@ -219,6 +222,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       featured: values.featured,
       priceOnRequest: values.priceOnRequest,
       initialStock: isEdit ? 0 : Number(values.initialStock || 0),
+      stockQuantity: isEdit ? Number(values.stockQuantity || 0) : undefined,
     };
 
     const result = isEdit
@@ -580,13 +584,15 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         <CardHeader>
           <CardTitle className="font-display uppercase tracking-wide">Estoque</CardTitle>
           <CardDescription>
-            {isEdit
+            {isEdit && CHECKOUT_ENABLED
               ? "O estoque muda apenas por movimentações — registre entradas, saídas e ajustes na tela de Estoque."
-              : "O estoque inicial gera uma movimentação de entrada rastreável."}
+              : isEdit
+                ? "Cada alteração de quantidade fica registrada no histórico do produto."
+                : "Quantas unidades você tem agora. Fica registrado no histórico do produto."}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          {isEdit ? (
+          {isEdit && CHECKOUT_ENABLED ? (
             <div className="space-y-2">
               <Label htmlFor="product-stock">Estoque atual</Label>
               <Input
@@ -598,6 +604,23 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               />
               <p className="text-xs text-warning">
                 Somente leitura: o estoque muda por movimentações.
+              </p>
+            </div>
+          ) : isEdit ? (
+            <div className="space-y-2">
+              <Label htmlFor="product-stock">Quantidade disponível</Label>
+              <Input
+                id="product-stock"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1"
+                value={values.stockQuantity}
+                onChange={(e) => set("stockQuantity", e.target.value)}
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Vendeu pelo WhatsApp? Baixe aqui. Zero = “Esgotado” na loja.
               </p>
             </div>
           ) : (
@@ -628,7 +651,9 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              Abaixo desse nível o produto entra nos alertas do dashboard.
+              {CHECKOUT_ENABLED
+                ? "Abaixo desse nível o produto entra nos alertas do dashboard."
+                : "Referência para saber quando repor a peça."}
             </p>
           </div>
         </CardContent>

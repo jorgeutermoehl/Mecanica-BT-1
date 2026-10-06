@@ -18,25 +18,28 @@ function slugify(name: string): string {
     .replace(/(^-|-$)+/g, "");
 }
 
+/** Normaliza para busca sem acento e sem diferença de maiúsculas. */
+function fold(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 export async function listAdminProducts(search?: string) {
   const q = search?.trim();
   const products = await prisma.product.findMany({
-    where: {
-      deletedAt: null,
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q } },
-              { sku: { contains: q } },
-              { originalCode: { contains: q } },
-            ],
-          }
-        : {}),
-    },
+    where: { deletedAt: null },
     include: { category: true, brand: true, images: { where: { isPrimary: true }, take: 1 } },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
   });
-  return products.map((p) => ({
+  // Busca em memória (catálogo pequeno): sem acento/maiúsculas, igual no
+  // SQLite e no Postgres (onde `contains` diferencia maiúsculas).
+  const terms = q ? fold(q).split(/\s+/).filter(Boolean) : [];
+  const matched = terms.length
+    ? products.filter((p) => {
+        const hay = fold([p.name, p.sku, p.originalCode ?? "", p.category.name, p.fitment ?? ""].join(" "));
+        return terms.every((t) => hay.includes(t));
+      })
+    : products;
+  return matched.map((p) => ({
     id: p.id,
     sku: p.sku,
     name: p.name,
@@ -46,6 +49,9 @@ export async function listAdminProducts(search?: string) {
     costPrice: Number(p.costPrice),
     salePrice: Number(p.salePrice),
     promoPrice: p.promoPrice !== null ? Number(p.promoPrice) : null,
+    priceOnRequest: p.priceOnRequest,
+    featured: p.featured,
+    condition: p.condition,
     stock: p.stockQuantity,
     minStock: p.minStock,
     status: p.status as ProductStatus,
@@ -66,6 +72,7 @@ export async function getAdminProduct(id: string) {
     id: p.id,
     sku: p.sku,
     name: p.name,
+    slug: p.slug,
     categoryId: p.categoryId,
     brandName: p.brand?.name ?? "",
     originalCode: p.originalCode ?? "",

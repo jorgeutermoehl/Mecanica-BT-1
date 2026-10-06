@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { COMMERCE } from "@/lib/constants";
+import { CHECKOUT_ENABLED, COMMERCE } from "@/lib/constants";
 import { formatBRL } from "@/lib/format";
 import { CreditCard, MessageCircle, ShieldCheck, Truck } from "lucide-react";
 import { Container } from "@/components/shared/container";
@@ -14,7 +14,10 @@ const ITEMS: { icon: LucideIcon; text: string }[] = [
     ? [{ icon: CreditCard, text: `Parcele em até ${COMMERCE.maxInstallments}x sem juros` }]
     : []),
   { icon: ShieldCheck, text: "Pagamento por Pix ou cartão" },
-  { icon: MessageCircle, text: "Atendimento por WhatsApp" },
+  {
+    icon: MessageCircle,
+    text: CHECKOUT_ENABLED ? "Atendimento por WhatsApp" : "Pedido direto no WhatsApp",
+  },
 ];
 
 /**

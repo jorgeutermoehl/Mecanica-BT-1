@@ -152,7 +152,13 @@ export const productSchema = z.object({
   fitment: z.string().max(160).optional().or(z.literal("")),
   warranty: z.string().max(160).optional().or(z.literal("")),
   location: z.string().max(80).optional().or(z.literal("")),
-  imageUrl: z.string().url("URL de imagem inválida").optional().or(z.literal("")),
+  // Foto principal: URL externa (https://…) ou caminho do próprio site
+  // (/api/media/… dos uploads, /produtos/… do seed) — antes só aceitava URL
+  // absoluta e a edição de produto com foto enviada falhava.
+  imageUrl: z
+    .string()
+    .refine((v) => v === "" || /^\/(?!\/)/.test(v) || /^https?:\/\//.test(v), "URL de imagem inválida")
+    .optional(),
   costPrice: z.coerce.number().min(0, "Custo não pode ser negativo"),
   salePrice: z.coerce.number().min(0, "Preço de venda não pode ser negativo"),
   promoPrice: z.coerce.number().positive().optional().or(z.literal("").transform(() => undefined)),

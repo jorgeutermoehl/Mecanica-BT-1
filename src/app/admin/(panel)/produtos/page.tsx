@@ -22,7 +22,8 @@ import {
 export const dynamic = "force-dynamic";
 
 /** Padrão Stripe: cabeçalho de tabela discreto e respiro nas bordas do card. */
-const TH_CLASS = "text-xs font-medium uppercase tracking-wide text-muted-foreground";
+const TH_CLASS =
+  "text-xs font-medium uppercase tracking-wide text-muted-foreground";
 const TABLE_CLASS =
   "[&_th:first-child]:pl-4 [&_td:first-child]:pl-4 [&_th:last-child]:pr-4 [&_td:last-child]:pr-4";
 
@@ -50,6 +51,66 @@ function ProductThumb({ product }: { product: AdminProduct }) {
   return (
     <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
       <PartIcon icon={product.category.toLowerCase()} className="size-4" />
+    </span>
+  );
+}
+
+const CONDITION_SHORT: Record<string, string> = {
+  NEW: "Novo",
+  USED: "Usado",
+  REMAN: "Revisado",
+};
+
+/** SKU · categoria · condição · destaque — numa linha sob o nome. */
+function ProductTags({ product: p }: { product: AdminProduct }) {
+  return (
+    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      <span className="font-mono">{p.sku}</span>
+      <span aria-hidden>·</span>
+      <span>{p.category}</span>
+      <span aria-hidden>·</span>
+      <span>{CONDITION_SHORT[p.condition] ?? p.condition}</span>
+      {p.featured && (
+        <span className="rounded-sm bg-boost px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase leading-none text-white">
+          Destaque
+        </span>
+      )}
+    </p>
+  );
+}
+
+function PriceCell({ product: p }: { product: AdminProduct }) {
+  if (p.priceOnRequest) {
+    return (
+      <span className="text-xs font-medium text-muted-foreground">
+        Sob consulta
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex flex-col items-end font-mono text-xs tabular-nums">
+      {p.promoPrice !== null ? (
+        <>
+          <span className="text-muted-foreground line-through">
+            {formatBRL(p.salePrice)}
+          </span>
+          <span className="text-primary">{formatBRL(p.promoPrice)}</span>
+        </>
+      ) : (
+        <span>{formatBRL(p.salePrice)}</span>
+      )}
+    </span>
+  );
+}
+
+function StockCell({ product: p }: { product: AdminProduct }) {
+  const low = p.stock <= p.minStock;
+  return (
+    <span className="whitespace-nowrap font-mono text-xs tabular-nums">
+      <span className={cn("text-sm", low && "font-medium text-warning")}>
+        {p.stock}
+      </span>
+      <span className="ml-1 text-muted-foreground">un.</span>
     </span>
   );
 }
@@ -105,96 +166,38 @@ export default async function AdminProductsPage({
         </Button>
       </form>
 
-      {/* Tabela */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-          <Table className={TABLE_CLASS}>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className={TH_CLASS}>Produto</TableHead>
-                <TableHead className={TH_CLASS}>SKU</TableHead>
-                <TableHead className={TH_CLASS}>Categoria</TableHead>
-                <TableHead className={cn(TH_CLASS, "text-right")}>Custo</TableHead>
-                <TableHead className={cn(TH_CLASS, "text-right")}>Preço</TableHead>
-                <TableHead className={cn(TH_CLASS, "text-right")}>Promo</TableHead>
-                <TableHead className={cn(TH_CLASS, "text-right")}>Estoque</TableHead>
-                <TableHead className={TH_CLASS}>Status</TableHead>
-                <TableHead className={cn(TH_CLASS, "text-right")}>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={9}
-                    className="py-10 text-center text-muted-foreground"
-                  >
-                    {q
-                      ? `Nenhum produto encontrado para “${q}”.`
-                      : "Nenhum produto cadastrado ainda — publique o primeiro anúncio."}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                products.map((p) => {
-                  const lowStock = p.stock <= p.minStock;
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <ProductThumb product={p} />
-                          <div className="min-w-0">
-                            <p className="max-w-[260px] truncate font-medium">
-                              {p.name}
-                            </p>
-                            {p.brand && (
-                              <p className="max-w-[260px] truncate text-xs text-muted-foreground">
-                                {p.brand}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{p.sku}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {p.category}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs tabular-nums text-muted-foreground">
-                        {formatBRL(p.costPrice)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs tabular-nums">
-                        {formatBRL(p.salePrice)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs tabular-nums">
-                        {p.promoPrice !== null ? (
-                          <span className="text-primary">
-                            {formatBRL(p.promoPrice)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span
-                          className={cn(
-                            "font-mono text-sm tabular-nums",
-                            lowStock && "font-medium text-warning",
-                          )}
-                        >
-                          {p.stock}
-                        </span>
-                        <span className="ml-1 font-mono text-[11px] tabular-nums text-muted-foreground">
-                          / mín. {p.minStock}
-                        </span>
-                      </TableCell>
-                      <TableCell>
+      {products.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            {q
+              ? `Nenhum produto encontrado para “${q}”.`
+              : "Nenhum produto cadastrado ainda — publique o primeiro anúncio."}
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Celular: cards (tabela não cabe) */}
+          <ul className="space-y-3 md:hidden">
+            {products.map((p) => (
+              <li key={p.id}>
+                <Card>
+                  <CardContent className="flex gap-3 p-3">
+                    <ProductThumb product={p} />
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 text-sm font-medium">
+                        {p.name}
+                      </p>
+                      <ProductTags product={p} />
+                      <div className="mt-2 flex items-center justify-between gap-2 text-sm">
+                        <PriceCell product={p} />
+                        <StockCell product={p} />
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-2">
                         <StatusBadge tone={STATUS_TONE[p.status]}>
                           {PRODUCT_STATUS_LABEL[p.status]}
                         </StatusBadge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button asChild size="sm" variant="ghost">
+                        <div className="flex items-center gap-1">
+                          <Button asChild size="sm" variant="outline">
                             <Link href={`/admin/produtos/${p.id}`}>Editar</Link>
                           </Button>
                           <ProductStatusToggle
@@ -203,16 +206,85 @@ export default async function AdminProductsPage({
                             active={p.status !== "INACTIVE"}
                           />
                         </div>
-                      </TableCell>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </li>
+            ))}
+          </ul>
+
+          {/* Desktop: tabela enxuta (SKU, categoria e selos sob o nome) */}
+          <Card className="hidden md:block">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table className={TABLE_CLASS}>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className={TH_CLASS}>Produto</TableHead>
+                      <TableHead className={cn(TH_CLASS, "text-right")}>
+                        Preço
+                      </TableHead>
+                      <TableHead className={cn(TH_CLASS, "text-right")}>
+                        Estoque
+                      </TableHead>
+                      <TableHead className={TH_CLASS}>Status</TableHead>
+                      <TableHead className={cn(TH_CLASS, "text-right")}>
+                        Ações
+                      </TableHead>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {products.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell className="max-w-[420px]">
+                          <div className="flex items-center gap-3">
+                            <ProductThumb product={p} />
+                            <div className="min-w-0">
+                              <Link
+                                href={`/admin/produtos/${p.id}`}
+                                className="block truncate font-medium hover:text-primary"
+                              >
+                                {p.name}
+                              </Link>
+                              <ProductTags product={p} />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <PriceCell product={p} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <StockCell product={p} />
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge tone={STATUS_TONE[p.status]}>
+                            {PRODUCT_STATUS_LABEL[p.status]}
+                          </StatusBadge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button asChild size="sm" variant="ghost">
+                              <Link href={`/admin/produtos/${p.id}`}>
+                                Editar
+                              </Link>
+                            </Button>
+                            <ProductStatusToggle
+                              productId={p.id}
+                              productName={p.name}
+                              active={p.status !== "INACTIVE"}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <p className="font-mono text-xs tabular-nums text-muted-foreground">
         {products.length}{" "}

@@ -23,13 +23,14 @@ O servidor **se recusa a subir** se faltar configuração essencial ou se ela es
 | `DATABASE_URL`, `DIRECT_URL` | sim | do passo 1 |
 | `AUTH_SECRET` | sim | `openssl rand -base64 48` |
 | `NEXT_PUBLIC_SITE_URL` | sim | `https://seudominio.com.br` |
-| `NEXT_PUBLIC_WHATSAPP` | sim | `5547999999999` |
+| `NEXT_PUBLIC_WHATSAPP` | sim | `5547999999999` — recebe os pedidos da loja |
+| `NEXT_PUBLIC_SALES_MODE` | não | vazio = venda pelo **WhatsApp** (padrão); `checkout` liga carrinho/pedidos/financeiro |
 | `STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` | sim na Vercel | sem isso as fotos somem a cada deploy |
-| `CRON_SECRET` | recomendado | a Vercel envia o token automaticamente para o cron |
+| `CRON_SECRET` | só no modo `checkout` | a Vercel envia o token automaticamente para o cron |
 | `NEXT_PUBLIC_LEGAL_NAME`, `NEXT_PUBLIC_LEGAL_DOCUMENT` | para vender de verdade | Decreto 7.962/2013: nome + CPF **ou** CNPJ |
 | `NEXT_PUBLIC_CONTACT_*`, `NEXT_PUBLIC_ADDRESS`, `NEXT_PUBLIC_BUSINESS_HOURS` | não | vazio = não aparece no site |
-| `NEXT_PUBLIC_FREE_SHIPPING_FROM`, `NEXT_PUBLIC_FLAT_SHIPPING`, `NEXT_PUBLIC_MAX_INSTALLMENTS` | não | regras anunciadas no site |
-| `RESEND_API_KEY`, `EMAIL_FROM`, `STORE_NOTIFY_EMAIL` | não | e-mail de pedido recebido e de contato |
+| `NEXT_PUBLIC_FREE_SHIPPING_FROM`, `NEXT_PUBLIC_FLAT_SHIPPING`, `NEXT_PUBLIC_MAX_INSTALLMENTS` | só no modo `checkout` | regras anunciadas no site |
+| `RESEND_API_KEY`, `EMAIL_FROM`, `STORE_NOTIFY_EMAIL` | só no modo `checkout` | e-mail de pedido recebido e de contato |
 
 > As variáveis `NEXT_PUBLIC_*` entram no build. Depois de mudar alguma, faça **Redeploy**.
 

@@ -895,18 +895,3 @@ export function AdjustDialog({ products }: { products: ProductOption[] }) {
     </Dialog>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/* Barra de ações do estoque                                          */
-/* ------------------------------------------------------------------ */
-
-export function StockDialogs({ products }: { products: ProductOption[] }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <EntryDialog products={products} />
-      <OutDialog products={products} />
-      <SaleDialog products={products} />
-      <AdjustDialog products={products} />
-    </div>
-  );
-}

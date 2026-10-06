@@ -2,6 +2,15 @@
  * Configuração central da loja FullBoost Race Parts.
  * Valores sensíveis podem ser sobrescritos por variáveis de ambiente.
  */
+/**
+ * Modo de venda. "whatsapp" (padrão): vitrine + pedido pelo WhatsApp — sem
+ * carrinho/checkout e painel só com cadastro de produtos e usuários.
+ * "checkout": liga carrinho, checkout, pedidos, estoque, financeiro e
+ * relatórios (o código continua no projeto para quando a loja quiser vender
+ * pelo site). Ver docs/DEPLOY.md.
+ */
+export const CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_SALES_MODE === "checkout";
+
 export const SITE = {
   name: "FullBoost Race Parts",
   shortName: "FullBoost",
@@ -60,12 +69,13 @@ function numberEnv(value: string | undefined, fallback: number): number {
 }
 
 /** Navegação principal da loja pública. */
-export const PUBLIC_NAV = [
+export const PUBLIC_NAV: { label: string; href: string }[] = [
   { label: "Início", href: "/" },
   { label: "Produtos", href: "/produtos" },
-  { label: "Promoções", href: "/promocoes" },
+  // Promoções (cupons) só fazem sentido com checkout; no modo WhatsApp, "Sobre".
+  CHECKOUT_ENABLED ? { label: "Promoções", href: "/promocoes" } : { label: "Sobre", href: "/sobre" },
   { label: "Contato", href: "/contato" },
-] as const;
+];
 
 /**
  * Linhas de produto que a loja trabalha hoje (vitrine institucional).
@@ -92,7 +102,30 @@ export const WHATSAPP_DEFAULT_MESSAGE =
  */
 export const IS_STAGING = process.env.NEXT_PUBLIC_APP_ENV === "staging";
 
+
 export function whatsappLink(message: string = WHATSAPP_DEFAULT_MESSAGE) {
   const text = IS_STAGING ? `[TESTE] ${message}` : message;
   return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(text)}`;
+}
+
+/**
+ * Mensagem de WhatsApp de um anúncio: nome, SKU, preço (ou "sob consulta") e
+ * o link da peça — a loja recebe tudo o que precisa para responder.
+ */
+export function productWhatsappMessage(p: {
+  name: string;
+  sku: string;
+  slug: string;
+  price: number;
+  promoPrice: number | null;
+  priceOnRequest: boolean;
+}): string {
+  const value = p.promoPrice ?? p.price;
+  const price = p.priceOnRequest
+    ? "preço sob consulta"
+    : value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const intro = p.priceOnRequest
+    ? "Olá! Quero consultar modelos e preço de:"
+    : "Olá! Tenho interesse nesta peça:";
+  return `${intro} ${p.name} (SKU ${p.sku}) — ${price}. ${SITE.url}/produtos/${p.slug}`;
 }

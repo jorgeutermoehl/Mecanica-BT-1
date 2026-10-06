@@ -50,7 +50,7 @@ const REDACTED_FIELDS = new Set(["passwordHash", "password", "token", "secret"])
 type Snapshot = Record<string, unknown>;
 
 /** Diff raso: mantém apenas os campos que mudaram (e nunca os sensíveis). */
-export function diffSnapshots(
+function diffSnapshots(
   before: Snapshot | null | undefined,
   after: Snapshot | null | undefined,
 ): { before: Snapshot; after: Snapshot } | null {
