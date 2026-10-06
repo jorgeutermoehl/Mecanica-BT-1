@@ -23,6 +23,8 @@ function fetchProducts(where: object = {}) {
     where: {
       deletedAt: null,
       status: { not: "INACTIVE" },
+      // Categoria desativada (ex.: Rodas & Pneus) leva junto os produtos dela.
+      category: { deletedAt: null },
       ...where,
     },
     include: {
@@ -30,7 +32,8 @@ function fetchProducts(where: object = {}) {
       brand: true,
       images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }] },
     },
-    orderBy: { createdAt: "desc" },
+    // Em foco primeiro; dentro de cada grupo, mais recentes primeiro.
+    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
   });
 }
 
@@ -71,6 +74,9 @@ function toStoreProduct(p: ProductWithRelations, sold: number): StoreProduct {
     originalCode: p.originalCode,
     sold,
     isNew: ageDays <= NEW_DAYS,
+    condition: p.condition,
+    featured: p.featured,
+    priceOnRequest: p.priceOnRequest,
   };
 }
 
@@ -81,7 +87,9 @@ export const getStoreProducts = unstable_cache(
     return products.map((p) => toStoreProduct(p, sold.get(p.id) ?? 0));
   },
   ["store-products"],
-  { tags: [CATALOG_TAG] },
+  // revalidate: rede de segurança quando o banco muda por fora do painel
+  // (ex.: recarga dos dados de demonstração na homologação).
+  { tags: [CATALOG_TAG], revalidate: 300 },
 );
 
 export async function getStoreProduct(slug: string): Promise<StoreProduct | null> {
@@ -129,7 +137,9 @@ export const getStoreCategories = unstable_cache(
       }));
   },
   ["store-categories"],
-  { tags: [CATALOG_TAG] },
+  // revalidate: rede de segurança quando o banco muda por fora do painel
+  // (ex.: recarga dos dados de demonstração na homologação).
+  { tags: [CATALOG_TAG], revalidate: 300 },
 );
 
 /** Dados agregados da home (uma ida ao banco para a lista, depois fatia). */
@@ -143,13 +153,19 @@ export async function getHomeData() {
     ? products.filter((p) => p.categorySlug === featuredCategory.slug).slice(0, 4)
     : [];
 
+  // "Foco do momento": anúncios marcados como destaque no painel. As demais
+  // vitrines evitam repetir o que já está nele (catálogo pequeno = muita repetição).
+  const focus = products.filter((p) => p.featured).slice(0, 8);
+  const inFocus = new Set(focus.map((p) => p.id));
+
   return {
     categories,
-    bestSellers: bySold.slice(0, 4),
+    focus,
+    bestSellers: bySold.filter((p) => p.sold > 0 && !inFocus.has(p.id)).slice(0, 4),
     onSale: products.filter((p) => p.promoPrice !== null).slice(0, 8),
     featuredCategory,
     featuredProducts,
-    newArrivals: products.filter((p) => p.isNew).slice(0, 4),
+    newArrivals: products.filter((p) => p.isNew && !inFocus.has(p.id)).slice(0, 4),
     totalProducts: products.length,
   };
 }

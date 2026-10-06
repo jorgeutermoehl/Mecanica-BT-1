@@ -154,10 +154,19 @@ export const productSchema = z.object({
   location: z.string().max(80).optional().or(z.literal("")),
   imageUrl: z.string().url("URL de imagem inválida").optional().or(z.literal("")),
   costPrice: z.coerce.number().min(0, "Custo não pode ser negativo"),
-  salePrice: z.coerce.number().positive("Preço de venda deve ser maior que zero"),
+  salePrice: z.coerce.number().min(0, "Preço de venda não pode ser negativo"),
   promoPrice: z.coerce.number().positive().optional().or(z.literal("").transform(() => undefined)),
   initialStock: z.coerce.number().int().min(0).default(0),
   minStock: z.coerce.number().int().min(0).default(0),
+  /** Novo / Usado / Revisado — exibido em selo na loja. */
+  condition: z.enum(PRODUCT_CONDITIONS).default("NEW"),
+  /** Anúncio em foco no momento (home + topo do catálogo). */
+  featured: z.boolean().default(false),
+  /** Preço sob consulta: sem carrinho, só WhatsApp (modelos variados). */
+  priceOnRequest: z.boolean().default(false),
+}).refine((d) => d.priceOnRequest || d.salePrice > 0, {
+  message: "Preço de venda deve ser maior que zero (ou marque “Preço sob consulta”)",
+  path: ["salePrice"],
 }).refine((d) => d.promoPrice === undefined || d.promoPrice < d.salePrice, {
   message: "Preço promocional deve ser menor que o preço de venda",
   path: ["promoPrice"],
@@ -278,6 +287,8 @@ export const checkoutSchema = z.object({
   // Loja pública (fase WhatsApp): só Pix e cartão por link — boleto volta com o gateway.
   paymentMethod: z.enum(["PIX", "CREDIT_CARD"]),
   couponCode: z.string().max(30).optional().or(z.literal("")),
+  /** Observações do cliente (veículo da gaiola, opção de painel, relação desejada…). */
+  notes: z.string().max(1000, "Observações muito longas (máx. 1000 caracteres)").optional().or(z.literal("")),
   /** Sessão de consentimento (localStorage fb-session-id) — liga pedido à origem da visita. */
   sessionId: z.string().max(64).optional().or(z.literal("")),
   /** Idempotência: UUID gerado uma vez por tentativa de checkout (double-click/retry). */

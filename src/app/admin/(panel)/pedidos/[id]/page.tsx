@@ -252,6 +252,18 @@ export default async function OrderDetailPage({
             </CardContent>
           </Card>
 
+          {/* Observações do cliente (veículo, opção de painel, relação…) */}
+          {order.notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Observações do cliente</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap text-sm">{order.notes}</p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Entrega */}
           <Card>
             <CardHeader>

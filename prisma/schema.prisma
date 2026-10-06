@@ -224,8 +224,12 @@ model Product {
   gtin           String?
   /// JSON array de códigos OEM para busca cruzada. /// json
   oemCodes       String?
-  /// NEW | USED | REMAN (Zod em validations).
+  /// NEW | USED | REMAN (Zod em validations) — exibido como Novo / Usado / Revisado.
   condition      String        @default("NEW")
+  /// Anúncio em foco no momento (seção "Foco do momento" na home e topo do catálogo).
+  featured       Boolean       @default(false)
+  /// Preço sob consulta: sem carrinho, só "Consultar no WhatsApp" (modelos variados).
+  priceOnRequest Boolean       @default(false)
   categoryId     String
   category       Category      @relation(fields: [categoryId], references: [id])
   brandId        String?

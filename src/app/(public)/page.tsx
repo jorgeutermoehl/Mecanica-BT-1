@@ -63,6 +63,7 @@ function SectionHeader({
 export default async function HomePage() {
   const {
     categories,
+    focus,
     bestSellers,
     onSale,
     featuredCategory,
@@ -123,6 +124,25 @@ export default async function HomePage() {
 
       {/* ===================== FAIXA DE CONFIANÇA ===================== */}
       <TrustStrip />
+
+      {/* ===================== FOCO DO MOMENTO (destaques do painel) ===================== */}
+      {focus.length > 0 && (
+        <section className="py-12 sm:py-16">
+          <Container>
+            <SectionHeader
+              eyebrow="Foco do momento"
+              title="Em destaque"
+              href="/produtos"
+              linkLabel="Ver catálogo"
+            />
+            <div className={PRODUCT_GRID}>
+              {focus.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* ===================== MAIS VENDIDOS ===================== */}
       {bestSellers.length > 0 && (

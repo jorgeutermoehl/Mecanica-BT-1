@@ -46,7 +46,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import type { StoreCategory, StoreProduct } from "@/types/store";
+import {
+  CONDITION_LABEL,
+  type StoreCategory,
+  type StoreProduct,
+} from "@/types/store";
 import { whatsappLink } from "@/lib/constants";
 
 /* ---------- Configurações de filtro / ordenação ---------- */
@@ -66,22 +70,30 @@ const SORTS: { id: SortId; label: string }[] = [
   { id: "novidades", label: "Novidades" },
 ];
 
-const PRICE_RANGES: { id: string; label: string; min: number; max: number }[] = [
-  { id: "all", label: "Todos os preços", min: 0, max: Infinity },
-  { id: "lt100", label: "Até R$ 100", min: 0, max: 100 },
-  { id: "100-500", label: "R$ 100 a R$ 500", min: 100, max: 500 },
-  { id: "500-2000", label: "R$ 500 a R$ 2.000", min: 500, max: 2000 },
-  { id: "2000-5000", label: "R$ 2.000 a R$ 5.000", min: 2000, max: 5000 },
-  { id: "gt5000", label: "Acima de R$ 5.000", min: 5000, max: Infinity },
-];
+const PRICE_RANGES: { id: string; label: string; min: number; max: number }[] =
+  [
+    { id: "all", label: "Todos os preços", min: 0, max: Infinity },
+    { id: "lt100", label: "Até R$ 100", min: 0, max: 100 },
+    { id: "100-500", label: "R$ 100 a R$ 500", min: 100, max: 500 },
+    { id: "500-2000", label: "R$ 500 a R$ 2.000", min: 500, max: 2000 },
+    { id: "2000-5000", label: "R$ 2.000 a R$ 5.000", min: 2000, max: 5000 },
+    { id: "gt5000", label: "Acima de R$ 5.000", min: 5000, max: Infinity },
+  ];
 
 /** Preço efetivo (promoção vence o preço cheio). */
 function priceOf(p: StoreProduct) {
   return p.promoPrice ?? p.price;
 }
 
+/** Para ordenar por preço: "sob consulta" vai sempre para o fim da lista. */
+function sortPrice(p: StoreProduct, dir: 1 | -1) {
+  return p.priceOnRequest ? dir * Number.MAX_SAFE_INTEGER : priceOf(p);
+}
+
 function toggle(list: string[], value: string): string[] {
-  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+  return list.includes(value)
+    ? list.filter((v) => v !== value)
+    : [...list, value];
 }
 
 /* ---------- Eyebrow (rótulo mono vermelho com traço) ---------- */
@@ -111,6 +123,10 @@ type FilterPanelProps = {
   setPriceId: (v: string) => void;
   onlyPromo: boolean;
   setOnlyPromo: (v: boolean) => void;
+  conditionOptions: string[];
+  conditionCounts: Record<string, number>;
+  conds: string[];
+  setConds: (v: string[]) => void;
   inStock: boolean;
   setInStock: (v: boolean) => void;
   activeCount: number;
@@ -139,6 +155,10 @@ function FilterPanel({
   setPriceId,
   onlyPromo,
   setOnlyPromo,
+  conditionOptions,
+  conditionCounts,
+  conds,
+  setConds,
   inStock,
   setInStock,
   activeCount,
@@ -164,49 +184,51 @@ function FilterPanel({
       </div>
 
       <div className="divide-y divide-border">
-{/* Categorias — navegação lateral */}
-<div className="py-5 first:pt-0">
-  <SectionTitle>Categorias</SectionTitle>
-  <nav className="flex flex-col gap-0.5">
-    <button
-      type="button"
-      onClick={() => setCats([])}
-      aria-current={cats.length === 0 ? "true" : undefined}
-      className={cn(
-        "flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
-        cats.length === 0
-          ? "bg-primary/10 font-medium text-primary"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground",
-      )}
-    >
-      <span>Todas as categorias</span>
-      <span className="font-mono text-xs">
-        {Object.values(catCounts).reduce((s, n) => s + n, 0)}
-      </span>
-    </button>
+        {/* Categorias — navegação lateral */}
+        <div className="py-5 first:pt-0">
+          <SectionTitle>Categorias</SectionTitle>
+          <nav className="flex flex-col gap-0.5">
+            <button
+              type="button"
+              onClick={() => setCats([])}
+              aria-current={cats.length === 0 ? "true" : undefined}
+              className={cn(
+                "flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
+                cats.length === 0
+                  ? "bg-primary/10 font-medium text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
+              )}
+            >
+              <span>Todas as categorias</span>
+              <span className="font-mono text-xs">
+                {Object.values(catCounts).reduce((s, n) => s + n, 0)}
+              </span>
+            </button>
 
-    {categories.map((c) => {
-      const active = cats.length === 1 && cats[0] === c.slug;
-      return (
-        <button
-          key={c.slug}
-          type="button"
-          onClick={() => setCats(active ? [] : [c.slug])}
-          aria-current={active ? "true" : undefined}
-          className={cn(
-            "flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
-            active
-              ? "bg-primary/10 font-medium text-primary"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground",
-          )}
-        >
-          <span>{c.name}</span>
-          <span className="font-mono text-xs">{catCounts[c.slug] ?? 0}</span>
-        </button>
-      );
-    })}
-  </nav>
-</div>
+            {categories.map((c) => {
+              const active = cats.length === 1 && cats[0] === c.slug;
+              return (
+                <button
+                  key={c.slug}
+                  type="button"
+                  onClick={() => setCats(active ? [] : [c.slug])}
+                  aria-current={active ? "true" : undefined}
+                  className={cn(
+                    "flex items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
+                    active
+                      ? "bg-primary/10 font-medium text-primary"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  )}
+                >
+                  <span>{c.name}</span>
+                  <span className="font-mono text-xs">
+                    {catCounts[c.slug] ?? 0}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
         {/* Marca */}
         {brandOptions.length > 0 && (
@@ -238,10 +260,50 @@ function FilterPanel({
           </div>
         )}
 
+        {/* Condição (só aparece quando há mais de uma no catálogo) */}
+        {conditionOptions.length > 1 && (
+          <div className="py-5">
+            <SectionTitle>Condição</SectionTitle>
+            <div className="flex flex-col gap-2.5">
+              {conditionOptions.map((c) => {
+                const id = `${idPrefix}-cond-${c}`;
+                return (
+                  <div key={c} className="flex items-center gap-2.5">
+                    <Checkbox
+                      id={id}
+                      checked={conds.includes(c)}
+                      onCheckedChange={(v) =>
+                        setConds(
+                          v === true
+                            ? [...conds, c]
+                            : conds.filter((x) => x !== c),
+                        )
+                      }
+                    />
+                    <label
+                      htmlFor={id}
+                      className="flex-1 cursor-pointer text-sm"
+                    >
+                      {CONDITION_LABEL[c] ?? c}
+                    </label>
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                      {conditionCounts[c] ?? 0}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Faixa de preço */}
         <div className="py-5">
           <SectionTitle>Faixa de preço</SectionTitle>
-          <RadioGroup value={priceId} onValueChange={setPriceId} className="gap-2.5">
+          <RadioGroup
+            value={priceId}
+            onValueChange={setPriceId}
+            className="gap-2.5"
+          >
             {PRICE_RANGES.map((r) => {
               const id = `${idPrefix}-price-${r.id}`;
               return (
@@ -301,7 +363,11 @@ type CatalogProps = {
   initialCategory?: string;
 };
 
-export function Catalog({ products, categories, initialCategory }: CatalogProps) {
+export function Catalog({
+  products,
+  categories,
+  initialCategory,
+}: CatalogProps) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortId>("relevancia");
   const [cats, setCats] = useState<string[]>(
@@ -311,6 +377,20 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
   const [priceId, setPriceId] = useState("all");
   const [onlyPromo, setOnlyPromo] = useState(false);
   const [inStock, setInStock] = useState(false);
+  const [conds, setConds] = useState<string[]>([]);
+
+  const { conditionOptions, conditionCounts } = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of products)
+      counts[p.condition] = (counts[p.condition] ?? 0) + 1;
+    const order = ["NEW", "REMAN", "USED"];
+    return {
+      conditionOptions: Object.keys(counts).sort(
+        (a, b) => order.indexOf(a) - order.indexOf(b),
+      ),
+      conditionCounts: counts,
+    };
+  }, [products]);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   // Facetas honestas com os dados: contagens derivadas do catálogo real.
@@ -341,6 +421,7 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
     brands.length +
     (priceId !== "all" ? 1 : 0) +
     (onlyPromo ? 1 : 0) +
+    conds.length +
     (inStock ? 1 : 0) +
     (query.trim() ? 1 : 0);
 
@@ -351,6 +432,7 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
     setPriceId("all");
     setOnlyPromo(false);
     setInStock(false);
+    setConds([]);
   }
 
   const filtered = useMemo(() => {
@@ -361,18 +443,25 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
       const price = priceOf(p);
       if (q && !matchesProductQuery(p, q)) return false;
       if (cats.length && !cats.includes(p.categorySlug)) return false;
-      if (brands.length && (!p.brand || !brands.includes(p.brand))) return false;
-      if (price < range.min || price > range.max) return false;
+      if (brands.length && (!p.brand || !brands.includes(p.brand)))
+        return false;
+      // Faixa de preço não se aplica a "sob consulta" (sem preço publicado).
+      if (
+        priceId !== "all" &&
+        (p.priceOnRequest || price < range.min || price > range.max)
+      )
+        return false;
       if (onlyPromo && p.promoPrice === null) return false;
+      if (conds.length && !conds.includes(p.condition)) return false;
       if (inStock && p.stock <= 0) return false;
       return true;
     });
 
     switch (sort) {
       case "menor-preco":
-        return [...list].sort((a, b) => priceOf(a) - priceOf(b));
+        return [...list].sort((a, b) => sortPrice(a, 1) - sortPrice(b, 1));
       case "maior-preco":
-        return [...list].sort((a, b) => priceOf(b) - priceOf(a));
+        return [...list].sort((a, b) => sortPrice(b, -1) - sortPrice(a, -1));
       case "mais-vendidos":
         return [...list].sort((a, b) => b.sold - a.sold);
       case "novidades":
@@ -381,7 +470,7 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
         // Relevância = ordem em que o servidor entregou o catálogo.
         return list;
     }
-  }, [products, query, cats, brands, priceId, onlyPromo, inStock, sort]);
+  }, [products, query, cats, brands, priceId, onlyPromo, conds, inStock, sort]);
 
   return (
     <Container className="py-10 lg:py-14">
@@ -433,6 +522,10 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
               setPriceId={setPriceId}
               onlyPromo={onlyPromo}
               setOnlyPromo={setOnlyPromo}
+              conditionOptions={conditionOptions}
+              conditionCounts={conditionCounts}
+              conds={conds}
+              setConds={setConds}
               inStock={inStock}
               setInStock={setInStock}
               activeCount={activeCount}
@@ -505,6 +598,10 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
                       setPriceId={setPriceId}
                       onlyPromo={onlyPromo}
                       setOnlyPromo={setOnlyPromo}
+                      conditionOptions={conditionOptions}
+                      conditionCounts={conditionCounts}
+                      conds={conds}
+                      setConds={setConds}
                       inStock={inStock}
                       setInStock={setInStock}
                       activeCount={activeCount}
@@ -523,10 +620,7 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
               </Sheet>
 
               {/* Ordenação */}
-              <Select
-                value={sort}
-                onValueChange={(v) => setSort(v as SortId)}
-              >
+              <Select value={sort} onValueChange={(v) => setSort(v as SortId)}>
                 <SelectTrigger
                   aria-label="Ordenar produtos"
                   className="h-10 w-full min-w-40 sm:w-48"
@@ -561,8 +655,8 @@ export function Catalog({ products, categories, initialCategory }: CatalogProps)
                 Nenhuma peça encontrada
               </h2>
               <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                Não achamos peças com esses filtros. Ajuste a busca ou fale com um
-                especialista para encontrar a peça certa pro seu setup.
+                Não achamos peças com esses filtros. Ajuste a busca ou fale com
+                um especialista para encontrar a peça certa pro seu setup.
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Button onClick={clearAll} variant="outline" className="gap-2">

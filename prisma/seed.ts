@@ -34,9 +34,25 @@ const daysAgo = (n: number, hourOffset = 0) =>
 
 
 
+const GAIOLA_VEICULOS =
+  "Veículos atendidos: Astra 1994–1996 (sem painel) · Celta (sem painel) · Chevette (sem painel e por fora do painel) · " +
+  "Corsa (sem painel) · Fusca (por fora do painel) · Kadett (sem painel, furando painel) · Gol G1 (sem painel, furando painel, " +
+  "por fora do painel) · Gol G2, G3 e G4 (furando painel, por fora do painel) · Vectra 1997–2005 (sem painel) · Opala (por fora do painel). " +
+  "Saveiro usa o kit do Gol: na maioria, com acrílico, os tubos passam pela janela traseira e ligam a gaiola às caixas de roda traseiras.";
+
+const GAIOLA_COMO_PEDIR =
+  "A maioria dos veículos tem kit com portas curvas ou retas; alguns têm opção de furar o painel ou passar por fora dele sem furar, " +
+  "e alguns podem ser feitos sem usar o painel. Informe o veículo e as opções nas observações do pedido ou pelo WhatsApp.";
+
+const GAIOLA_SPECS =
+  "Pontos de fixação: 6 | Fabricação: sob medida para o veículo | Painel: furando, por fora ou sem painel (conforme o veículo) | " +
+  "Portas: retas ou curvas (conforme o veículo)";
+
 /**
- * Produtos já anunciados nas redes da loja (preços/custos de exemplo —
- * ajuste no painel). Imagens: recortes dos próprios anúncios.
+ * Anúncios da loja (preços/custos/estoque de exemplo onde não informados —
+ * ajuste no painel). Imagens: fotos e tabelas enviadas pela loja.
+ * Foco do momento (featured): coroa e pinhão, virabrequim e gaiolas.
+ * "Sob consulta" (priceOnRequest): anúncios de modelos variados.
  */
 const PRODUCTS: {
   sku: string;
@@ -44,6 +60,9 @@ const PRODUCTS: {
   slug: string;
   category: string;
   ownBrand?: boolean;
+  condition: "NEW" | "USED" | "REMAN";
+  featured: boolean;
+  priceOnRequest?: boolean;
   description: string;
   technicalSpecs: string;
   fitment: string;
@@ -52,36 +71,83 @@ const PRODUCTS: {
   qty: number;
   minStock: number;
   location: string;
-  warranty: string;
+  warranty?: string;
   images: { url: string; alt: string }[];
 }[] = [
+  // Referência de peça NOVA (o pedido de exemplo usa este item).
   {
     sku: "TRA-CP-831-GBX",
     name: "Coroa e Pinhão 8x31 — Gol BX",
     slug: "coroa-e-pinhao-8x31-gol-bx",
     category: "transmissao",
+    condition: "NEW",
+    featured: true,
     description:
-      "Par coroa e pinhão relação 8x31 para câmbio do Gol BX. Peça nova, embalada individualmente. Relação longa — ideal para velocidade final em rua e pista. Lote disponível: consulte quantidade no WhatsApp.",
-    technicalSpecs: "Relação: 8x31 (3,875:1) | Aplicação: câmbio Gol BX | Dentes: pinhão 8 / coroa 31 | Aço cementado",
+      "Par coroa e pinhão relação 8x31 para câmbio do Gol BX. Peça nova, embalada individualmente. Relação longa — ideal para velocidade final em rua e pista.",
+    technicalSpecs: "Relação: 8x31 | Aplicação: câmbio Gol BX | Dentes: pinhão 8 / coroa 31",
     fitment: "Câmbio Gol BX · relação 8x31",
     costPrice: 420,
     salePrice: 790,
     qty: 10,
     minStock: 2,
     location: "Corredor T · Prateleira 1",
-    warranty: "3 meses contra defeitos de fabricação",
     images: [
       { url: "/produtos/coroa-pinhao-detalhe.webp", alt: "Coroa e pinhão 8x31 — detalhe dos dentes e do pinhão" },
-      { url: "/produtos/coroa-pinhao-lote.webp", alt: "Lote de coroas e pinhões 8x31 embalados" },
+      { url: "/produtos/coroa-pinhao-lote.webp", alt: "Lote de coroas e pinhões 8x31 novos, embalados" },
     ],
+  },
+  {
+    sku: "TRA-CP-MODELOS",
+    name: "Coroa e Pinhão — Diversas Relações (Usado)",
+    slug: "coroa-e-pinhao-diversas-relacoes-usado",
+    category: "transmissao",
+    condition: "USED",
+    featured: true,
+    priceOnRequest: true,
+    description:
+      "Pares de coroa e pinhão usados, em várias relações e aplicações. Cada par é vendido junto (coroa + pinhão). " +
+      "Informe o carro, o câmbio e a relação desejada no WhatsApp que enviamos fotos do par disponível e o preço.",
+    technicalSpecs: "Condição: usado | Relações: variadas — consulte | Venda: par (coroa + pinhão)",
+    fitment: "Diversas relações — consulte",
+    costPrice: 0,
+    salePrice: 0,
+    qty: 6,
+    minStock: 1,
+    location: "Bancada T",
+    images: [
+      { url: "/produtos/coroa-pinhao-modelos.webp", alt: "Pares de coroa e pinhão usados de relações variadas" },
+      { url: "/produtos/coroa-pinhao-modelos-bancada.webp", alt: "Coroas e pinhões na bancada da oficina" },
+    ],
+  },
+  {
+    sku: "MOT-VIR-MODELOS",
+    name: "Virabrequim — Modelos Diversos (Usado)",
+    slug: "virabrequim-modelos-diversos-usado",
+    category: "motor",
+    condition: "USED",
+    featured: true,
+    priceOnRequest: true,
+    description:
+      "Virabrequins usados de modelos variados. Informe o motor do carro e a medida desejada (STD ou retificado) " +
+      "no WhatsApp que confirmamos a aplicação, enviamos fotos da peça e o preço.",
+    technicalSpecs: "Condição: usado | Modelos: variados — consulte | Medida: informar na consulta",
+    fitment: "Modelos variados — consulte",
+    costPrice: 0,
+    salePrice: 0,
+    qty: 2,
+    minStock: 1,
+    location: "Corredor M · Prateleira 1",
+    images: [{ url: "/produtos/virabrequim-modelos.webp", alt: "Dois virabrequins usados lado a lado" }],
   },
   {
     sku: "MOT-VIR-FSC-STD",
     name: "Virabrequim STD Aço — Fusca",
     slug: "virabrequim-std-aco-fusca",
     category: "motor",
+    condition: "NEW",
+    featured: false,
     description:
-      "Virabrequim medida STD em aço para motores VW a ar (Fusca e derivados). Peça nova, pronta para montagem — base confiável para motor de rua ou preparação.",
+      "Virabrequim medida STD em aço para motores VW a ar (Fusca e derivados) — base confiável para motor de rua ou preparação.",
     technicalSpecs: "Medida: STD | Material: aço | Motor: VW a ar 1300/1500/1600",
     fitment: "Motor VW a ar · Fusca 1300/1500/1600",
     costPrice: 750,
@@ -89,26 +155,84 @@ const PRODUCTS: {
     qty: 2,
     minStock: 1,
     location: "Corredor M · Prateleira 2",
-    warranty: "3 meses contra defeitos de fabricação",
     images: [],
   },
   {
-    sku: "GAI-RC-SOBMED",
-    name: "Gaiola de Proteção Rollcage — Sob Medida (Rua ou Pista)",
-    slug: "gaiola-rollcage-sob-medida",
+    sku: "GAI-6P-BASICO",
+    name: "Gaiola Santo Antônio 6 Pontos — Básica",
+    slug: "gaiola-santo-antonio-6-pontos-basica",
     category: "gaiolas",
     ownBrand: true,
+    condition: "NEW",
+    featured: true,
     description:
-      "Gaiola de proteção (rollcage) fabricada sob medida na nossa oficina. Opções para carros com ou sem bancos traseiros, furando ou desviando o painel, com ou sem suporte de paraquedas — para carros de rua ou pista. Confirme o modelo do carro no WhatsApp antes do pedido.",
-    technicalSpecs: "Tubo de aço sem costura | Dobras em dobradeira CNC | Opções: com/sem bancos · furando/desviando painel · com/sem suporte de paraquedas · rua ou pista",
-    fitment: "Sob medida — informe o modelo do carro",
-    costPrice: 1800,
-    salePrice: 3900,
-    qty: 2,
+      "Gaiola de proteção (santo antônio) de 6 pontos, fabricada sob medida para o seu carro. " +
+      "Exemplo de pedido: 6 pontos básicos do Gol G1, furando painel.\n\n" + GAIOLA_COMO_PEDIR + "\n\n" + GAIOLA_VEICULOS,
+    technicalSpecs: GAIOLA_SPECS,
+    fitment: "Sob medida · 6 pontos básico",
+    costPrice: 0,
+    salePrice: 1650,
+    qty: 3,
     minStock: 1,
     location: "Oficina · Área de solda",
-    warranty: "12 meses na estrutura e soldas",
-    images: [{ url: "/produtos/gaiola-rollcage.webp", alt: "Gaiola de proteção rollcage em tubo de aço" }],
+    images: [
+      { url: "/produtos/gaiola-kit-6-pontos-basico.webp", alt: "Desenho da gaiola 6 pontos básica" },
+      { url: "/produtos/gaiola-desenho-6-pontos.webp", alt: "Desenho técnico de gaiola de 6 pontos" },
+      { url: "/produtos/gaiola-rollcage.webp", alt: "Gaiola fabricada na oficina" },
+      { url: "/produtos/gaiola-tabela-veiculos.webp", alt: "Tabela de kits e veículos atendidos" },
+    ],
+  },
+  {
+    sku: "GAI-6P-PORTAS",
+    name: "Gaiola Santo Antônio 6 Pontos — Portas e Painel",
+    slug: "gaiola-santo-antonio-6-pontos-portas-e-painel",
+    category: "gaiolas",
+    ownBrand: true,
+    condition: "NEW",
+    featured: true,
+    description:
+      "Gaiola de 6 pontos com travessa de painel e barras nas portas (retas ou curvas), fabricada sob medida. " +
+      "Exemplo de pedido: 6 pontos básicos do Gol G2 por fora do painel + travessa painel + portas retas.\n\n" +
+      GAIOLA_COMO_PEDIR + "\n\n" + GAIOLA_VEICULOS,
+    technicalSpecs: GAIOLA_SPECS + " | Inclui: travessa de painel + barras nas portas",
+    fitment: "Sob medida · 6 pontos com portas e painel",
+    costPrice: 0,
+    salePrice: 1850,
+    qty: 3,
+    minStock: 1,
+    location: "Oficina · Área de solda",
+    images: [
+      { url: "/produtos/gaiola-kit-6-pontos-portas-painel.webp", alt: "Desenho da gaiola 6 pontos com portas e painel" },
+      { url: "/produtos/gaiola-reforco-portas.webp", alt: "Detalhe das barras de reforço nas portas" },
+      { url: "/produtos/gaiola-rollcage.webp", alt: "Gaiola fabricada na oficina" },
+      { url: "/produtos/gaiola-tabela-veiculos.webp", alt: "Tabela de kits e veículos atendidos" },
+    ],
+  },
+  {
+    sku: "GAI-6P-COMPLETA",
+    name: "Gaiola Santo Antônio 6 Pontos — Completa (Painel, Porta-malas e X nas Portas)",
+    slug: "gaiola-santo-antonio-6-pontos-completa",
+    category: "gaiolas",
+    ownBrand: true,
+    condition: "NEW",
+    featured: true,
+    description:
+      "Gaiola de 6 pontos completa: travessa de painel, tubo no porta-malas e \"X\" nas portas, fabricada sob medida. " +
+      "Exemplo de pedido: 6 pontos básicos do Opala por fora do painel, com \"X\" nas portas + travessa painel + tubo no porta-malas.\n\n" +
+      GAIOLA_COMO_PEDIR + "\n\n" + GAIOLA_VEICULOS,
+    technicalSpecs: GAIOLA_SPECS + " | Inclui: travessa de painel + tubo no porta-malas + X nas portas",
+    fitment: "Sob medida · 6 pontos completa",
+    costPrice: 0,
+    salePrice: 2100,
+    qty: 3,
+    minStock: 1,
+    location: "Oficina · Área de solda",
+    images: [
+      { url: "/produtos/gaiola-kit-6-pontos-completo.webp", alt: "Desenho da gaiola 6 pontos completa" },
+      { url: "/produtos/gaiola-reforco-portas.webp", alt: "Detalhe das barras de reforço nas portas" },
+      { url: "/produtos/gaiola-desenho-6-pontos.webp", alt: "Desenho técnico de gaiola de 6 pontos" },
+      { url: "/produtos/gaiola-tabela-veiculos.webp", alt: "Tabela de kits e veículos atendidos" },
+    ],
   },
 ];
 
@@ -183,8 +307,8 @@ async function main() {
 
   console.log("🗂️  Categorias (estruturais) + 1 marca + 1 fornecedor...");
   const catBySlug: Record<string, string> = {};
-  for (const c of CATEGORIES) {
-    const cat = await prisma.category.create({ data: c });
+  for (const { disabled, ...c } of CATEGORIES) {
+    const cat = await prisma.category.create({ data: { ...c, deletedAt: disabled ? daysAgo(30) : null } });
     catBySlug[c.slug] = cat.id;
   }
   const brand = await prisma.brand.create({ data: { name: "FullBoost", slug: "fullboost" } });
@@ -215,12 +339,15 @@ async function main() {
         description: p.description,
         technicalSpecs: p.technicalSpecs,
         fitment: p.fitment,
+        condition: p.condition,
+        featured: p.featured,
+        priceOnRequest: p.priceOnRequest ?? false,
         costPrice: p.costPrice,
         salePrice: p.salePrice,
         stockQuantity: p.qty,
         minStock: p.minStock,
         location: p.location,
-        warranty: p.warranty,
+        warranty: p.warranty ?? null,
         status: "ACTIVE",
         createdAt: openedAt,
         images: {

@@ -89,6 +89,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addProduct = React.useCallback((product: StoreProduct, quantity = 1) => {
+    if (product.priceOnRequest) {
+      toast.info("Preço sob consulta", { description: "Consulte modelos e preço pelo WhatsApp." });
+      return;
+    }
     if (product.stock <= 0) {
       toast.error("Produto esgotado", { description: product.name });
       return;

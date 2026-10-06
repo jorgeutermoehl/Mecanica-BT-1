@@ -66,7 +66,14 @@ export async function placeOrder(input: CheckoutInput) {
     // 1. Produtos reais do banco (preço/estoque do servidor).
     const ids = input.items.map((i) => i.productId);
     const products = await tx.product.findMany({
-      where: { id: { in: ids }, deletedAt: null, status: { not: "INACTIVE" } },
+      where: {
+        id: { in: ids },
+        deletedAt: null,
+        status: { not: "INACTIVE" },
+        // Preço sob consulta e categoria desativada nunca entram no checkout.
+        priceOnRequest: false,
+        category: { deletedAt: null },
+      },
     });
     const byId = new Map(products.map((p) => [p.id, p]));
 
@@ -185,6 +192,7 @@ export async function placeOrder(input: CheckoutInput) {
         shipCity: input.shipping.city,
         shipState: input.shipping.state.toUpperCase(),
         sessionId,
+        notes: input.notes?.trim() || null,
         externalReference,
         paymentProvider: "MANUAL",
         paidAt: isPaid ? now : null,
@@ -507,6 +515,7 @@ export async function getOrder(id: string) {
     customerDocument: o.customerDocument,
     paymentMethod: o.paymentMethod,
     couponCode: o.couponCode,
+    notes: o.notes,
     subtotal: Number(o.subtotal),
     discount: Number(o.discount),
     shippingCost: Number(o.shippingCost),

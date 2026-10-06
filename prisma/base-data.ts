@@ -31,7 +31,18 @@ export const ROLES = [
  * (getStoreCategories) — as linhas que ainda não anunciamos ficam cadastradas
  * e "desbloqueiam" sozinhas no 1º anúncio. Foco atual: transmissão, motor, gaiolas.
  */
-export const CATEGORIES = [
+export type CategorySeed = {
+  name: string;
+  slug: string;
+  icon: string;
+  featured: boolean;
+  position: number;
+  description: string;
+  /** true = categoria desativada (soft-delete): some da loja e do painel. */
+  disabled?: boolean;
+};
+
+export const CATEGORIES: CategorySeed[] = [
   { name: "Transmissão", slug: "transmissao", icon: "transmissao", featured: true, position: 0, description: "Coroa e pinhão, relações curtas e longas e componentes de câmbio para rua, arrancada e pista." },
   { name: "Motor", slug: "motor", icon: "motor", featured: false, position: 1, description: "Virabrequins, internos e componentes de motor — da linha a ar ao AP." },
   { name: "Gaiolas & Segurança", slug: "gaiolas", icon: "gaiolas", featured: false, position: 2, description: "Gaiolas de proteção (rollcage) sob medida para carros de rua ou pista, com ou sem bancos traseiros." },
@@ -40,7 +51,9 @@ export const CATEGORIES = [
   { name: "Escape", slug: "escape", icon: "escape", featured: false, position: 11, description: "Sistemas cat-back, downpipes e ponteiras em inox." },
   { name: "Freios", slug: "freios", icon: "freios", featured: false, position: 12, description: "Kits big brake, discos e pastilhas de alta performance." },
   { name: "Suspensão", slug: "suspensao", icon: "suspensao", featured: false, position: 13, description: "Coilovers, amortecedores e acerto de altura com segurança." },
-  { name: "Rodas", slug: "rodas", icon: "rodas", featured: false, position: 14, description: "Rodas esportivas, forjadas e réplicas nos principais furações e aros." },
+  // Desativada por decisão da loja (não vende rodas/pneus): fica fora da loja
+  // e do cadastro do painel mesmo que um produto antigo aponte para ela.
+  { name: "Rodas & Pneus", slug: "rodas", icon: "rodas", featured: false, position: 14, description: "Rodas esportivas, forjadas e réplicas nos principais furações e aros.", disabled: true },
   { name: "Admissão & Filtros", slug: "filtros", icon: "filtros", featured: false, position: 15, description: "Filtros esportivos e kits de admissão para respirar melhor." },
   { name: "Elétrica & Ignição", slug: "eletrica", icon: "eletrica", featured: false, position: 16, description: "Velas, bobinas e baterias para ignição sem falhas." },
   { name: "Óleos & Fluidos", slug: "oleos", icon: "oleos", featured: false, position: 17, description: "Lubrificantes sintéticos e fluidos racing." },

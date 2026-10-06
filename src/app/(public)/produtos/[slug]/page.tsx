@@ -31,8 +31,8 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { getStoreProduct, getRelatedProducts } from "@/server/catalog";
-import type { StoreProduct } from "@/types/store";
 import { formatBRL, installment, discountPercent } from "@/lib/format";
+import { CONDITION_LABEL, type StoreProduct } from "@/types/store";
 import { whatsappLink, COMMERCE } from "@/lib/constants";
 
 // PDP servida pelo cache com tag "catalog" (revalidateTag no painel).
@@ -56,16 +56,18 @@ export async function generateMetadata({
   const current = product.promoPrice ?? product.price;
   return {
     title: product.name,
-    description: `${product.name} da ${product.brand ?? product.category} — ${formatBRL(
-      current,
-    )}. ${product.category} de performance para rua e pista. Compre na FullBoost Race Parts.`,
+    description: `${product.name} da ${product.brand ?? product.category} — ${
+      product.priceOnRequest ? "preço sob consulta" : formatBRL(current)
+    }. ${product.category} de performance para rua e pista. Compre na FullBoost Race Parts.`,
     alternates: { canonical: `/produtos/${product.slug}` },
     // Preview bonito ao colar o link no WhatsApp/Instagram.
     openGraph: {
       type: "website",
       title: product.name,
       description: product.fitment ?? product.category,
-      ...(product.image ? { images: [{ url: product.image, alt: product.name }] } : {}),
+      ...(product.image
+        ? { images: [{ url: product.image, alt: product.name }] }
+        : {}),
     },
   };
 }
@@ -126,8 +128,10 @@ export default async function ProductPage({
     notFound();
   }
 
-  const hasPromo = product.promoPrice !== null;
+  const onRequest = product.priceOnRequest;
+  const hasPromo = product.promoPrice !== null && !onRequest;
   const current = product.promoPrice ?? product.price;
+  const conditionLabel = CONDITION_LABEL[product.condition] ?? null;
   const outOfStock = product.stock <= 0;
   const lowStock = product.stock > 0 && product.stock <= 5;
   const brandLabel = product.brand ?? product.category;
@@ -141,6 +145,7 @@ export default async function ProductPage({
     { label: "Código (SKU)", value: product.sku },
     ...(product.brand ? [{ label: "Marca", value: product.brand }] : []),
     { label: "Categoria", value: product.category },
+    ...(conditionLabel ? [{ label: "Condição", value: conditionLabel }] : []),
     ...(product.originalCode
       ? [{ label: "Código original", value: product.originalCode }]
       : []),
@@ -213,20 +218,24 @@ export default async function ProductPage({
             <div className="flex flex-col gap-3">
               <div className="relative aspect-square overflow-hidden rounded-lg border border-border bg-carbon">
                 {/* Badges sobre a galeria */}
-                {(hasPromo || product.isNew) && (
-                  <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1">
-                    {hasPromo && (
-                      <span className="rounded-sm bg-primary px-2 py-1 font-mono text-xs font-bold leading-none text-primary-foreground tabular-nums">
-                        -{discountPercent(product.price, product.promoPrice!)}%
-                      </span>
-                    )}
-                    {product.isNew && (
-                      <span className="rounded-sm bg-foreground px-2 py-1 font-mono text-xs font-bold leading-none text-background">
-                        NOVO
-                      </span>
-                    )}
-                  </div>
-                )}
+                <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1">
+                  {conditionLabel && (
+                    <span
+                      className={
+                        product.condition === "NEW"
+                          ? "rounded-sm bg-success px-2 py-1 font-mono text-xs font-bold uppercase leading-none text-success-foreground"
+                          : "rounded-sm bg-foreground px-2 py-1 font-mono text-xs font-bold uppercase leading-none text-background"
+                      }
+                    >
+                      {conditionLabel}
+                    </span>
+                  )}
+                  {hasPromo && (
+                    <span className="rounded-sm bg-primary px-2 py-1 font-mono text-xs font-bold leading-none text-primary-foreground tabular-nums">
+                      -{discountPercent(product.price, product.promoPrice!)}%
+                    </span>
+                  )}
+                </div>
                 {product.image ? (
                   <Image
                     src={product.image}
@@ -314,13 +323,25 @@ export default async function ProductPage({
                     </span>
                   </p>
                 )}
-                <p className="mt-1 font-display text-4xl font-bold tracking-tight text-foreground tabular-nums">
-                  {formatBRL(current)}{" "}
-                  <span className="font-sans text-sm font-semibold text-success">
-                    no PIX
-                  </span>
-                </p>
-                {COMMERCE.maxInstallments > 1 && (
+                {onRequest ? (
+                  <>
+                    <p className="mt-1 font-display text-4xl font-bold tracking-tight text-foreground">
+                      Sob consulta
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Vários modelos disponíveis — consulte relação, medida,
+                      aplicação e preço pelo WhatsApp.
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 font-display text-4xl font-bold tracking-tight text-foreground tabular-nums">
+                    {formatBRL(current)}{" "}
+                    <span className="font-sans text-sm font-semibold text-success">
+                      no PIX
+                    </span>
+                  </p>
+                )}
+                {!onRequest && COMMERCE.maxInstallments > 1 && (
                   <p className="mt-1 font-mono text-sm text-muted-foreground tabular-nums">
                     ou {COMMERCE.maxInstallments}x de {installment(current)} sem
                     juros no cartão

@@ -17,7 +17,7 @@ import {
 } from "../src/server/inventory";
 import { setPromoPrice } from "../src/server/promotions";
 import { authenticate } from "../src/lib/auth";
-import { checkoutSchema } from "../src/lib/validations";
+import { checkoutSchema, productSchema } from "../src/lib/validations";
 
 let passed = 0;
 let failed = 0;
@@ -93,16 +93,34 @@ async function main() {
     parsed.success ? fail("carrinho vazio no checkout", "zod aceitou") : ok("carrinho vazio barrado pela validação");
   }
 
+  {
+    const onRequest = await prisma.product.findFirstOrThrow({ where: { priceOnRequest: true } });
+    await expectError(
+      "pedido com anúncio 'sob consulta' (sem preço)",
+      () => placeOrder({ ...CHECKOUT_BASE, items: [{ productId: onRequest.id, quantity: 1 }] }),
+      "não está mais disponível",
+    );
+  }
+
   console.log("== PRODUTOS ==");
   await expectError(
     "SKU duplicado",
     () =>
       createProduct(
-        { name: "Roda duplicada", sku: "TRA-CP-831-GBX", categoryId: product.categoryId, brandName: "", originalCode: "", description: "", technicalSpecs: "", fitment: "", warranty: "", location: "", imageUrl: "", costPrice: 1, salePrice: 2, promoPrice: undefined, initialStock: 0, minStock: 0 },
+        { name: "Coroa duplicada", sku: "TRA-CP-831-GBX", categoryId: product.categoryId, brandName: "", originalCode: "", description: "", technicalSpecs: "", fitment: "", warranty: "", location: "", imageUrl: "", costPrice: 1, salePrice: 2, promoPrice: undefined, initialStock: 0, minStock: 0, condition: "NEW", featured: false, priceOnRequest: false },
         admin.id,
       ),
     "Já existe um produto com esse SKU",
   );
+  {
+    const base = { name: "Coroa teste", sku: "TST-1", categoryId: product.categoryId, costPrice: 1, initialStock: 0, minStock: 0 };
+    productSchema.safeParse({ ...base, salePrice: 0 }).success
+      ? fail("preço zero sem 'sob consulta'", "zod aceitou")
+      : ok("preço zero barrado quando não é 'sob consulta'");
+    productSchema.safeParse({ ...base, salePrice: 0, priceOnRequest: true }).success
+      ? ok("preço zero aceito em anúncio 'sob consulta'")
+      : fail("anúncio sob consulta", "zod recusou");
+  }
   await expectError(
     "promoção maior que o preço de venda",
     () => setPromoPrice({ productId: product.id, promoPrice: 899 }, admin.id),

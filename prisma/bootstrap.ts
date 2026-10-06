@@ -27,9 +27,14 @@ async function main() {
       update: { permissions: { set: r.perms.map((key) => ({ key })) } },
     });
   }
-  for (const c of CATEGORIES) {
-    // Não sobrescreve ajustes feitos no painel (nome/descrição/posição).
-    await prisma.category.upsert({ where: { slug: c.slug }, create: c, update: {} });
+  for (const { disabled, ...c } of CATEGORIES) {
+    // Não sobrescreve ajustes feitos no painel (nome/descrição/posição);
+    // só garante que as categorias desativadas pela loja continuem desativadas.
+    await prisma.category.upsert({
+      where: { slug: c.slug },
+      create: { ...c, deletedAt: disabled ? new Date() : null },
+      update: disabled ? { deletedAt: new Date() } : {},
+    });
   }
   console.log(`✔ ${PERMISSIONS.length} permissões · ${ROLES.length} papéis · ${CATEGORIES.length} categorias`);
 

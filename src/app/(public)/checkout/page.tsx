@@ -22,6 +22,7 @@ import { PartIcon } from "@/components/shared/part-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -203,6 +204,7 @@ export default function CheckoutPage() {
       },
       paymentMethod: method,
       couponCode: get("couponCode").toUpperCase(),
+      notes: get("notes"),
       // Mesma sessão do banner de cookies — liga o pedido à origem da visita
       // (UTM/Instagram) respeitando o consentimento dado.
       sessionId: localStorage.getItem("fb-session-id") ?? "",
@@ -430,6 +432,16 @@ export default function CheckoutPage() {
                 Suas peças ficam reservadas por 72h. Depois de confirmar, você
                 finaliza o pagamento e o frete com o nosso time no WhatsApp.
               </p>
+              <div className="mt-5 space-y-1.5">
+                <Label htmlFor="notes">Observações do pedido (opcional)</Label>
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  rows={3}
+                  maxLength={1000}
+                  placeholder="Ex.: gaiola para Gol G2 por fora do painel, portas retas · relação desejada · motor do carro"
+                />
+              </div>
             </SectionCard>
           </div>
 

@@ -9,6 +9,7 @@ import { createProductAction, updateProductAction } from "@/app/actions/admin";
 import { uploadProductImageAction } from "@/app/actions/media";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -49,6 +50,9 @@ export interface ProductFormProduct {
   costPrice: number;
   salePrice: number;
   promoPrice?: number;
+  condition: string;
+  featured: boolean;
+  priceOnRequest: boolean;
   stock: number;
   minStock: number;
 }
@@ -75,6 +79,9 @@ type FormValues = {
   promoPrice: string;
   initialStock: string;
   minStock: string;
+  condition: string;
+  featured: boolean;
+  priceOnRequest: boolean;
 };
 
 function initialValues(product?: ProductFormProduct): FormValues {
@@ -95,6 +102,9 @@ function initialValues(product?: ProductFormProduct): FormValues {
     promoPrice: product?.promoPrice !== undefined ? String(product.promoPrice) : "",
     initialStock: "0",
     minStock: product !== undefined ? String(product.minStock) : "0",
+    condition: product?.condition ?? "NEW",
+    featured: product?.featured ?? false,
+    priceOnRequest: product?.priceOnRequest ?? false,
   };
 }
 
@@ -201,10 +211,13 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       location: values.location.trim(),
       imageUrl: values.imageUrl.trim(),
       costPrice: Number(values.costPrice),
-      salePrice: Number(values.salePrice),
+      salePrice: values.priceOnRequest && values.salePrice.trim() === "" ? 0 : Number(values.salePrice),
       promoPrice:
         values.promoPrice.trim() === "" ? undefined : Number(values.promoPrice),
       minStock: Number(values.minStock || 0),
+      condition: values.condition,
+      featured: values.featured,
+      priceOnRequest: values.priceOnRequest,
       initialStock: isEdit ? 0 : Number(values.initialStock || 0),
     };
 
@@ -348,6 +361,33 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               maxLength={80}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="product-condition">Condição</Label>
+            <Select value={values.condition} onValueChange={(v) => set("condition", v)}>
+              <SelectTrigger id="product-condition" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NEW">Novo</SelectItem>
+                <SelectItem value="USED">Usado</SelectItem>
+                <SelectItem value="REMAN">Revisado / recondicionado</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Aparece como selo na foto do anúncio.</p>
+          </div>
+          <div className="flex items-start gap-2.5 sm:pt-7">
+            <Checkbox
+              id="product-featured"
+              checked={values.featured}
+              onCheckedChange={(v) => set("featured", v === true)}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="product-featured">Anúncio em destaque</Label>
+              <p className="text-xs text-muted-foreground">
+                Entra em “Foco do momento” na página inicial e no topo do catálogo.
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -452,7 +492,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               id="product-specs"
               value={values.technicalSpecs}
               onChange={(e) => set("technicalSpecs", e.target.value)}
-              placeholder={"Uma por linha. Ex.:\nMaterial: alumínio forjado\nPressão máx.: 2.5 bar"}
+              placeholder={"Uma por linha. Ex.:\nRelação: 8x31\nAplicação: câmbio Gol BX"}
               rows={5}
               maxLength={4000}
             />
@@ -485,18 +525,20 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="product-price">Preço de venda (R$) *</Label>
+            <Label htmlFor="product-price">
+              Preço de venda (R$) {values.priceOnRequest ? "(opcional)" : "*"}
+            </Label>
             <Input
               id="product-price"
               type="number"
               inputMode="decimal"
-              min="0.01"
+              min="0"
               step="0.01"
               value={values.salePrice}
               onChange={(e) => set("salePrice", e.target.value)}
               placeholder="0,00"
               className="font-mono"
-              required
+              required={!values.priceOnRequest}
             />
           </div>
           <div className="space-y-2">
@@ -515,6 +557,20 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             <p className="text-xs text-muted-foreground">
               Se preenchido, o produto entra na vitrine de promoções.
             </p>
+          </div>
+          <div className="flex items-start gap-2.5 sm:col-span-3">
+            <Checkbox
+              id="product-on-request"
+              checked={values.priceOnRequest}
+              onCheckedChange={(v) => set("priceOnRequest", v === true)}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="product-on-request">Preço sob consulta</Label>
+              <p className="text-xs text-muted-foreground">
+                Para anúncios com vários modelos (relações, medidas): a loja mostra
+                “Sob consulta” e o botão “Consultar no WhatsApp”, sem carrinho.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

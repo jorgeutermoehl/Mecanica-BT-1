@@ -3,14 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingCart } from "lucide-react";
+import { MessageCircle, ShoppingCart } from "lucide-react";
 import { PartIcon } from "@/components/shared/part-icon";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/cart/cart-provider";
-import { COMMERCE } from "@/lib/constants";
+import { COMMERCE, whatsappLink } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { formatBRL, installment, discountPercent } from "@/lib/format";
-import type { StoreProduct } from "@/types/store";
+import { CONDITION_LABEL, type StoreProduct } from "@/types/store";
 
 export function ProductCard({ product }: { product: StoreProduct }) {
   const { addProduct } = useCart();
@@ -21,6 +21,8 @@ export function ProductCard({ product }: { product: StoreProduct }) {
   const outOfStock = product.stock <= 0;
   const lowStock = product.stock > 0 && product.stock <= 5;
   const showImage = product.image && !imgError;
+  const onRequest = product.priceOnRequest;
+  const conditionLabel = CONDITION_LABEL[product.condition] ?? null;
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/50">
@@ -54,19 +56,30 @@ export function ProductCard({ product }: { product: StoreProduct }) {
           </span>
         )}
 
-        {(hasPromo || product.isNew) && (
-          <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
-            {hasPromo && (
-              <span className="rounded-sm bg-primary px-2 py-1 font-mono text-[11px] font-bold leading-none text-primary-foreground tabular-nums">
-                -{discountPercent(product.price, product.promoPrice!)}%
-              </span>
-            )}
-            {product.isNew && (
-              <span className="rounded-sm bg-foreground px-2 py-1 font-mono text-[11px] font-bold leading-none text-background">
-                NOVO
-              </span>
-            )}
-          </div>
+        {/* Selos: condição da peça (Novo/Usado/Revisado) + desconto + foco */}
+        <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
+          {conditionLabel && (
+            <span
+              className={cn(
+                "rounded-sm px-2 py-1 font-mono text-[11px] font-bold uppercase leading-none",
+                product.condition === "NEW"
+                  ? "bg-success text-success-foreground"
+                  : "bg-foreground text-background",
+              )}
+            >
+              {conditionLabel}
+            </span>
+          )}
+          {hasPromo && !onRequest && (
+            <span className="rounded-sm bg-primary px-2 py-1 font-mono text-[11px] font-bold leading-none text-primary-foreground tabular-nums">
+              -{discountPercent(product.price, product.promoPrice!)}%
+            </span>
+          )}
+        </div>
+        {product.featured && (
+          <span className="absolute right-2 top-2 rounded-sm bg-boost px-2 py-1 font-mono text-[11px] font-bold uppercase leading-none text-white">
+            Destaque
+          </span>
         )}
       </Link>
 
@@ -97,24 +110,36 @@ export function ProductCard({ product }: { product: StoreProduct }) {
         <div className="flex-1" />
 
         {/* Preço — padrão BR: PIX em destaque + parcelamento em mono */}
-        <div className="mt-3">
-          {hasPromo && (
-            <p className="font-mono text-xs text-muted-foreground line-through tabular-nums">
-              {formatBRL(product.price)}
+        {onRequest ? (
+          <div className="mt-3">
+            <p className="font-display text-xl font-bold tracking-tight text-foreground">
+              Sob consulta
             </p>
-          )}
-          <p className="font-display text-xl font-bold tracking-tight text-foreground tabular-nums">
-            {formatBRL(current)}{" "}
-            <span className="font-sans text-xs font-semibold text-success">
-              no PIX
-            </span>
-          </p>
-          {COMMERCE.maxInstallments > 1 && (
-            <p className="font-mono text-[11px] text-muted-foreground tabular-nums">
-              ou {COMMERCE.maxInstallments}x de {installment(current)} sem juros no cartão
+            <p className="font-mono text-[11px] text-muted-foreground">
+              Modelos e preço pelo WhatsApp
             </p>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="mt-3">
+            {hasPromo && (
+              <p className="font-mono text-xs text-muted-foreground line-through tabular-nums">
+                {formatBRL(product.price)}
+              </p>
+            )}
+            <p className="font-display text-xl font-bold tracking-tight text-foreground tabular-nums">
+              {formatBRL(current)}{" "}
+              <span className="font-sans text-xs font-semibold text-success">
+                no PIX
+              </span>
+            </p>
+            {COMMERCE.maxInstallments > 1 && (
+              <p className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                ou {COMMERCE.maxInstallments}x de {installment(current)} sem
+                juros no cartão
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Estoque (texto + cor) e prova social */}
         <p className="mt-2 flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-wide">
@@ -153,20 +178,37 @@ export function ProductCard({ product }: { product: StoreProduct }) {
 
         {/* Ações — uma primária, uma secundária */}
         <div className="mt-3 grid gap-2">
-          <Button
-            onClick={() => addProduct(product)}
-            disabled={outOfStock}
-            className="h-10 w-full gap-2"
-          >
-            <ShoppingCart className="size-4" />
-            {outOfStock ? (
-              "Indisponível"
-            ) : (
-              <span>
-                Adicionar<span className="hidden lg:inline"> ao carrinho</span>
-              </span>
-            )}
-          </Button>
+          {onRequest ? (
+            <Button asChild className="h-10 w-full gap-2">
+              <a
+                href={whatsappLink(
+                  `Olá! Quero consultar modelos e preço de: ${product.name} (SKU ${product.sku}).`,
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <MessageCircle className="size-4" />
+                Consultar
+                <span className="hidden lg:inline"> no WhatsApp</span>
+              </a>
+            </Button>
+          ) : (
+            <Button
+              onClick={() => addProduct(product)}
+              disabled={outOfStock}
+              className="h-10 w-full gap-2"
+            >
+              <ShoppingCart className="size-4" />
+              {outOfStock ? (
+                "Indisponível"
+              ) : (
+                <span>
+                  Adicionar
+                  <span className="hidden lg:inline"> ao carrinho</span>
+                </span>
+              )}
+            </Button>
+          )}
           <Button asChild variant="outline" className="h-10 w-full">
             <Link href={`/produtos/${product.slug}`}>Ver detalhes</Link>
           </Button>

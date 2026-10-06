@@ -28,7 +28,25 @@ export type StoreProduct = {
   /** Unidades vendidas (agregado de order_items). */
   sold: number;
   isNew: boolean;
+  /** NEW | USED | REMAN — exibido como Novo / Usado / Revisado. */
+  condition: string;
+  /** Anúncio em foco no momento (home + topo do catálogo). */
+  featured: boolean;
+  /** Sem preço/carrinho: venda só pela consulta no WhatsApp. */
+  priceOnRequest: boolean;
 };
+
+/** Rótulo de condição da peça exibido na loja. */
+export const CONDITION_LABEL: Record<string, string> = {
+  NEW: "Novo",
+  USED: "Usado",
+  REMAN: "Revisado",
+};
+
+/** Produto pode ir para o carrinho? (preço definido e estoque). */
+export function isPurchasable(p: Pick<StoreProduct, "priceOnRequest" | "stock">): boolean {
+  return !p.priceOnRequest && p.stock > 0;
+}
 
 export type StoreCategory = {
   id: string;

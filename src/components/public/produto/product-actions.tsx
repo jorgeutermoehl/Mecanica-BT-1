@@ -32,6 +32,30 @@ export function ProductActions({ product }: { product: StoreProduct }) {
 
   const waMessage = `Olá! Tenho interesse na peça ${product.name} (SKU ${product.sku}). Pode me ajudar com uma dúvida?`;
 
+  // Preço sob consulta: sem carrinho — a venda acontece na conversa.
+  if (product.priceOnRequest) {
+    return (
+      <div className="mt-6 flex flex-col gap-3">
+        <Button asChild size="lg" className="h-11 gap-2">
+          <a
+            href={whatsappLink(
+              `Olá! Quero consultar modelos, aplicação e preço de: ${product.name} (SKU ${product.sku}).`,
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <MessageCircle className="size-4" />
+            Consultar modelos e preço no WhatsApp
+          </a>
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Informe o carro e o motor que a gente indica o modelo certo e envia
+          fotos da peça disponível.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-6 flex flex-col gap-4">
       {/* Seletor de quantidade + adicionar ao carrinho */}
